@@ -71,6 +71,9 @@ public final class ByteArrayPacketReader implements PacketReader {
                 throw new PacketDecodingException("VarInt exceeds five bytes");
             }
             current = readByte();
+            if (position == 28 && (current & 0xF0) != 0) {
+                throw new PacketDecodingException("VarInt exceeds 32 bits");
+            }
             value |= (current & 0x7F) << position;
             position += 7;
         } while ((current & 0x80) != 0);

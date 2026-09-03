@@ -30,6 +30,7 @@ import uk.co.enderfall.sdk.api.config.ValidationResult;
 import uk.co.enderfall.sdk.api.logging.ModLogger;
 
 final class TomlConfigFile {
+    static final long MAXIMUM_FILE_BYTES = 1_048_576;
     private static final DateTimeFormatter BACKUP_TIMESTAMP = DateTimeFormatter.ofPattern("uuuuMMdd'T'HHmmss'Z'")
             .withLocale(Locale.ROOT)
             .withZone(ZoneOffset.UTC);
@@ -49,10 +50,19 @@ final class TomlConfigFile {
             return new DefaultConfigHandle(path, defaults);
         }
 
+        if (Files.size(path) > MAXIMUM_FILE_BYTES) {
+            backup(path, clock);
+            logger.warn("Config {} exceeds the {} byte safety limit; backed up and regenerated",
+                    path, MAXIMUM_FILE_BYTES);
+            Map<ConfigKey<?>, Object> defaults = defaults(spec);
+            writeAtomically(path, render(spec, defaults, Map.of()));
+            return new DefaultConfigHandle(path, defaults);
+        }
+
         TomlParseResult parsed = Toml.parse(path, TomlVersion.V1_0_0);
         if (parsed.hasErrors()) {
             backup(path, clock);
-            parsed.errors().forEach(error -> logger.warn("Malformed config {}: {}", path, error));
+            logger.warn("Malformed config {}; backed up and regenerated", path);
             Map<ConfigKey<?>, Object> defaults = defaults(spec);
             writeAtomically(path, render(spec, defaults, Map.of()));
             return new DefaultConfigHandle(path, defaults);
@@ -85,7 +95,7 @@ final class TomlConfigFile {
         return new DefaultConfigHandle(path, values);
     }
 
-    private static Map<ConfigKey<?>, Object> defaults(ConfigSpec spec) {
+    static Map<ConfigKey<?>, Object> defaults(ConfigSpec spec) {
         Map<ConfigKey<?>, Object> values = new LinkedHashMap<>();
         spec.keys().forEach(key -> values.put(key, key.defaultValue()));
         return values;

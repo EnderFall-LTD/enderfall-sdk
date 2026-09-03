@@ -12,11 +12,12 @@ target has passed the contract and runtime suites.
 ## Current implementation status
 
 The `0.1.0-beta.1` source tree contains the Java 17 API, shared runtime core,
-deterministic config/network/data services, the settings plugin, a four-target starter
-build, unit and Gradle functional tests, and publication scaffolding. Target-native
-Fabric/NeoForge/Forge adapters and real game-launch/mixed-loader lanes are release
-gates still under implementation. Generated consumer JARs are therefore build-pipeline
-fixtures, not yet release-ready playable mods.
+deterministic config/network/data services, the settings plugin, a nine-target starter,
+direct Fabric/Forge/NeoForge adapters, unit and Gradle functional tests, and publication
+scaffolding. One unchanged portable starter builds all nine target JARs, and every
+dedicated-server target has reached Minecraft's ready state. Automated client and
+same-version mixed-loader lanes remain release gates, so this is still a development
+baseline rather than a release-ready SDK.
 
 Build success and Minecraft runtime validation are reported separately throughout this
 project.

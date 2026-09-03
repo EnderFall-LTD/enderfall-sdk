@@ -40,6 +40,15 @@ dependencies {
 group = "uk.co.enderfall.sdk"
 version = providers.gradleProperty("sdkVersion").get()
 
+allprojects {
+    // Build the SBOM from Gradle's verified resolution graph. Repository POM
+    // enrichment performs a second, unbounded metadata resolution pass and is
+    // not needed for a complete component/dependency inventory.
+    tasks.withType<org.cyclonedx.gradle.CyclonedxDirectTask>().configureEach {
+        includeMetadataResolution.set(false)
+    }
+}
+
 subprojects {
     group = rootProject.group
     version = rootProject.version
@@ -76,6 +85,31 @@ subprojects {
 
     plugins.withId("maven-publish") {
         extensions.configure<PublishingExtension> {
+            publications.withType<MavenPublication>().configureEach {
+                pom {
+                    name.convention(project.name)
+                    description.convention(project.description ?: project.name)
+                    url.set("https://github.com/EnderFall/enderfall-sdk")
+                    licenses {
+                        license {
+                            name.set("Apache License, Version 2.0")
+                            url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                            distribution.set("repo")
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set("enderfall")
+                            name.set("EnderFall")
+                        }
+                    }
+                    scm {
+                        url.set("https://github.com/EnderFall/enderfall-sdk")
+                        connection.set("scm:git:https://github.com/EnderFall/enderfall-sdk.git")
+                        developerConnection.set("scm:git:ssh://git@github.com/EnderFall/enderfall-sdk.git")
+                    }
+                }
+            }
             repositories {
                 maven {
                     name = "workspace"
@@ -112,6 +146,15 @@ tasks.register("publishWorkspace") {
     dependsOn(":bom:publishAllPublicationsToWorkspaceRepository")
     dependsOn(":gradle-plugin:publishAllPublicationsToWorkspaceRepository")
     dependsOn(":runtime-core:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-fabric-1.20.1:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-fabric-1.21.1:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-fabric-1.21.4:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-fabric-26.2:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-forge-1.20.1:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-neoforge-1.20.1:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-neoforge-1.21.4:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-neoforge-1.21.1:publishAllPublicationsToWorkspaceRepository")
+    dependsOn(":runtime-neoforge-26.2:publishAllPublicationsToWorkspaceRepository")
 }
 
 tasks.register("buildAll") {
@@ -127,6 +170,14 @@ tasks.register("checkAll") {
     dependsOn("verifyPinnedDependencies")
 }
 
+tasks.register<GradleBuild>("checkContractTargets") {
+    group = "verification"
+    description = "Builds the full portable contract mod unchanged for all nine targets."
+    dependsOn("publishWorkspace")
+    dir = file("test-mod")
+    tasks = listOf("buildAll")
+}
+
 tasks.register("verifyPinnedDependencies") {
     group = "verification"
     description = "Rejects snapshots and dynamic dependency selectors."
@@ -135,7 +186,10 @@ tasks.register("verifyPinnedDependencies") {
             child.configurations.flatMap { configuration ->
                 configuration.dependencies.mapNotNull { dependency ->
                     val dependencyVersion = dependency.version ?: return@mapNotNull null
-                    if (dependencyVersion.contains('+')
+                    if (dependencyVersion.endsWith("+")
+                        || dependencyVersion.contains('*')
+                        || dependencyVersion.startsWith('[')
+                        || dependencyVersion.startsWith('(')
                         || dependencyVersion.equals("latest.release", ignoreCase = true)
                         || dependencyVersion.equals("latest.integration", ignoreCase = true)
                         || dependencyVersion.endsWith("-SNAPSHOT", ignoreCase = true)
@@ -177,15 +231,25 @@ tasks.register("releaseChecksums") {
     group = "distribution"
     description = "Writes SHA-256 checksums for SDK JARs."
     dependsOn("buildAll")
+    dependsOn(":runtime-forge-1.20.1:reobfShadowJar")
+    dependsOn(":runtime-neoforge-1.20.1:reobfShadowJar")
     val output = layout.buildDirectory.file("checksums/SHA256SUMS")
+    val releaseJars = provider {
+        subprojects.filter { it.name != "test-mod" }.flatMap { child ->
+            child.layout.buildDirectory.dir("libs").get().asFileTree
+                .matching {
+                    include("*.jar")
+                    exclude("*-plain.jar")
+                }.files
+        }.sortedBy { it.name }
+    }
+    inputs.files(releaseJars)
+        .withPropertyName("releaseJars")
+        .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
     outputs.file(output)
     doLast {
-        val jars = subprojects.flatMap { child ->
-            child.layout.buildDirectory.dir("libs").get().asFileTree
-                .matching { include("*.jar") }.files
-        }.sortedBy { it.name }
         val digest = MessageDigest.getInstance("SHA-256")
-        val lines = jars.map { jar ->
+        val lines = releaseJars.get().map { jar ->
             digest.reset()
             val hash = digest.digest(jar.readBytes()).joinToString("") { "%02x".format(it) }
             "$hash  ${jar.name}"
@@ -201,8 +265,10 @@ tasks.register("verifyRuntimeMatrix") {
     description = "Release gate for real target client/server and mixed-loader tests."
     doLast {
         throw GradleException(
-            "Release blocked: target-native adapters and the real client/server mixed-loader matrix " +
-                "have not been implemented and accepted yet. A successful Java build is not runtime proof."
+            "Release blocked: all target-native adapters compile and dedicated-server startup has been " +
+                "smoke-tested, but the automated client and same-version mixed-loader matrix has not " +
+                "been implemented and accepted yet. A successful Java build or server launch is not " +
+                "mixed-loader runtime proof."
         )
     }
 }

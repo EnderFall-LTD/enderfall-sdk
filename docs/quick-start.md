@@ -27,7 +27,11 @@ development target. Select another development target with, for example:
 
 ```bash
 ./gradlew runClient -Penderfall.target=1.21.4-fabric
+./gradlew runServer -Penderfall.target=1.20.1-forge
+./gradlew generateData -Penderfall.target=26.2-neoforge
 ```
 
-`runClient`, `runServer`, and real data generation remain unavailable for a target
-until its runtime adapter is wired and accepted.
+On PowerShell, quote properties containing the target value, for example
+`.\gradlew.bat runServer '-Penderfall.target=1.20.1-forge'`. The selected target must be
+present in the settings DSL. These development runs are not a substitute for the
+release matrix recorded in `targets.md`.

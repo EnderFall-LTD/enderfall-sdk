@@ -22,6 +22,9 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
 }
 
 tasks.withType<Jar>().configureEach {

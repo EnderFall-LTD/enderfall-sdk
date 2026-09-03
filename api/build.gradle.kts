@@ -43,16 +43,6 @@ publishing {
                 name = "EnderFall SDK API"
                 description = project.description
                 url = "https://github.com/EnderFall/enderfall-sdk"
-                licenses {
-                    license {
-                        name = "Apache License, Version 2.0"
-                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
-                }
-                scm {
-                    url = "https://github.com/EnderFall/enderfall-sdk"
-                    connection = "scm:git:https://github.com/EnderFall/enderfall-sdk.git"
-                }
             }
         }
     }

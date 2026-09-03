@@ -13,5 +13,10 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
-    implementation(project(":api"))
+    val apiProject = findProject(":api")
+    if (apiProject != null) {
+        implementation(apiProject)
+    } else {
+        implementation("uk.co.enderfall.sdk:enderfall-sdk-api:0.1.0-beta.1")
+    }
 }

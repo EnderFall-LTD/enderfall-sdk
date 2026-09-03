@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="Apache-2.0"
+
+[[mods]]
+modId="enderfall_sdk"
+version="${version}"
+displayName="EnderFall SDK"
+authors="EnderFall"
+description='''Portable mod runtime for Minecraft 1.20.1 on Forge.'''
+
+[[dependencies.enderfall_sdk]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.23,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.enderfall_sdk]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1]"
+ordering="NONE"
+side="BOTH"

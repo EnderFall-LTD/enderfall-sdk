@@ -3,6 +3,8 @@ package uk.co.enderfall.sdk.gradle;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -12,6 +14,7 @@ import org.gradle.api.Project;
 import org.gradle.api.initialization.ProjectDescriptor;
 import org.gradle.api.initialization.Settings;
 import org.gradle.api.plugins.BasePlugin;
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import uk.co.enderfall.sdk.gradle.model.EnderfallSdkExtension;
 import uk.co.enderfall.sdk.gradle.model.ModDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetCatalog;
@@ -25,6 +28,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
     @Override
     public void apply(Settings settings) {
         settings.getPluginManager().apply("org.gradle.toolchains.foojay-resolver-convention");
+        configureLoaderRepositories(settings);
         EnderfallSdkExtension extension = settings.getExtensions()
                 .create("enderfallSdk", EnderfallSdkExtension.class);
         settings.getDependencyResolutionManagement().getRepositories().mavenCentral();
@@ -38,6 +42,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             throw new GradleException("developmentTarget " + extension.getDevelopmentTarget()
                     + " is not selected. Selected targets: " + String.join(", ", selected.keySet()));
         }
+        Map<String, TargetDefinition> materialized = materializedTargets(settings, extension, selected);
 
         File generatedRoot = new File(settings.getRootDir(), ".gradle/enderfall-sdk/projects");
         createDirectory(generatedRoot);
@@ -47,19 +52,25 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         createDirectory(parent.getProjectDir());
 
         Map<String, TargetDefinition> byProjectPath = new LinkedHashMap<>();
-        selected.values().forEach(target -> {
+        java.util.List<URI> dependencyRepositories = new ArrayList<>();
+        settings.getDependencyResolutionManagement().getRepositories()
+                .withType(MavenArtifactRepository.class)
+                .forEach(repository -> dependencyRepositories.add(repository.getUrl()));
+        materialized.values().forEach(target -> {
             String path = TARGET_PARENT + ':' + target.projectName();
             settings.include(path);
             ProjectDescriptor descriptor = settings.project(path);
             descriptor.setProjectDir(new File(generatedRoot, target.projectName()));
             createDirectory(descriptor.getProjectDir());
+            writeTargetBuild(descriptor.getProjectDir(), target);
             byProjectPath.put(path, target);
         });
 
         settings.getGradle().beforeProject(project -> {
             TargetDefinition target = byProjectPath.get(project.getPath());
             if (target != null) {
-                TargetProjectConfigurator.configure(project, settings.getRootDir(), extension.modDefinition(), target);
+                TargetProjectConfigurator.configure(project, settings.getRootDir(), extension.modDefinition(), target,
+                        dependencyRepositories);
             } else if (project == project.getRootProject()) {
                 configureRoot(project, extension, selected);
             }
@@ -115,10 +126,13 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                         extension.modDefinition().getId());
                 project.getLogger().lifecycle("Development target: {}", development.id());
                 for (TargetDefinition target : selected.values()) {
-                    project.getLogger().lifecycle("  {} | Java {} | loader {} | API {} | runtime UNVALIDATED",
+                    String runtimeStatus = TargetCatalog.hasRuntimeAdapter(target)
+                            ? "COMPILE_VALIDATED" : "UNAVAILABLE";
+                    project.getLogger().lifecycle("  {} | Java {} | loader {} | API {} | runtime {}",
                             target.id(),
                             target.javaVersion(), target.loaderVersion(),
-                            target.platformApiVersion().isBlank() ? "included" : target.platformApiVersion());
+                            target.platformApiVersion().isBlank() ? "included" : target.platformApiVersion(),
+                            runtimeStatus);
                 }
             });
         });
@@ -139,6 +153,37 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             task.setDescription("Runs " + targetTask + " for " + target.id());
             task.dependsOn(projectPath(target) + ':' + targetTask);
         });
+    }
+
+    private static Map<String, TargetDefinition> materializedTargets(Settings settings,
+                                                                      EnderfallSdkExtension extension,
+                                                                      Map<String, TargetDefinition> selected) {
+        java.util.Set<String> requested = settings.getGradle().getStartParameter().getTaskNames().stream()
+                .map(name -> name.substring(name.lastIndexOf(':') + 1))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        if (requested.equals(java.util.Set.of("initializeMod"))) {
+            return java.util.Map.of();
+        }
+        boolean runtimeInvocation = requested.stream()
+                .anyMatch(java.util.Set.of("runClient", "runServer", "generateData")::contains);
+        boolean aggregateInvocation = requested.stream()
+                .anyMatch(java.util.Set.of("buildAll", "checkAll")::contains);
+        if (!runtimeInvocation) {
+            return selected;
+        }
+        if (aggregateInvocation) {
+            throw new GradleException("Run runClient, runServer, or generateData separately from buildAll/checkAll");
+        }
+        String selectedTarget = settings.getProviders().gradleProperty("enderfall.target")
+                .getOrElse(extension.getDevelopmentTarget());
+        TargetDefinition target = selected.get(selectedTarget);
+        if (target == null) {
+            throw new GradleException("Unknown -Penderfall.target=" + selectedTarget + ". Selected targets: "
+                    + String.join(", ", selected.keySet()));
+        }
+        Map<String, TargetDefinition> result = new LinkedHashMap<>();
+        result.put(target.id(), target);
+        return result;
     }
 
     private static String projectPath(TargetDefinition target) {
@@ -176,6 +221,147 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             Files.createDirectories(directory.toPath());
         } catch (IOException exception) {
             throw new GradleException("Cannot create generated target directory " + directory, exception);
+        }
+    }
+
+    private static void configureLoaderRepositories(Settings settings) {
+        settings.getPluginManagement().getRepositories().maven(repository -> {
+            repository.setName("Fabric");
+            repository.setUrl("https://maven.fabricmc.net/");
+            repository.content(content -> content.includeGroupByRegex("net\\.fabricmc(?:\\..*)?"));
+        });
+        settings.getPluginManagement().getRepositories().maven(repository -> {
+            repository.setName("NeoForged");
+            repository.setUrl("https://maven.neoforged.net/releases");
+            repository.content(content -> content.includeGroupByRegex("net\\.neoforged(?:\\..*)?"));
+        });
+        settings.getDependencyResolutionManagement().getRepositories().maven(repository -> {
+            repository.setName("Fabric");
+            repository.setUrl("https://maven.fabricmc.net/");
+            repository.content(content -> content.includeGroupByRegex("net\\.fabricmc(?:\\..*)?"));
+        });
+        settings.getDependencyResolutionManagement().getRepositories().maven(repository -> {
+            repository.setName("NeoForged");
+            repository.setUrl("https://maven.neoforged.net/releases");
+            repository.content(content -> {
+                content.includeGroupByRegex("net\\.neoforged(?:\\..*)?");
+                content.includeGroup("net.minecraftforge");
+            });
+        });
+    }
+
+    private static void writeTargetBuild(File directory, TargetDefinition target) {
+        String script;
+        if (target.loader().equals("fabric")
+                && (target.minecraftVersion().equals("1.20.1")
+                || target.minecraftVersion().equals("1.21.1")
+                || target.minecraftVersion().equals("1.21.4"))) {
+            String minecraftVersion = target.minecraftVersion();
+            String runtimeArtifact = "enderfall-sdk-runtime-" + minecraftVersion + "-fabric";
+            script = "plugins {\n"
+                    + "    id 'net.fabricmc.fabric-loom-remap' version '1.17.20'\n"
+                    + "}\n\n"
+                    + "dependencies {\n"
+                    + "    minecraft 'com.mojang:minecraft:" + minecraftVersion + "'\n"
+                    + "    mappings loom.officialMojangMappings()\n"
+                    + "    modImplementation 'net.fabricmc:fabric-loader:" + target.loaderVersion() + "'\n"
+                    + "    modImplementation 'net.fabricmc.fabric-api:fabric-api:"
+                    + target.platformApiVersion() + "'\n"
+                    + "    modImplementation 'uk.co.enderfall.sdk:" + runtimeArtifact + ":"
+                    + TargetCatalog.SDK_VERSION + "'\n"
+                    + "    runtimeOnly 'uk.co.enderfall.sdk:enderfall-sdk-runtime-core:"
+                    + TargetCatalog.SDK_VERSION + "'\n"
+                    + "}\n\n"
+                    + "loom {\n"
+                    + "    runs {\n"
+                    + "        client { runDir 'run/client' }\n"
+                    + "        server { runDir 'run/server'; programArgs 'nogui' }\n"
+                    + "    }\n"
+                    + "}\n\n"
+                    + "tasks.named('runServer').configure { standardInput = System.in }\n";
+        } else if (target.loader().equals("fabric") && target.minecraftVersion().equals("26.2")) {
+            script = "plugins {\n"
+                    + "    id 'net.fabricmc.fabric-loom' version '1.17.20'\n"
+                    + "}\n\n"
+                    + "dependencies {\n"
+                    + "    minecraft 'com.mojang:minecraft:26.2'\n"
+                    + "    implementation 'net.fabricmc:fabric-loader:0.19.5'\n"
+                    + "    implementation 'net.fabricmc.fabric-api:fabric-api:0.159.0+26.2'\n"
+                    + "    implementation 'uk.co.enderfall.sdk:enderfall-sdk-runtime-26.2-fabric:"
+                    + TargetCatalog.SDK_VERSION + "'\n"
+                    + "    runtimeOnly 'uk.co.enderfall.sdk:enderfall-sdk-runtime-core:"
+                    + TargetCatalog.SDK_VERSION + "'\n"
+                    + "}\n\n"
+                    + "loom {\n"
+                    + "    runs {\n"
+                    + "        client { runDir 'run/client' }\n"
+                    + "        server { runDir 'run/server'; programArgs 'nogui' }\n"
+                    + "    }\n"
+                    + "}\n\n"
+                    + "tasks.named('runServer').configure { standardInput = System.in }\n";
+        } else if (target.minecraftVersion().equals("1.20.1")
+                && (target.loader().equals("forge") || target.loader().equals("neoforge"))) {
+            String runtimeArtifact = "enderfall-sdk-runtime-1.20.1-" + target.loader();
+            String legacyVersion = target.loader().equals("forge")
+                    ? "    version = '1.20.1-" + target.loaderVersion() + "'\n"
+                    : "    enable { neoForgeVersion = '1.20.1-" + target.loaderVersion() + "' }\n";
+            script = "plugins {\n"
+                    + "    id 'net.neoforged.moddev.legacyforge' version '2.0.146'\n"
+                    + "}\n\n"
+                    + "dependencies {\n"
+                    + "    modImplementation 'uk.co.enderfall.sdk:" + runtimeArtifact + ":"
+                    + TargetCatalog.SDK_VERSION + "'\n"
+                    + "}\n\n"
+                    + "legacyForge {\n"
+                    + legacyVersion
+                    + "    validateAccessTransformers = true\n"
+                    + "    runs {\n"
+                    + "        client { client(); gameDirectory = file('run/client') }\n"
+                    + "        server { server(); gameDirectory = file('run/server'); programArgument '--nogui' }\n"
+                    + "    }\n"
+                    + "    mods {\n"
+                    + "        enderfall_consumer {\n"
+                    + "            sourceSet(sourceSets.main)\n"
+                    + "            sourceSet(sourceSets.portable)\n"
+                    + "        }\n"
+                    + "    }\n"
+                    + "}\n\n"
+                    + "tasks.named('runServer').configure { standardInput = System.in }\n";
+        } else if (target.loader().equals("neoforge")
+                && (target.minecraftVersion().equals("1.21.1")
+                || target.minecraftVersion().equals("1.21.4")
+                || target.minecraftVersion().equals("26.2"))) {
+            String neoVersion = target.loaderVersion();
+            String runtimeArtifact = "enderfall-sdk-runtime-" + target.minecraftVersion() + "-neoforge";
+            script = "plugins {\n"
+                    + "    id 'net.neoforged.moddev' version '2.0.146'\n"
+                    + "}\n\n"
+                    + "dependencies {\n"
+                    + "    implementation 'uk.co.enderfall.sdk:" + runtimeArtifact + ":"
+                    + TargetCatalog.SDK_VERSION + "'\n"
+                    + "}\n\n"
+                    + "neoForge {\n"
+                    + "    version = '" + neoVersion + "'\n"
+                    + "    runs {\n"
+                    + "        client { client(); gameDirectory = file('run/client') }\n"
+                    + "        server { server(); gameDirectory = file('run/server'); programArgument '--nogui' }\n"
+                    + "    }\n"
+                    + "    mods {\n"
+                    + "        enderfall_consumer {\n"
+                    + "            sourceSet(sourceSets.main)\n"
+                    + "            sourceSet(sourceSets.portable)\n"
+                    + "        }\n"
+                    + "    }\n"
+                    + "}\n\n"
+                    + "tasks.named('runServer').configure { standardInput = System.in }\n";
+        } else {
+            script = "// EnderFall target build is configured by the settings plugin.\n";
+        }
+        try {
+            Files.writeString(directory.toPath().resolve("build.gradle"), script,
+                    java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new GradleException("Cannot write generated target build for " + target.id(), exception);
         }
     }
 }

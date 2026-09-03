@@ -21,6 +21,9 @@ Entities, block entities, menus, screens, rendering, complex world generation, c
 data components, and broad native wrappers are intentionally outside the 1.0 foundation.
 Use a native source root for those until a later portable module defines a contract.
 
+`ResourceId` rejects absolute, empty, `.` and `..` path segments. The data generator
+also normalizes every destination and refuses to write outside its configured output root.
+
 APIs marked `@Experimental` are outside compatibility guarantees. APIs marked
 `@CapabilityGated` have identical source signatures on every target, but callers must
 check `context.capabilities()` where an old game genuinely cannot implement the feature.

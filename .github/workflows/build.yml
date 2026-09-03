@@ -32,5 +32,5 @@ jobs:
           name: verification-${{ runner.os }}
           path: |
             build/checksums/SHA256SUMS
-            build/reports/cyclonedx-direct/bom.*
+            build/reports/cyclonedx/bom.*
           if-no-files-found: error

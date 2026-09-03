@@ -143,8 +143,12 @@ public final class JsonDataGenerationContext implements DataGenerationContext {
     }
 
     public void writeTo(Path outputDirectory) throws IOException {
+        Path root = outputDirectory.toAbsolutePath().normalize();
         for (Map.Entry<String, String> resource : resources().entrySet()) {
-            Path target = outputDirectory.resolve(resource.getKey());
+            Path target = root.resolve(resource.getKey()).normalize();
+            if (!target.startsWith(root)) {
+                throw new IOException("Generated resource escapes output directory: " + resource.getKey());
+            }
             Files.createDirectories(target.getParent());
             Files.writeString(target, resource.getValue(), StandardCharsets.UTF_8);
         }

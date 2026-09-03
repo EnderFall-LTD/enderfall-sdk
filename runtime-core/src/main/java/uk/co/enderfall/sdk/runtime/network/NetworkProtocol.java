@@ -47,10 +47,11 @@ public final class NetworkProtocol {
             throw new PacketDecodingException("Capability count " + count + " exceeds " + MAXIMUM_PACKET_TYPES);
         }
         Set<PacketCapability> capabilities = new HashSet<>();
+        Set<ResourceId> packetIds = new HashSet<>();
         for (int index = 0; index < count; index++) {
             PacketCapability capability = new PacketCapability(reader.readResourceId(), reader.readVarInt(),
                     reader.readBoolean());
-            if (!capabilities.add(capability)) {
+            if (!packetIds.add(capability.id()) || !capabilities.add(capability)) {
                 throw new PacketDecodingException("Duplicate packet capability " + capability.id());
             }
         }

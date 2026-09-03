@@ -5,9 +5,11 @@ separate Minecraft mod artifacts from one portable source tree.
 
 The project is in pre-release development. The current implementation contains the
 Java 17 API contract, shared runtime services, reviewed target catalog, Gradle settings
-plugin, portable contract test mod, publishing safeguards, and a separate CC0 starter.
-Target-native loader adapters are the remaining critical release gate and must pass
-their real client/server matrix before any target is declared playable or stable.
+plugin, direct Fabric/Forge/NeoForge adapters for all nine catalog targets, a portable
+contract test mod, publishing safeguards, and a separate CC0 starter. All nine artifacts
+compile from one unchanged portable source tree and all nine dedicated-server targets
+have reached Minecraft's ready state. Client and same-version mixed-loader tests remain
+release gates, so networking is not yet declared stable.
 
 ## Coordinates
 
@@ -44,6 +46,7 @@ See `docs/architecture.md` and `docs/compatibility.md` for the detailed contract
 
 ## Validation status
 
-`buildAll` proves the Java and Gradle implementation builds. It does not prove Minecraft
-launch, dedicated-server isolation, or mixed-loader networking. Those remain explicitly
-unverified until target adapters and the automated game harness are present.
+`buildAll` proves the Java and Gradle implementation builds. Dedicated-server smoke
+results are tracked separately in `docs/targets.md`; they do not prove client behavior or
+mixed-loader networking. Coordinated publication remains blocked until the automated
+client/server matrix and manual release-candidate pass are complete.

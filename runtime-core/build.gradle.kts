@@ -15,6 +15,8 @@ java {
 tasks.shadowJar {
     archiveClassifier = ""
     relocate("org.tomlj", "uk.co.enderfall.sdk.internal.tomlj")
+    relocate("org.antlr.v4.runtime", "uk.co.enderfall.sdk.internal.antlr")
+    exclude("org/checkerframework/**")
 }
 
 tasks.jar {
@@ -36,12 +38,6 @@ publishing {
                 name = "EnderFall SDK Runtime Core"
                 description = project.description
                 url = "https://github.com/EnderFall/enderfall-sdk"
-                licenses {
-                    license {
-                        name = "Apache License, Version 2.0"
-                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
-                }
             }
         }
     }

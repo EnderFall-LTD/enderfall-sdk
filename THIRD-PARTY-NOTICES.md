@@ -3,6 +3,7 @@
 | Component | Version | License | Use |
 |---|---:|---|---|
 | TomlJ | 1.1.1 | Apache-2.0 | Relocated runtime TOML parser |
+| ANTLR 4 runtime | 4.11.1 | BSD-3-Clause | Relocated parser runtime used by TomlJ |
 | JUnit Jupiter | 5.12.2 | EPL-2.0 | Tests only |
 | Foojay resolver convention | 1.0.0 | Apache-2.0 | Java toolchain provisioning |
 | Shadow Gradle plugin | 9.6.1 | Apache-2.0 | Build-time relocation |

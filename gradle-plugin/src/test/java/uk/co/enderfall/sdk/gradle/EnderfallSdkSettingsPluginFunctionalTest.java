@@ -7,8 +7,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipFile;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
@@ -23,6 +27,9 @@ class EnderfallSdkSettingsPluginFunctionalTest {
     void freshConsumerBuildProducesNamedTargetJarsAndMetadata() throws IOException {
         Path repository = temporaryDirectory.resolve("repository");
         installApiStub(repository);
+        installRuntimeCoreStub(repository);
+        installFabricRuntimeStub(repository);
+        installNeoForgeRuntimeStub(repository);
         write("settings.gradle.kts", """
                 pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
                 plugins { id("uk.co.enderfall.sdk") }
@@ -62,14 +69,18 @@ class EnderfallSdkSettingsPluginFunctionalTest {
         Path neoForge = temporaryDirectory.resolve("build/releases/functional_mod-1.2.3+mc1.21.4-neoforge.jar");
         assertTrue(Files.isRegularFile(fabric));
         assertTrue(Files.isRegularFile(neoForge));
-        try (ZipFile zip = new ZipFile(fabric.toFile())) {
+        try (JarFile zip = new JarFile(fabric.toFile())) {
             assertTrue(zip.getEntry("fabric.mod.json") != null);
             assertTrue(zip.getEntry("META-INF/enderfall.mod.json") != null);
             assertTrue(zip.getEntry("META-INF/enderfall/portable-source.sha256") != null);
+            assertTrue(zip.getEntry("pack.mcmeta") != null);
+            assertEquals("COMPILE_VALIDATED", zip.getManifest().getMainAttributes()
+                    .getValue("EnderFall-Runtime-Status"));
         }
         try (ZipFile zip = new ZipFile(neoForge.toFile())) {
             assertTrue(zip.getEntry("META-INF/neoforge.mods.toml") != null);
             assertTrue(zip.getEntry("META-INF/enderfall.mod.json") != null);
+            assertTrue(zip.getEntry("pack.mcmeta") != null);
         }
         try (ZipFile fabricZip = new ZipFile(fabric.toFile()); ZipFile neoForgeZip = new ZipFile(neoForge.toFile())) {
             byte[] fabricHash = fabricZip.getInputStream(
@@ -78,6 +89,39 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                     neoForgeZip.getEntry("META-INF/enderfall/portable-source.sha256")).readAllBytes();
             assertTrue(java.util.Arrays.equals(fabricHash, neoForgeHash));
         }
+    }
+
+    @Test
+    void initializationTaskDoesNotMaterializeLoaderProjects() throws IOException {
+        write("settings.gradle.kts", """
+                plugins { id("uk.co.enderfall.sdk") }
+                rootProject.name = "initialization-fixture"
+                enderfallSdk {
+                    mod {
+                        id = "fixture_mod"
+                        name = "Fixture Mod"
+                        group = "dev.fixture"
+                        version = "1.0.0"
+                        entrypoint = "dev.fixture.FixtureMod"
+                    }
+                    targets {
+                        version("1.21.4") { loaders("fabric", "neoforge") }
+                        version("26.2") { loaders("fabric", "neoforge") }
+                    }
+                    developmentTarget = "26.2-fabric"
+                }
+                """);
+        write("build.gradle.kts", """
+                tasks.register("initializeMod") {
+                    doLast { println("INITIALIZATION_ONLY") }
+                }
+                """);
+
+        BuildResult result = runner("initializeMod").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":initializeMod").getOutcome());
+        assertTrue(result.getOutput().contains("INITIALIZATION_ONLY"));
+        assertTrue(!result.getOutput().contains("Fabric Loom:"));
     }
 
     @Test
@@ -102,6 +146,7 @@ class EnderfallSdkSettingsPluginFunctionalTest {
     void portableMinecraftImportFailsBeforeCompilation() throws IOException {
         Path repository = temporaryDirectory.resolve("repository");
         installApiStub(repository);
+        installFabricRuntimeStub(repository);
         write("settings.gradle.kts", """
                 pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
                 plugins { id("uk.co.enderfall.sdk") }
@@ -151,6 +196,152 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                   <modelVersion>4.0.0</modelVersion>
                   <groupId>uk.co.enderfall.sdk</groupId>
                   <artifactId>enderfall-sdk-api</artifactId>
+                  <version>0.1.0-beta.1</version>
+                </project>
+                """, StandardCharsets.UTF_8);
+    }
+
+    private static void installFabricRuntimeStub(Path repository) throws IOException {
+        Path workDirectory = Files.createTempDirectory(repository.getParent(), "fabric-runtime-stub-");
+        Path source = workDirectory.resolve(
+                "src/uk/co/enderfall/sdk/runtime/fabric/v1_21_4/FabricConsumerBootstrap.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package uk.co.enderfall.sdk.runtime.fabric.v1_21_4;
+                public final class FabricConsumerBootstrap {
+                    private FabricConsumerBootstrap() { }
+                    public static void initialize(String modId, String entrypoint, String clientEntrypoint) { }
+                }
+                """, StandardCharsets.UTF_8);
+        Path classes = workDirectory.resolve("classes");
+        Files.createDirectories(classes);
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        int result = compiler.run(null, null, null, "--release", "17", "-d", classes.toString(), source.toString());
+        if (result != 0) {
+            throw new IOException("Could not compile the Fabric runtime test stub");
+        }
+
+        Path artifactDirectory = repository.resolve(
+                "uk/co/enderfall/sdk/enderfall-sdk-runtime-1.21.4-fabric/0.1.0-beta.1");
+        Files.createDirectories(artifactDirectory);
+        Path jar = artifactDirectory.resolve("enderfall-sdk-runtime-1.21.4-fabric-0.1.0-beta.1.jar");
+        Path classFile = classes.resolve(
+                "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/FabricConsumerBootstrap.class");
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(jar))) {
+            output.putNextEntry(new JarEntry(
+                    "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/FabricConsumerBootstrap.class"));
+            output.write(Files.readAllBytes(classFile));
+            output.closeEntry();
+            output.putNextEntry(new JarEntry("fabric.mod.json"));
+            output.write("""
+                    {"schemaVersion":1,"id":"enderfall_sdk","version":"0.1.0-beta.1","name":"EnderFall SDK"}
+                    """.getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+        }
+        Files.writeString(artifactDirectory.resolve(
+                "enderfall-sdk-runtime-1.21.4-fabric-0.1.0-beta.1.pom"), """
+                <project xmlns="http://maven.apache.org/POM/4.0.0">
+                  <modelVersion>4.0.0</modelVersion>
+                  <groupId>uk.co.enderfall.sdk</groupId>
+                  <artifactId>enderfall-sdk-runtime-1.21.4-fabric</artifactId>
+                  <version>0.1.0-beta.1</version>
+                </project>
+                """, StandardCharsets.UTF_8);
+    }
+
+    private static void installRuntimeCoreStub(Path repository) throws IOException {
+        Path workDirectory = Files.createTempDirectory(repository.getParent(), "runtime-core-stub-");
+        Path source = workDirectory.resolve(
+                "src/uk/co/enderfall/sdk/runtime/data/PortableDataGeneratorMain.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package uk.co.enderfall.sdk.runtime.data;
+                public final class PortableDataGeneratorMain {
+                    private PortableDataGeneratorMain() { }
+                    public static void main(String[] arguments) { }
+                }
+                """, StandardCharsets.UTF_8);
+        Path classes = workDirectory.resolve("classes");
+        Files.createDirectories(classes);
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        int result = compiler.run(null, null, null, "--release", "17", "-d", classes.toString(), source.toString());
+        if (result != 0) {
+            throw new IOException("Could not compile the runtime-core test stub");
+        }
+
+        Path artifactDirectory = repository.resolve(
+                "uk/co/enderfall/sdk/enderfall-sdk-runtime-core/0.1.0-beta.1");
+        Files.createDirectories(artifactDirectory);
+        Path jar = artifactDirectory.resolve("enderfall-sdk-runtime-core-0.1.0-beta.1.jar");
+        Path classFile = classes.resolve(
+                "uk/co/enderfall/sdk/runtime/data/PortableDataGeneratorMain.class");
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(jar))) {
+            output.putNextEntry(new JarEntry(
+                    "uk/co/enderfall/sdk/runtime/data/PortableDataGeneratorMain.class"));
+            output.write(Files.readAllBytes(classFile));
+            output.closeEntry();
+        }
+        Files.writeString(artifactDirectory.resolve(
+                "enderfall-sdk-runtime-core-0.1.0-beta.1.pom"), """
+                <project xmlns="http://maven.apache.org/POM/4.0.0">
+                  <modelVersion>4.0.0</modelVersion>
+                  <groupId>uk.co.enderfall.sdk</groupId>
+                  <artifactId>enderfall-sdk-runtime-core</artifactId>
+                  <version>0.1.0-beta.1</version>
+                </project>
+                """, StandardCharsets.UTF_8);
+    }
+
+    private static void installNeoForgeRuntimeStub(Path repository) throws IOException {
+        Path workDirectory = Files.createTempDirectory(repository.getParent(), "neoforge-runtime-stub-");
+        Path source = workDirectory.resolve(
+                "src/uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeConsumerBootstrap.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package uk.co.enderfall.sdk.runtime.neoforge.v1_21_4;
+                public final class NeoForgeConsumerBootstrap {
+                    private NeoForgeConsumerBootstrap() { }
+                    public static void initialize(String modId, String entrypoint, String clientEntrypoint,
+                                                  Object modBus, ClassLoader consumerClassLoader) { }
+                }
+                """, StandardCharsets.UTF_8);
+        Path classes = workDirectory.resolve("classes");
+        Files.createDirectories(classes);
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        int result = compiler.run(null, null, null, "--release", "17", "-d", classes.toString(), source.toString());
+        if (result != 0) {
+            throw new IOException("Could not compile the NeoForge runtime test stub");
+        }
+
+        Path artifactDirectory = repository.resolve(
+                "uk/co/enderfall/sdk/enderfall-sdk-runtime-1.21.4-neoforge/0.1.0-beta.1");
+        Files.createDirectories(artifactDirectory);
+        Path jar = artifactDirectory.resolve("enderfall-sdk-runtime-1.21.4-neoforge-0.1.0-beta.1.jar");
+        Path classFile = classes.resolve(
+                "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeConsumerBootstrap.class");
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(jar))) {
+            output.putNextEntry(new JarEntry(
+                    "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeConsumerBootstrap.class"));
+            output.write(Files.readAllBytes(classFile));
+            output.closeEntry();
+            output.putNextEntry(new JarEntry("META-INF/neoforge.mods.toml"));
+            output.write("""
+                    modLoader="javafml"
+                    loaderVersion="[1,)"
+                    license="Apache-2.0"
+                    [[mods]]
+                    modId="enderfall_sdk"
+                    version="0.1.0-beta.1"
+                    displayName="EnderFall SDK"
+                    """.getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+        }
+        Files.writeString(artifactDirectory.resolve(
+                "enderfall-sdk-runtime-1.21.4-neoforge-0.1.0-beta.1.pom"), """
+                <project xmlns="http://maven.apache.org/POM/4.0.0">
+                  <modelVersion>4.0.0</modelVersion>
+                  <groupId>uk.co.enderfall.sdk</groupId>
+                  <artifactId>enderfall-sdk-runtime-1.21.4-neoforge</artifactId>
                   <version>0.1.0-beta.1</version>
                 </project>
                 """, StandardCharsets.UTF_8);

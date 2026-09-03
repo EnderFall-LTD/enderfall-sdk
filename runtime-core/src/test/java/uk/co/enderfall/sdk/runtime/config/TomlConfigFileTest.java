@@ -10,6 +10,9 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.co.enderfall.sdk.api.config.ConfigHandle;
@@ -54,11 +57,57 @@ class TomlConfigFileTest {
         assertTrue(Files.readString(path, StandardCharsets.UTF_8).contains("enabled = true"));
     }
 
+    @Test
+    void oversizedFileIsBackedUpWithoutBeingParsed() throws IOException {
+        ConfigSpec.Builder builder = ConfigSpec.builder();
+        ConfigKey<Boolean> enabled = builder.booleanValue("enabled", true, "Feature toggle.");
+        Path path = temporaryDirectory.resolve("oversized.toml");
+        Files.writeString(path, "x".repeat((int) TomlConfigFile.MAXIMUM_FILE_BYTES + 1),
+                StandardCharsets.UTF_8);
+
+        ConfigHandle handle = TomlConfigFile.load(path, builder.build(), new SilentLogger(), CLOCK);
+
+        assertTrue(handle.get(enabled));
+        assertTrue(Files.exists(temporaryDirectory.resolve("oversized.toml.invalid-20260903T123456Z.bak")));
+        assertTrue(Files.size(path) < TomlConfigFile.MAXIMUM_FILE_BYTES);
+    }
+
+    @Test
+    void malformedSensitiveValuesAreNeverIncludedInWarnings() throws IOException {
+        ConfigSpec.Builder builder = ConfigSpec.builder();
+        builder.value("token", uk.co.enderfall.sdk.api.config.ConfigType.STRING, "",
+                "Private token.", uk.co.enderfall.sdk.api.config.ConfigValidator.acceptingAll(), true);
+        Path path = temporaryDirectory.resolve("sensitive.toml");
+        String secret = "do-not-log-this-secret";
+        Files.writeString(path, "token = \"" + secret, StandardCharsets.UTF_8);
+        CapturingLogger logger = new CapturingLogger();
+
+        TomlConfigFile.load(path, builder.build(), logger, CLOCK);
+
+        assertTrue(logger.messages.stream().noneMatch(message -> message.contains(secret)));
+    }
+
     private static final class SilentLogger implements ModLogger {
         @Override public void debug(String message, Object... arguments) { }
         @Override public void info(String message, Object... arguments) { }
         @Override public void warn(String message, Object... arguments) { }
         @Override public void error(String message, Object... arguments) { }
         @Override public void error(String message, Throwable error, Object... arguments) { }
+    }
+
+    private static final class CapturingLogger implements ModLogger {
+        private final List<String> messages = new ArrayList<>();
+
+        @Override public void debug(String message, Object... arguments) { record(message, arguments); }
+        @Override public void info(String message, Object... arguments) { record(message, arguments); }
+        @Override public void warn(String message, Object... arguments) { record(message, arguments); }
+        @Override public void error(String message, Object... arguments) { record(message, arguments); }
+        @Override public void error(String message, Throwable error, Object... arguments) {
+            record(message, arguments);
+        }
+
+        private void record(String message, Object... arguments) {
+            messages.add(message + Arrays.toString(arguments));
+        }
     }
 }

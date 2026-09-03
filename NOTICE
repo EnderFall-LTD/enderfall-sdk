@@ -4,3 +4,7 @@ Copyright 2026 EnderFall
 This product includes TomlJ 1.1.1, Copyright 2020 Christian Pommranz,
 licensed under the Apache License 2.0. TomlJ classes are relocated inside the
 runtime-core distribution.
+
+This product includes the ANTLR 4 runtime 4.11.1, Copyright 2012-2022
+The ANTLR Project, licensed under the BSD 3-Clause License. Its classes are
+relocated inside the runtime-core distribution.

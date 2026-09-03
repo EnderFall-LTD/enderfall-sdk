@@ -9,6 +9,7 @@ immutable after startup; live reload is outside 1.0.
 - Valid unknown entries are retained.
 - Invalid known entries alone are replaced with defaults.
 - A malformed file is regenerated from defaults.
+- Files larger than 1 MiB are backed up and regenerated without being parsed.
 - Every repair first creates a UTC-timestamped `.bak` copy.
 - Failure to back up or atomically replace a file aborts startup.
 - Values marked sensitive are never included in warnings.

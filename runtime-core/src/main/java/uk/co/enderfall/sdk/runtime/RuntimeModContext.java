@@ -64,6 +64,10 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
         return networking;
     }
 
+    public DefaultConfigManager runtimeConfigs() {
+        return configs;
+    }
+
     public DefaultDataGenerationManager runtimeDataGeneration() {
         return dataGeneration;
     }

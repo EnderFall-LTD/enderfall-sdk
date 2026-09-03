@@ -50,6 +50,9 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
     @Input
     public abstract Property<String> getSdkVersion();
 
+    @Input
+    public abstract Property<Boolean> getBootstrapEnabled();
+
     @OutputDirectory
     public abstract DirectoryProperty getOutputDirectory();
 
@@ -58,6 +61,7 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
         Path output = getOutputDirectory().get().getAsFile().toPath();
         Files.createDirectories(output.resolve("META-INF"));
         write(output.resolve("META-INF/enderfall.mod.json"), universalMetadata());
+        write(output.resolve("pack.mcmeta"), packMetadata());
         switch (getLoader().get()) {
             case "fabric" -> write(output.resolve("fabric.mod.json"), fabricMetadata());
             case "forge" -> write(output.resolve("META-INF/mods.toml"), forgeMetadata(false));
@@ -84,8 +88,34 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
                 + "}\n";
     }
 
+    private String packMetadata() {
+        String versionFields = switch (getMinecraftVersion().get()) {
+            case "1.20.1" -> "    \"pack_format\": 15,\n";
+            case "1.21.1" -> "    \"pack_format\": 34,\n"
+                    + "    \"supported_formats\": [34, 48],\n";
+            case "1.21.4" -> "    \"pack_format\": 46,\n"
+                    + "    \"supported_formats\": [46, 61],\n";
+            case "26.2" -> "    \"min_format\": 88,\n"
+                    + "    \"max_format\": [107, 1],\n";
+            default -> throw new IllegalStateException("Missing pack format for " + getMinecraftVersion().get());
+        };
+        return "{\n"
+                + "  \"pack\": {\n"
+                + versionFields
+                + "    \"description\": " + json(getModName().get() + " resources") + "\n"
+                + "  }\n"
+                + "}\n";
+    }
+
     private String fabricMetadata() {
         String author = getAuthor().get().isBlank() ? "[]" : "[" + json(getAuthor().get()) + "]";
+        String entrypoints = "";
+        if (getBootstrapEnabled().get()) {
+            String bootstrap = GenerateBootstrapSourcesTask.generatedClassName(getModId().get(), "fabric");
+            entrypoints = "  \"entrypoints\": {\n"
+                    + "    \"main\": [" + json(bootstrap) + "]\n"
+                    + "  },\n";
+        }
         return "{\n"
                 + "  \"schemaVersion\": 1,\n"
                 + "  \"id\": " + json(getModId().get()) + ",\n"
@@ -94,6 +124,7 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
                 + "  \"authors\": " + author + ",\n"
                 + "  \"license\": " + json(getLicenseName().get()) + ",\n"
                 + "  \"environment\": \"*\",\n"
+                + entrypoints
                 + "  \"custom\": {\n"
                 + "    \"enderfall\": {\n"
                 + "      \"entrypoint\": " + json(getEntrypoint().get()) + ",\n"
@@ -114,7 +145,8 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
         boolean legacyMetadata = !neoForge || getMinecraftVersion().get().equals("1.20.1");
         String dependencyType = legacyMetadata ? "mandatory=true\n" : "type=\"required\"\n";
         String minecraftRange = '[' + getMinecraftVersion().get() + ']';
-        String platformModId = neoForge ? "neoforge" : "forge";
+        String platformModId = neoForge && !getMinecraftVersion().get().equals("1.20.1")
+                ? "neoforge" : "forge";
         return "modLoader=\"" + loaderName + "\"\n"
                 + "loaderVersion=\"[1,)\"\n"
                 + "license=" + toml(getLicenseName().get()) + "\n\n"

@@ -1,0 +1,7 @@
+{
+  "pack": {
+    "pack_format": 46,
+    "supported_formats": [46, 61],
+    "description": "EnderFall SDK runtime resources"
+  }
+}

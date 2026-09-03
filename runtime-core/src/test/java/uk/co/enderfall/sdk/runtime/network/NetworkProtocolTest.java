@@ -37,4 +37,14 @@ class NetworkProtocolTest {
                                 ResourceId.of("test_mod", "packet_" + index), 1, false))
                         .collect(java.util.stream.Collectors.toSet())));
     }
+
+    @Test
+    void rejectsConflictingDeclarationsForOnePacketId() {
+        ResourceId id = ResourceId.of("test_mod", "echo");
+        byte[] encoded = NetworkProtocol.encode(Set.of(
+                new NetworkProtocol.PacketCapability(id, 1, true),
+                new NetworkProtocol.PacketCapability(id, 1, false)));
+
+        assertThrows(PacketDecodingException.class, () -> NetworkProtocol.decode(encoded));
+    }
 }

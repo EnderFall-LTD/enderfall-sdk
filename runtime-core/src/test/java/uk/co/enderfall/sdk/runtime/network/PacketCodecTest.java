@@ -42,5 +42,8 @@ class PacketCodecTest {
         assertThrows(PacketDecodingException.class,
                 () -> new ByteArrayPacketReader(new byte[] {(byte) 0x80, (byte) 0x80, (byte) 0x80,
                         (byte) 0x80, (byte) 0x80, 0x00}, 32).readVarInt());
+        assertThrows(PacketDecodingException.class,
+                () -> new ByteArrayPacketReader(new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff,
+                        (byte) 0xff, 0x10}, 32).readVarInt());
     }
 }

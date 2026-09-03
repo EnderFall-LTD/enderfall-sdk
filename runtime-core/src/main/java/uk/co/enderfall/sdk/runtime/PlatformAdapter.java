@@ -35,4 +35,9 @@ public interface PlatformAdapter {
     void sendToPlayer(java.util.UUID playerId, ResourceId id, byte[] payload);
 
     void sendToAll(ResourceId id, byte[] payload);
+
+    /** Players currently connected to this physical server; empty on clients and before server start. */
+    default java.util.Collection<java.util.UUID> connectedPlayers() {
+        return java.util.List.of();
+    }
 }

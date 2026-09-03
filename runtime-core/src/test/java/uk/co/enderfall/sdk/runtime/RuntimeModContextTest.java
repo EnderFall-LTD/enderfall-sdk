@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +20,10 @@ import uk.co.enderfall.sdk.api.EnderfallMod;
 import uk.co.enderfall.sdk.api.ModContext;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.command.CommandSpec;
+import uk.co.enderfall.sdk.api.config.ConfigHandle;
+import uk.co.enderfall.sdk.api.config.ConfigKey;
+import uk.co.enderfall.sdk.api.config.ConfigScope;
+import uk.co.enderfall.sdk.api.config.ConfigSpec;
 import uk.co.enderfall.sdk.api.network.PacketDirection;
 import uk.co.enderfall.sdk.api.platform.CapabilitySet;
 import uk.co.enderfall.sdk.api.platform.Environment;
@@ -55,6 +62,31 @@ class RuntimeModContextTest {
         assertTrue(context.registrationsFrozen());
     }
 
+    @Test
+    void serverConfigUsesDefaultsUntilTheWorldDirectoryIsAvailable() throws IOException {
+        RecordingAdapter adapter = new RecordingAdapter(temporaryDirectory);
+        RuntimeModContext context = new RuntimeModContext("test_mod", adapter);
+        ConfigSpec.Builder builder = ConfigSpec.builder();
+        ConfigKey<Integer> count = builder.integer("feature.count", 5, 1, 20, "Feature count.");
+
+        ConfigHandle handle = context.configs().register("gameplay", ConfigScope.SERVER, builder.build());
+
+        assertEquals(5, handle.get(count));
+        assertThrows(IllegalStateException.class, handle::path);
+        Path serverDirectory = temporaryDirectory.resolve("serverconfig");
+        Files.createDirectories(serverDirectory);
+        Files.writeString(serverDirectory.resolve("test_mod-gameplay-server.toml"),
+                "feature.count = 12\n", StandardCharsets.UTF_8);
+        adapter.serverAvailable = true;
+        context.runtimeConfigs().loadServerConfigs();
+        assertEquals(12, handle.get(count));
+        assertEquals(serverDirectory.resolve("test_mod-gameplay-server.toml"), handle.path());
+
+        context.runtimeConfigs().unloadServerConfigs();
+        assertEquals(5, handle.get(count));
+        assertThrows(IllegalStateException.class, handle::path);
+    }
+
     public static final class ServerMod implements EnderfallMod {
         @Override
         public void initialize(ModContext context) {
@@ -77,6 +109,7 @@ class RuntimeModContextTest {
     private static final class RecordingAdapter implements PlatformAdapter {
         private final Path directory;
         private final List<ResourceId> items = new ArrayList<>();
+        private boolean serverAvailable;
 
         private RecordingAdapter(Path directory) {
             this.directory = directory;
@@ -85,7 +118,12 @@ class RuntimeModContextTest {
         @Override public PlatformInfo platformInfo() { return new TestPlatformInfo(); }
         @Override public CapabilitySet capabilities() { return new ImmutableCapabilitySet(java.util.Set.of()); }
         @Override public Path commonConfigDirectory() { return directory; }
-        @Override public Path serverConfigDirectory() { return directory.resolve("serverconfig"); }
+        @Override public Path serverConfigDirectory() {
+            if (!serverAvailable) {
+                throw new IllegalStateException("No server world is available");
+            }
+            return directory.resolve("serverconfig");
+        }
         @Override public void registerItem(ResourceId id, ItemSpec spec) { items.add(id); }
         @Override public void registerBlock(ResourceId id, BlockSpec spec, ItemSpec blockItemSpec) { }
         @Override public void registerCreativeTab(ResourceId id, CreativeTabSpec spec) { }

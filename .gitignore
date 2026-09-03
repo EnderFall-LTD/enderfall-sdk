@@ -1,6 +1,7 @@
 .gradle/
 .idea/
 .vscode/
+**/.eclipse/
 build/
 **/build/
 **/bin/

@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[10,)"
+license="Apache-2.0"
+
+[[mods]]
+modId="enderfall_sdk"
+version="${version}"
+displayName="EnderFall SDK"
+authors="EnderFall"
+description='''Portable mod runtime for Minecraft 26.2 on NeoForge.'''
+
+[[dependencies.enderfall_sdk]]
+modId="neoforge"
+type="required"
+versionRange="[26.2.0.75,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.enderfall_sdk]]
+modId="minecraft"
+type="required"
+versionRange="[26.2]"
+ordering="NONE"
+side="BOTH"

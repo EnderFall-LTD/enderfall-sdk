@@ -1,16 +1,20 @@
 package uk.co.enderfall.sdk.gradle;
 
 import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.Copy;
+import org.gradle.api.tasks.JavaExec;
+import org.gradle.api.tasks.bundling.AbstractArchiveTask;
 import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
@@ -20,6 +24,7 @@ import uk.co.enderfall.sdk.gradle.model.ModDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetCatalog;
 import uk.co.enderfall.sdk.gradle.model.TargetDefinition;
 import uk.co.enderfall.sdk.gradle.task.CheckDuplicateResourcesTask;
+import uk.co.enderfall.sdk.gradle.task.GenerateBootstrapSourcesTask;
 import uk.co.enderfall.sdk.gradle.task.GenerateModMetadataTask;
 import uk.co.enderfall.sdk.gradle.task.GeneratePortableSourceHashTask;
 import uk.co.enderfall.sdk.gradle.task.VerifyPortableSourcesTask;
@@ -28,8 +33,22 @@ final class TargetProjectConfigurator {
     private TargetProjectConfigurator() {
     }
 
-    static void configure(Project project, File consumerRoot, ModDefinition mod, TargetDefinition target) {
+    static void configure(Project project, File consumerRoot, ModDefinition mod, TargetDefinition target,
+                          List<URI> dependencyRepositories) {
         project.getPluginManager().apply(JavaPlugin.class);
+        dependencyRepositories.forEach(repositoryUrl -> project.getRepositories().maven(repository -> {
+            repository.setUrl(repositoryUrl);
+            String host = repositoryUrl.getHost();
+            if (host != null && host.equalsIgnoreCase("maven.fabricmc.net")) {
+                repository.content(content -> content.includeGroupByRegex("net\\.fabricmc(?:\\..*)?"));
+            } else if (host != null && host.equalsIgnoreCase("maven.neoforged.net")) {
+                repository.content(content -> {
+                    content.includeGroupByRegex("net\\.neoforged(?:\\..*)?");
+                    content.includeGroupByRegex("net\\.neoforged\\.fancymodloader(?:\\..*)?");
+                    content.includeGroup("net.minecraftforge");
+                });
+            }
+        }));
         project.setGroup(mod.getGroup());
         project.setVersion(mod.getVersion());
         project.setDescription(mod.getName() + " for " + target.id());
@@ -60,6 +79,27 @@ final class TargetProjectConfigurator {
                 "uk.co.enderfall.sdk:enderfall-sdk-api:" + TargetCatalog.SDK_VERSION);
         project.getDependencies().add(main.getCompileOnlyConfigurationName(),
                 "uk.co.enderfall.sdk:enderfall-sdk-api:" + TargetCatalog.SDK_VERSION);
+        Configuration dataRuntime = project.getConfigurations().create("enderfallDataRuntime");
+        dataRuntime.setCanBeConsumed(false);
+        dataRuntime.setCanBeResolved(true);
+        project.getDependencies().add(dataRuntime.getName(),
+                "uk.co.enderfall.sdk:enderfall-sdk-runtime-core:" + TargetCatalog.SDK_VERSION);
+
+        if (TargetCatalog.hasRuntimeAdapter(target)) {
+            var bootstrap = project.getTasks().register("generateEnderfallBootstrap",
+                    GenerateBootstrapSourcesTask.class, task -> {
+                    task.setGroup("enderfall sdk");
+                    task.setDescription("Generates the loader bootstrap for " + target.id());
+                    task.getModId().set(mod.getId());
+                    task.getEntrypoint().set(mod.getEntrypoint());
+                    task.getClientEntrypoint().set(mod.getClientEntrypoint());
+                    task.getLoader().set(target.loader());
+                    task.getMinecraftVersion().set(target.minecraftVersion());
+                    task.getOutputDirectory().set(project.getLayout().getBuildDirectory()
+                            .dir("generated/enderfallBootstrap"));
+                    });
+            main.getJava().srcDir(bootstrap.flatMap(GenerateBootstrapSourcesTask::getOutputDirectory));
+        }
 
         var metadata = project.getTasks().register("generateModMetadata", GenerateModMetadataTask.class, task -> {
             task.setGroup("enderfall sdk");
@@ -76,6 +116,7 @@ final class TargetProjectConfigurator {
             task.getLoaderVersion().set(target.loaderVersion());
             task.getJavaVersion().set(target.javaVersion());
             task.getSdkVersion().set(TargetCatalog.SDK_VERSION);
+            task.getBootstrapEnabled().set(TargetCatalog.hasRuntimeAdapter(target));
             task.getOutputDirectory().set(project.getLayout().getBuildDirectory().dir("generated/enderfallMetadata"));
         });
         main.getResources().srcDir(metadata.flatMap(GenerateModMetadataTask::getOutputDirectory));
@@ -98,8 +139,8 @@ final class TargetProjectConfigurator {
                     task.getOutputFile().set(project.getLayout().getBuildDirectory()
                             .file("generated/portableHash/META-INF/enderfall/portable-source.sha256"));
                 });
-        main.getResources().srcDir(portableHash.flatMap(task -> task.getOutputFile())
-                .map(file -> file.getAsFile().getParentFile().getParentFile().getParentFile()));
+        var portableHashRoot = project.getLayout().getBuildDirectory().dir("generated/portableHash");
+        main.getResources().srcDir(portableHashRoot);
 
         var duplicateCheck = project.getTasks().register("checkDuplicateResources", CheckDuplicateResourcesTask.class,
                 task -> {
@@ -107,8 +148,7 @@ final class TargetProjectConfigurator {
                     task.setDescription("Fails when multiple selected source roots contain the same resource path.");
                     task.getResourceRoots().from(allResourceRoots);
                     task.getResourceRoots().from(metadata.flatMap(GenerateModMetadataTask::getOutputDirectory));
-                    task.getResourceRoots().from(portableHash.flatMap(hashTask -> hashTask.getOutputFile())
-                            .map(file -> file.getAsFile().getParentFile().getParentFile().getParentFile()));
+                    task.getResourceRoots().from(portableHashRoot);
                     task.dependsOn(metadata, portableHash);
                 });
         var duplicateClassCheck = project.getTasks().register("checkDuplicateClasses",
@@ -132,12 +172,11 @@ final class TargetProjectConfigurator {
             }
         });
         project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources.class, task -> {
-            task.dependsOn(metadata, duplicateCheck);
+            task.dependsOn(metadata, portableHash, duplicateCheck);
             task.setDuplicatesStrategy(DuplicatesStrategy.FAIL);
         });
         project.getTasks().named(JavaPlugin.JAR_TASK_NAME, Jar.class, task -> {
-            task.getArchiveFileName().set(mod.getId() + '-' + mod.getVersion() + "+mc"
-                    + target.minecraftVersion() + '-' + target.loader() + ".jar");
+            task.getArchiveFileName().set(artifactName(mod, target));
             task.from(portable.getOutput());
             task.dependsOn(duplicateCheck, duplicateClassCheck, portableHash);
             task.setPreserveFileTimestamps(false);
@@ -150,8 +189,13 @@ final class TargetProjectConfigurator {
                     "Implementation-Title", mod.getName(),
                     "Implementation-Version", mod.getVersion(),
                     "EnderFall-Target", target.id(),
-                    "EnderFall-Runtime-Status", "UNVALIDATED"
+                    "EnderFall-Runtime-Status", "COMPILE_VALIDATED"
             ));
+        });
+        project.getTasks().withType(AbstractArchiveTask.class).configureEach(task -> {
+            if (task.getName().equals("remapJar") || task.getName().equals("reobfJar")) {
+                task.getArchiveFileName().set(artifactName(mod, target));
+            }
         });
         project.getTasks().named("check").configure(task ->
                 task.dependsOn(portableCheck, duplicateCheck, duplicateClassCheck));
@@ -159,18 +203,41 @@ final class TargetProjectConfigurator {
         project.getTasks().register("collectArtifact", Copy.class, task -> {
             task.setGroup("build");
             task.dependsOn(project.getTasks().named("build"));
-            task.from(project.getTasks().named(JavaPlugin.JAR_TASK_NAME, Jar.class).flatMap(Jar::getArchiveFile));
+            task.from(project.provider(() -> {
+                var reobf = project.getTasks().findByName("reobfJar");
+                if (reobf instanceof AbstractArchiveTask archiveTask) {
+                    return archiveTask.getArchiveFile().get().getAsFile();
+                }
+                var remap = project.getTasks().findByName("remapJar");
+                if (remap instanceof AbstractArchiveTask archiveTask) {
+                    return archiveTask.getArchiveFile().get().getAsFile();
+                }
+                return project.getTasks().named(JavaPlugin.JAR_TASK_NAME, Jar.class)
+                        .get().getArchiveFile().get().getAsFile();
+            }));
             task.into(new File(consumerRoot, "build/releases"));
         });
 
-        registerUnavailableRuntimeTask(project, "runClient", target);
-        registerUnavailableRuntimeTask(project, "runServer", target);
-        project.getTasks().register("generateData", task -> {
+        if (!TargetCatalog.hasRuntimeAdapter(target)) {
+            registerUnavailableRuntimeTask(project, "runClient", target);
+            registerUnavailableRuntimeTask(project, "runServer", target);
+        }
+        var dataOutput = project.getLayout().getBuildDirectory().dir("generated/enderfallData/resources");
+        main.getResources().srcDir(dataOutput);
+        var generateData = project.getTasks().register("generateData", JavaExec.class, task -> {
             task.setGroup("enderfall sdk");
             task.setDescription("Generates portable data for " + target.id());
-            task.doLast(ignored -> project.getLogger().lifecycle(
-                    "No data-generation entrypoint is configured for {}.", target.id()));
+            task.dependsOn(project.getTasks().named(portable.getClassesTaskName()));
+            task.getMainClass().set("uk.co.enderfall.sdk.runtime.data.PortableDataGeneratorMain");
+            task.setClasspath(project.files(portable.getOutput(), dataRuntime));
+            task.getJavaLauncher().set(toolchains.launcherFor(spec ->
+                    spec.getLanguageVersion().set(JavaLanguageVersion.of(17))));
+            task.args(mod.getId(), mod.getEntrypoint(), target.minecraftVersion(), target.loader(),
+                    dataOutput.get().getAsFile().getAbsolutePath());
+            task.getOutputs().dir(dataOutput);
         });
+        project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME).configure(task ->
+                task.dependsOn(generateData));
     }
 
     private static void registerUnavailableRuntimeTask(Project project, String taskName, TargetDefinition target) {
@@ -182,6 +249,11 @@ final class TargetProjectConfigurator {
                         + " is not available until that runtime adapter passes its contract build");
             });
         });
+    }
+
+    private static String artifactName(ModDefinition mod, TargetDefinition target) {
+        return mod.getId() + '-' + mod.getVersion() + "+mc"
+                + target.minecraftVersion() + '-' + target.loader() + ".jar";
     }
 
     private static List<File> portableJavaRoots(File root) {

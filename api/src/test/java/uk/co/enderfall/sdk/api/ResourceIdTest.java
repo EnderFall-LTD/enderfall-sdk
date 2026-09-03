@@ -19,4 +19,12 @@ class ResourceIdTest {
         assertThrows(IllegalArgumentException.class, () -> ResourceId.parse("stone"));
         assertThrows(IllegalArgumentException.class, () -> ResourceId.of("Example", "stone"));
     }
+
+    @Test
+    void rejectsPathsThatCouldEscapeDataGenerationRoots() {
+        assertThrows(IllegalArgumentException.class, () -> ResourceId.of("example", "../outside"));
+        assertThrows(IllegalArgumentException.class, () -> ResourceId.of("example", "inside/../../outside"));
+        assertThrows(IllegalArgumentException.class, () -> ResourceId.of("example", "/absolute"));
+        assertThrows(IllegalArgumentException.class, () -> ResourceId.of("example", "double//separator"));
+    }
 }

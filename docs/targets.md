@@ -1,6 +1,7 @@
 # Target catalog
 
-Every value is exact. Releases reject `+`, `latest.*`, and `-SNAPSHOT` selectors.
+Every value is exact. A `+` inside an exact Fabric build version is literal; releases
+reject wildcard selectors such as `1.+`, `latest.*`, ranges, and `-SNAPSHOT` versions.
 
 | Minecraft | Loader | Java | Loader version | Platform API | Milestone |
 |---|---|---:|---|---|---|
@@ -17,6 +18,21 @@ Every value is exact. Releases reject `+`, `latest.*`, and `-SNAPSHOT` selectors
 The catalog is not the same thing as runtime acceptance. Each target moves through
 `catalogued`, `compiles`, `client smoke`, `server smoke`, and `mixed-loader accepted`.
 Only the final state may be advertised as supported.
+
+## Current validation snapshot
+
+Validated locally on Windows on 2026-09-03:
+
+| Target group | Unchanged portable build | Dedicated server ready | Client smoke | Mixed-loader |
+|---|---|---|---|---|
+| 1.20.1 Fabric/Forge/NeoForge | pass | pass | pending | pending |
+| 1.21.1 Fabric/NeoForge | pass | pass | pending | pending |
+| 1.21.4 Fabric/NeoForge | pass | pass | pending | pending |
+| 26.2 Fabric/NeoForge | pass | pass | pending | pending |
+
+The nine output JARs carried the same portable-source SHA-256 value. Server-ready means
+the generated consumer loaded and Minecraft reached `Done`; it does not claim that every
+foundation feature or any network pairing has been exercised in-game.
 
 The newest two Minecraft release lines are active. Older lines receive six months'
 notice before maintenance status and retain compile/smoke lanes and permanent artifacts.

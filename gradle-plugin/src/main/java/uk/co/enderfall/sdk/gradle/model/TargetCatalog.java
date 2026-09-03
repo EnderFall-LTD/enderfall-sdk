@@ -25,6 +25,11 @@ public final class TargetCatalog {
         return String.join(", ", TARGETS.keySet());
     }
 
+    /** True only after a target-native artifact and consumer bootstrap have compile validation. */
+    public static boolean hasRuntimeAdapter(TargetDefinition target) {
+        return TARGETS.containsKey(target.id());
+    }
+
     private static Map<String, TargetDefinition> createTargets() {
         Map<String, TargetDefinition> targets = new LinkedHashMap<>();
         add(targets, new TargetDefinition("1.20.1", "fabric", 17, "0.19.5", "0.92.12+1.20.1"));

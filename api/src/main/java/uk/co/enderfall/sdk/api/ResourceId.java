@@ -14,7 +14,7 @@ public record ResourceId(String namespace, String path) implements Comparable<Re
         if (!NAMESPACE.matcher(namespace).matches()) {
             throw new IllegalArgumentException("Invalid resource namespace: " + namespace);
         }
-        if (path.isEmpty() || !PATH.matcher(path).matches()) {
+        if (path.isEmpty() || !PATH.matcher(path).matches() || unsafePath(path)) {
             throw new IllegalArgumentException("Invalid resource path: " + path);
         }
     }
@@ -30,6 +30,18 @@ public record ResourceId(String namespace, String path) implements Comparable<Re
             throw new IllegalArgumentException("Resource ID must be namespace:path: " + value);
         }
         return new ResourceId(value.substring(0, separator), value.substring(separator + 1));
+    }
+
+    private static boolean unsafePath(String value) {
+        if (value.startsWith("/") || value.endsWith("/") || value.contains("//")) {
+            return true;
+        }
+        for (String segment : value.split("/")) {
+            if (segment.equals(".") || segment.equals("..")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

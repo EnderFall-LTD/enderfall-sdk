@@ -1,0 +1,87 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'com.gradleup.shadow' version '9.6.1'
+    id 'net.neoforged.moddev' version '2.0.146'
+}
+
+description = 'EnderFall SDK runtime adapter for Minecraft 1.21.4 on NeoForge'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+    withJavadocJar()
+}
+
+neoForge {
+    version = '21.4.157'
+    runs {
+        client {
+            client()
+            gameDirectory = file('run/client')
+        }
+        server {
+            server()
+            gameDirectory = file('run/server')
+            programArgument '--nogui'
+        }
+    }
+    mods {
+        enderfall_sdk {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+configurations {
+    shade
+}
+
+dependencies {
+    implementation project(':api')
+    implementation project(':runtime-core')
+
+    shade project(':api')
+    shade project(':runtime-core')
+    shade 'org.tomlj:tomlj:1.1.1'
+    shade 'org.antlr:antlr4-runtime:4.11.1'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+}
+
+def sdkArtifactVersion = version.toString()
+tasks.processResources {
+    inputs.property('version', sdkArtifactVersion)
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand(version: sdkArtifactVersion)
+    }
+}
+
+tasks.shadowJar {
+    configurations = [project.configurations.shade]
+    archiveClassifier = ''
+    relocate 'org.tomlj', 'uk.co.enderfall.sdk.internal.tomlj'
+    relocate 'org.antlr.v4.runtime', 'uk.co.enderfall.sdk.internal.antlr'
+    exclude 'org/checkerframework/**'
+}
+
+tasks.jar {
+    archiveClassifier = 'plain'
+}
+
+tasks.assemble {
+    dependsOn tasks.shadowJar
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'enderfall-sdk-runtime-1.21.4-neoforge'
+            artifact tasks.shadowJar
+            artifact tasks.sourcesJar
+            artifact tasks.javadocJar
+        }
+    }
+}

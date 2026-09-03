@@ -16,10 +16,12 @@ import uk.co.enderfall.sdk.api.network.PacketDirection;
 import uk.co.enderfall.sdk.api.network.PacketHandler;
 import uk.co.enderfall.sdk.api.network.PacketRequirement;
 import uk.co.enderfall.sdk.api.network.PacketType;
+import uk.co.enderfall.sdk.runtime.DisconnectHandler;
 import uk.co.enderfall.sdk.runtime.PlatformAdapter;
 import uk.co.enderfall.sdk.runtime.RegistrationGateAccess;
 
 public final class DefaultNetworkManager implements NetworkManager {
+    private static final UUID SERVER_CONNECTION_ID = new UUID(0L, 0L);
     private final String modId;
     private final String target;
     private final PlatformAdapter adapter;
@@ -27,6 +29,7 @@ public final class DefaultNetworkManager implements NetworkManager {
     private final ModLogger logger;
     private final Map<ResourceId, Registration<?>> registrations = new HashMap<>();
     private final Map<UUID, Set<ProtocolKey>> remoteCapabilities = new ConcurrentHashMap<>();
+    private final ResourceId manifestId;
 
     public DefaultNetworkManager(String modId, String target, PlatformAdapter adapter,
                                  RegistrationGateAccess gate, ModLogger logger) {
@@ -35,6 +38,9 @@ public final class DefaultNetworkManager implements NetworkManager {
         this.adapter = adapter;
         this.gate = gate;
         this.logger = logger;
+        manifestId = ResourceId.of(modId, "_enderfall/manifest");
+        adapter.registerPayload(manifestId, PacketDirection.BIDIRECTIONAL,
+                PacketType.SDK_MAXIMUM_BYTES, this::receiveCapabilityManifest);
     }
 
     @Override
@@ -57,26 +63,45 @@ public final class DefaultNetworkManager implements NetworkManager {
     @Override
     public <T> void sendToServer(PacketType<T> packet, T value) {
         requireDirection(packet, PacketDirection.SERVERBOUND);
+        if (!requireRemote(SERVER_CONNECTION_ID, packet)) {
+            return;
+        }
         adapter.sendToServer(packet.id(), encode(packet, value));
     }
 
     @Override
     public <T> void sendToPlayer(UUID playerId, PacketType<T> packet, T value) {
         requireDirection(packet, PacketDirection.CLIENTBOUND);
-        requireRemote(playerId, packet);
+        if (!requireRemote(playerId, packet)) {
+            return;
+        }
         adapter.sendToPlayer(playerId, packet.id(), encode(packet, value));
     }
 
     @Override
     public <T> void sendToAll(PacketType<T> packet, T value) {
         requireDirection(packet, PacketDirection.CLIENTBOUND);
-        adapter.sendToAll(packet.id(), encode(packet, value));
+        for (UUID playerId : adapter.connectedPlayers()) {
+            sendToPlayer(playerId, packet, value);
+        }
     }
 
     @Override
     public boolean remoteSupports(UUID playerId, PacketType<?> packet) {
         return remoteCapabilities.getOrDefault(playerId, Set.of())
                 .contains(new ProtocolKey(packet.id(), packet.schemaVersion()));
+    }
+
+    /** Begins play-phase negotiation for a newly joined player. */
+    public void connectionOpened(UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
+        remoteCapabilities.remove(playerId);
+        adapter.sendToPlayer(playerId, manifestId, createCapabilityManifest());
+    }
+
+    /** Removes all negotiated state for a disconnected player. */
+    public void connectionClosed(UUID playerId) {
+        remoteCapabilities.remove(Objects.requireNonNull(playerId, "playerId"));
     }
 
     public void setRemoteCapabilities(UUID playerId, Set<ProtocolKey> capabilities) {
@@ -114,6 +139,15 @@ public final class DefaultNetworkManager implements NetworkManager {
             Set<ProtocolKey> remote = manifest.capabilities().stream()
                     .map(capability -> new ProtocolKey(capability.id(), capability.schemaVersion()))
                     .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            Set<ProtocolKey> local = localCapabilities();
+            for (NetworkProtocol.PacketCapability capability : manifest.capabilities()) {
+                if (capability.required()
+                        && !local.contains(new ProtocolKey(capability.id(), capability.schemaVersion()))) {
+                    disconnect.accept("Missing required EnderFall packet " + capability.id()
+                            + " schema " + capability.schemaVersion());
+                    return false;
+                }
+            }
             for (Registration<?> registration : registrations.values()) {
                 if (registration.packet.requirement() == PacketRequirement.REQUIRED
                         && !remote.contains(new ProtocolKey(registration.packet.id(),
@@ -136,6 +170,10 @@ public final class DefaultNetworkManager implements NetworkManager {
                              Optional<UUID> playerId, java.util.function.Consumer<String> disconnect) {
         try {
             requireIncomingDirection(registration.packet, direction);
+            UUID remoteId = playerId.orElse(SERVER_CONNECTION_ID);
+            if (!remoteSupports(remoteId, registration.packet)) {
+                throw new PacketDecodingException("Packet was not negotiated for this connection");
+            }
             ByteArrayPacketReader reader = new ByteArrayPacketReader(payload, registration.packet.maximumBytes());
             T decoded = registration.packet.codec().decode(reader);
             if (reader.remainingBytes() != 0) {
@@ -149,6 +187,21 @@ public final class DefaultNetworkManager implements NetworkManager {
         }
     }
 
+    private void receiveCapabilityManifest(byte[] payload, PacketDirection direction, Optional<UUID> playerId,
+                                           DisconnectHandler disconnect) {
+        UUID remoteId;
+        if (direction == PacketDirection.SERVERBOUND) {
+            remoteId = playerId.orElseThrow(() ->
+                    new IllegalStateException("Serverbound manifest has no player"));
+        } else {
+            remoteId = SERVER_CONNECTION_ID;
+        }
+        if (acceptCapabilityManifest(remoteId, payload, disconnect::disconnect)
+                && direction == PacketDirection.CLIENTBOUND) {
+            adapter.sendToServer(manifestId, createCapabilityManifest());
+        }
+    }
+
     private <T> byte[] encode(PacketType<T> packet, T value) {
         Registration<?> registered = registrations.get(packet.id());
         if (registered == null || registered.packet.schemaVersion() != packet.schemaVersion()) {
@@ -159,10 +212,14 @@ public final class DefaultNetworkManager implements NetworkManager {
         return writer.toByteArray();
     }
 
-    private void requireRemote(UUID playerId, PacketType<?> packet) {
-        if (packet.requirement() == PacketRequirement.REQUIRED && !remoteSupports(playerId, packet)) {
-            throw new IllegalStateException("Remote player does not support required packet " + packet.id());
+    private boolean requireRemote(UUID playerId, PacketType<?> packet) {
+        if (remoteSupports(playerId, packet)) {
+            return true;
         }
+        if (packet.requirement() == PacketRequirement.REQUIRED) {
+            throw new IllegalStateException("Remote connection does not support required packet " + packet.id());
+        }
+        return false;
     }
 
     private static void requireDirection(PacketType<?> packet, PacketDirection requested) {
@@ -188,7 +245,9 @@ public final class DefaultNetworkManager implements NetworkManager {
         @Override
         public boolean remoteSupports(ResourceId packetId, int schemaVersion) {
             return playerId.map(id -> capabilities.getOrDefault(id, Set.of())
-                    .contains(new ProtocolKey(packetId, schemaVersion))).orElse(false);
+                    .contains(new ProtocolKey(packetId, schemaVersion)))
+                    .orElseGet(() -> capabilities.getOrDefault(SERVER_CONNECTION_ID, Set.of())
+                            .contains(new ProtocolKey(packetId, schemaVersion)));
         }
 
         @Override

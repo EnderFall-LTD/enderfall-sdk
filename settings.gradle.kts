@@ -1,5 +1,11 @@
 pluginManagement {
     repositories {
+        maven("https://maven.fabricmc.net/") {
+            name = "Fabric"
+        }
+        maven("https://maven.neoforged.net/releases") {
+            name = "NeoForged"
+        }
         gradlePluginPortal()
         mavenCentral()
     }
@@ -10,8 +16,16 @@ plugins {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // Loom and ModDevGradle add generated/local remapping repositories to target projects.
+    // Dependency verification still pins every resolved artifact by SHA-256.
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
+        maven("https://maven.fabricmc.net/") {
+            name = "Fabric"
+        }
+        maven("https://maven.neoforged.net/releases") {
+            name = "NeoForged"
+        }
         gradlePluginPortal()
         mavenCentral()
     }
@@ -23,6 +37,15 @@ include(
     "bom",
     "api",
     "runtime-core",
+    "runtime-fabric-1.20.1",
+    "runtime-fabric-1.21.1",
+    "runtime-fabric-1.21.4",
+    "runtime-fabric-26.2",
+    "runtime-forge-1.20.1",
+    "runtime-neoforge-1.20.1",
+    "runtime-neoforge-1.21.4",
+    "runtime-neoforge-1.21.1",
+    "runtime-neoforge-26.2",
     "gradle-plugin",
     "test-mod"
 )

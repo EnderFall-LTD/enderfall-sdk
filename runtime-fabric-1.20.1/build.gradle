@@ -1,0 +1,56 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.fabricmc.fabric-loom-remap' version '1.17.20'
+}
+
+description = 'EnderFall SDK runtime adapter for Minecraft 1.20.1 on Fabric'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+    withSourcesJar()
+    withJavadocJar()
+}
+
+sourceSets.main {
+    java.srcDir(project(':runtime-fabric-1.21.4').file('src/main/java'))
+    java.exclude('**/FabricPlatformAdapter.java')
+    java.exclude('**/FabricClientHooks.java')
+    java.exclude('**/FabricRawPayload.java')
+}
+
+loom {
+    runs {
+        client { runDir = 'run/client' }
+        server { runDir = 'run/server'; programArgs 'nogui' }
+    }
+}
+
+dependencies {
+    minecraft 'com.mojang:minecraft:1.20.1'
+    mappings loom.officialMojangMappings()
+    modImplementation 'net.fabricmc:fabric-loader:0.19.5'
+    modImplementation 'net.fabricmc.fabric-api:fabric-api:0.92.12+1.20.1'
+    compileOnly project(':runtime-core')
+    include project(path: ':runtime-core', configuration: 'shadowRuntimeElements')
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.compilerArgs.add('-Xlint:-auxiliaryclass')
+}
+
+def sdkArtifactVersion = version.toString()
+tasks.processResources {
+    inputs.property('version', sdkArtifactVersion)
+    filesMatching('fabric.mod.json') { expand(version: sdkArtifactVersion) }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'enderfall-sdk-runtime-1.20.1-fabric'
+            from components.java
+        }
+    }
+}

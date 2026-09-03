@@ -1,0 +1,6 @@
+EnderFall SDK
+Copyright 2026 EnderFall
+
+This product includes TomlJ 1.1.1, Copyright 2020 Christian Pommranz,
+licensed under the Apache License 2.0. TomlJ classes are relocated inside the
+runtime-core distribution.

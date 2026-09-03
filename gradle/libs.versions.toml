@@ -1,0 +1,28 @@
+[versions]
+gradle = "9.7.1"
+stonecutter = "0.9.7"
+loom-back-compat = "0.4.2"
+foojay = "1.0.0"
+fabric-loom = "1.17.20"
+moddevgradle = "2.0.146"
+tomlj = "1.1.1"
+junit = "5.12.2"
+shadow = "9.6.1"
+cyclonedx = "3.4.1"
+japicmp = "0.26.1"
+plugin-publish = "2.1.1"
+
+[libraries]
+tomlj = { module = "org.tomlj:tomlj", version.ref = "tomlj" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+japicmp = { module = "com.github.siom79.japicmp:japicmp", version.ref = "japicmp" }
+
+[plugins]
+foojay = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
+stonecutter = { id = "dev.kikugie.stonecutter", version.ref = "stonecutter" }
+loom-back-compat = { id = "dev.kikugie.loom-back-compat", version.ref = "loom-back-compat" }
+moddev = { id = "net.neoforged.moddev", version.ref = "moddevgradle" }
+legacy-forge = { id = "net.neoforged.moddev.legacyforge", version.ref = "moddevgradle" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
+plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }

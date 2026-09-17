@@ -46,7 +46,7 @@ final class PortableMenuScreenEmitter {
         String content = SCREEN.formatted(outputRoot.substring(0, outputRoot.length() - 1).replace('/', '.'),
                 prefix + "PortableMenuScreen", rendering.graphics, rendering.description, rendering.method,
                 rendering.centeredText, rendering.text, rendering.gui, rendering.screen, gauges ? GAUGES : "",
-                backgroundInsideRender ? "super.renderBackground(graphics, mouseX, mouseY, partialTick);\n                    " : "",
+                backgroundInsideRender ? "super.renderBackground(graphics, mouseX, mouseY, partialTick);\n        " : "",
                 backgroundInsideRender ? BACKGROUND_OVERRIDE : "");
         return List.of(new RuntimeSource(canonical, outputRoot + filename, content.getBytes(StandardCharsets.UTF_8)));
     }
@@ -64,8 +64,8 @@ final class PortableMenuScreenEmitter {
             """ + "                    ";
 
     private static final String BACKGROUND_OVERRIDE = """
-                // Screen.render invokes this on 1.21.x. The background was already drawn
-                // before our foreground, so do not blur the panel again during widget rendering.
+                // Screen.render invokes this after our foreground. The background was already drawn
+                // first, so do not blur the panel again during widget rendering.
                 @Override
                 public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
                 }

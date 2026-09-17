@@ -24,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1211GenerationTest {
     private static final String TARGET = "1.21.1-neoforge";
     private static final String EXPECTED_DIGEST =
-            "6c0556e72048ed86ba65838bf54855bb1c1f632fa12251bc22565adb34564041";
+            "1e57d889e4bce92c7ab896cebe85ee0a93892ba1484c92564bc6c9d7acfd2a55";
     private static final String PACKAGE_PATH = "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final String CANONICAL_MENU = PACKAGE_PATH + "NeoForgeWorkbenchMenu.java";
     private static final String MENU_DESCRIPTION =
@@ -70,7 +70,7 @@ class NeoForge1211GenerationTest {
     }
 
     @Test
-    void reusesTwelveCentralNeoForgeSourcesByteForByte() throws Exception {
+    void reusesElevenCentralNeoForgeSourcesByteForByte() throws Exception {
         Path canonical = canonicalRuntimeRoot();
         Path output = temporaryDirectory.resolve("reuse");
         generate(canonical, output);
@@ -79,7 +79,8 @@ class NeoForge1211GenerationTest {
         try (var stream = Files.walk(canonical.resolve("src/neoforge/java"))) {
             for (Path canonicalFile : stream.filter(Files::isRegularFile).toList()) {
                 String name = canonicalFile.getFileName().toString();
-                if (name.equals("NeoForgeWorkbenchMenu.java") || name.equals("NeoForgeWorkbenchRecipe.java")) {
+                if (name.equals("NeoForgePortableMenuScreen.java")
+                        || name.equals("NeoForgeWorkbenchMenu.java") || name.equals("NeoForgeWorkbenchRecipe.java")) {
                     continue;
                 }
                 Path relative = canonical.resolve("src/neoforge/java").relativize(canonicalFile);
@@ -88,7 +89,7 @@ class NeoForge1211GenerationTest {
                 reused++;
             }
         }
-        assertEquals(12, reused);
+        assertEquals(11, reused);
     }
 
     @Test

@@ -47,7 +47,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "FabricPortableMenuScreen.java",
-                    "54a8bed308f8013585172a85c12da7847b76163557b24cc7f8eb11a367c803ed"),
+                    "d0d8abba1da8f3a63075b7e51d517ce33a8e73b65e1aab2c1c6a724f70f8af24"),
             Map.entry(PACKAGE_PATH + "FabricRawPayload.java",
                     "45ed5bdacd32817664eb106aef40305c8846e791575131ced6be68b5458173a6"),
             Map.entry(PACKAGE_PATH + "FabricRecipeBinding.java",
@@ -104,7 +104,7 @@ class Fabric1211GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("1b255d8e383e87c9f8575f190816750692828421efe6d1a19d26a0ab8054cb94",
+        assertEquals("dc70ff73af69f68f27c01ee3ae951a380826505ed76993837411491a03171740",
                 first.sha256());
         assertEquals(16, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
@@ -130,13 +130,14 @@ class Fabric1211GenerationTest {
     }
 
     @Test
-    void reusesElevenCanonicalSourcesByteForByte() throws Exception {
+    void reusesTenCanonicalSourcesByteForByte() throws Exception {
         Path canonical = canonicalRuntimeRoot();
         Path output = temporaryDirectory.resolve("reuse");
         generate(canonical, output);
 
         List<String> transformedCanonicalNames = List.of(
-                "FabricPlatformAdapter.java", "FabricWorkbenchMenu.java", "FabricWorkbenchRecipe.java");
+                "FabricPlatformAdapter.java", "FabricPortableMenuScreen.java",
+                "FabricWorkbenchMenu.java", "FabricWorkbenchRecipe.java");
         int reused = 0;
         try (var stream = Files.walk(canonical.resolve("src/canonical/java"))) {
             for (Path canonicalFile : stream.filter(Files::isRegularFile).toList()) {
@@ -149,7 +150,7 @@ class Fabric1211GenerationTest {
                 reused++;
             }
         }
-        assertEquals(11, reused);
+        assertEquals(10, reused);
     }
 
     @Test
@@ -194,7 +195,7 @@ class Fabric1211GenerationTest {
         Path menu = canonical.resolve("src/canonical/java").resolve(CANONICAL_MENU);
         Files.writeString(menu, "// Feature declaration only; no Java template required.\n");
         writeManifest(canonical);
-        assertEquals("1b255d8e383e87c9f8575f190816750692828421efe6d1a19d26a0ab8054cb94",
+        assertEquals("dc70ff73af69f68f27c01ee3ae951a380826505ed76993837411491a03171740",
                 generate(canonical, temporaryDirectory.resolve("independent-output")).sha256());
     }
 

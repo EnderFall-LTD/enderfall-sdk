@@ -15,7 +15,7 @@ class BlockEntityStorageMainTest {
             BlockEntityStorageMain.main(new String[] {target, root.toString()});
             Path file = root.resolve("uk/co/enderfall/sdk/runtime/blockentity/nativebridge/StoredBlockEntity.java");
             String source = Files.readString(file);
-            assertTrue(source.contains("storage.replaceInventoryAndFields(owned, fields)"));
+            assertTrue(source.contains("inventory.setItem(slot, storage.stack(slot))"));
             assertTrue(source.contains("ProcessingStateCodec.decode(tag.getByteArray(PROCESS_KEY))"));
             assertTrue(source.contains("implements net.minecraft.world.WorldlyContainer"));
             assertTrue(source.contains("on " + target + " at"));

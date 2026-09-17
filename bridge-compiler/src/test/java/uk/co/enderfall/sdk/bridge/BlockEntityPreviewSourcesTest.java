@@ -22,7 +22,7 @@ class BlockEntityPreviewSourcesTest {
         assertTrue(first.contains("binding.ports.canExtract(slot, portFace(face))"));
         assertTrue(first.contains("if (binding.ports == null || face == null) return new int[0]"));
         assertTrue(first.contains("storage.restore(tag.getByteArray(SAVE_KEY))"));
-        assertTrue(first.contains("storage.replaceInventoryAndFields(owned, fields)"));
+        assertTrue(first.contains("inventory.setItem(slot, storage.stack(slot))"));
         assertTrue(first.contains("notifyInventoryCommit = () -> { super.setChanged(); notifyInventoryListeners(); }"));
         assertTrue(first.indexOf("ProcessingStateCodec.decode(tag.getByteArray(PROCESS_KEY))")
                 < first.indexOf("storage.restore(tag.getByteArray(SAVE_KEY))"));

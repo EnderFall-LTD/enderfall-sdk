@@ -100,11 +100,12 @@ private val generatedFabricTargets = listOf(
         referenceProjectPath = ":runtime-fabric-1.20.1",
         referenceLayout = GeneratedFabricReferenceLayout.INHERITED_1_21_4,
         inheritedReferenceJavaFiles = listOf("EnderfallFabricRuntime", "FabricCommandBridge",
-            "FabricConsumerBootstrap", "FabricPlatformInfo", "FabricPortableMenuScreen")
+            "FabricConsumerBootstrap", "FabricPlatformInfo")
             .map { "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/$it.java" },
         localReferenceJavaFiles = listOf("ClientHooks", "PlatformAdapter", "WorkbenchBinding",
             "WorkbenchMenu", "WorkbenchRecipe", "WorkbenchScreen")
-            .map { "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/Fabric1201$it.java" },
+            .map { "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/Fabric1201$it.java" } +
+            "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/FabricPortableMenuScreen.java",
         suppressAuxiliaryClassWarning = true,
     ),
     GeneratedFabricTargetSpec(

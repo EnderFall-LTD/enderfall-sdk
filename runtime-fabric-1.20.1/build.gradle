@@ -12,18 +12,19 @@ java {
     withJavadocJar()
 }
 
-sourceSets.main {
-    java.srcDir(project(':runtime-fabric-1.21.4').file('src/main/java'))
-    java.exclude('**/FabricPlatformAdapter.java')
-    java.exclude('**/FabricClientHooks.java')
-    java.exclude('**/FabricRawPayload.java')
-    java.exclude('**/FabricRecipeBinding.java')
-    java.exclude('**/FabricWorkbenchBinding.java')
-    java.exclude('**/FabricWorkbenchInput.java')
-    java.exclude('**/FabricWorkbenchRecipe.java')
-    java.exclude('**/FabricWorkbenchMenu.java')
-    java.exclude('**/FabricWorkbenchScreen.java')
-}
+def sharedJava = objects.sourceDirectorySet('sharedJava', 'Shared 1.21.4 runtime sources compatible with 1.20.1')
+sharedJava.srcDir(project(':runtime-fabric-1.21.4').file('src/main/java'))
+sharedJava.exclude('**/FabricPlatformAdapter.java')
+sharedJava.exclude('**/FabricClientHooks.java')
+sharedJava.exclude('**/FabricPortableMenuScreen.java')
+sharedJava.exclude('**/FabricRawPayload.java')
+sharedJava.exclude('**/FabricRecipeBinding.java')
+sharedJava.exclude('**/FabricWorkbenchBinding.java')
+sharedJava.exclude('**/FabricWorkbenchInput.java')
+sharedJava.exclude('**/FabricWorkbenchRecipe.java')
+sharedJava.exclude('**/FabricWorkbenchMenu.java')
+sharedJava.exclude('**/FabricWorkbenchScreen.java')
+sourceSets.main.java.source(sharedJava)
 
 loom {
     runs {

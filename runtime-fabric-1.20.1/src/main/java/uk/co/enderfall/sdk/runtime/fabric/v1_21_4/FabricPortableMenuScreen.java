@@ -1,4 +1,4 @@
-package uk.co.enderfall.sdk.runtime.neoforge.v1_21_4;
+package uk.co.enderfall.sdk.runtime.fabric.v1_21_4;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,7 @@ import uk.co.enderfall.sdk.api.ui.MenuState;
 import uk.co.enderfall.sdk.runtime.PortableMenuView;
 
 /** Target-native renderer for the portable synchronized menu contract. */
-final class NeoForgePortableMenuScreen extends Screen {
+final class FabricPortableMenuScreen extends Screen {
     private PortableMenuView view;
     private final Consumer<String> actionSender;
     private final Runnable closeSender;
@@ -22,7 +22,7 @@ final class NeoForgePortableMenuScreen extends Screen {
     private boolean remoteClose;
     private boolean closeNotified;
 
-    NeoForgePortableMenuScreen(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
+    FabricPortableMenuScreen(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
         super(Component.literal(view.state().resolve(view.spec().title())));
         this.view = view;
         this.actionSender = actionSender;
@@ -46,7 +46,6 @@ final class NeoForgePortableMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, height, 0xB0100D18);
         int left = (width - view.spec().width()) / 2;
         int top = (height - view.spec().height()) / 2;
@@ -67,11 +66,6 @@ final class NeoForgePortableMenuScreen extends Screen {
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
-    // Screen.render invokes this after our foreground. The background was already drawn
-    // first, so do not blur the panel again during widget rendering.
-    @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-    }
     @Override
     public void onClose() {
         notifyClosed();
@@ -114,13 +108,13 @@ final class NeoForgePortableMenuScreen extends Screen {
 
     static void show(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
         Minecraft client = Minecraft.getInstance();
-        client.execute(() -> client.setScreen(new NeoForgePortableMenuScreen(view, actionSender, closeSender)));
+        client.execute(() -> client.setScreen(new FabricPortableMenuScreen(view, actionSender, closeSender)));
     }
 
     static void update(long sessionId, MenuState state) {
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
-            if (client.screen instanceof NeoForgePortableMenuScreen screen && screen.sessionId() == sessionId) {
+            if (client.screen instanceof FabricPortableMenuScreen screen && screen.sessionId() == sessionId) {
                 screen.update(state);
             }
         });
@@ -129,7 +123,7 @@ final class NeoForgePortableMenuScreen extends Screen {
     static void close(long sessionId) {
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
-            if (client.screen instanceof NeoForgePortableMenuScreen screen && screen.sessionId() == sessionId) {
+            if (client.screen instanceof FabricPortableMenuScreen screen && screen.sessionId() == sessionId) {
                 screen.closeFromServer();
             }
         });

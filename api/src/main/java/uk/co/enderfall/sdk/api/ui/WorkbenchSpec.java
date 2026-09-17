@@ -57,7 +57,7 @@ public final class WorkbenchSpec {
         private java.util.List<String> machineInputs = java.util.List.of();
         private java.util.List<String> machineOutputs = java.util.List.of();
         private boolean machine;
-        /** Combined recipes use data/<namespace>/enderfall_machine/*.json.
+        /** Combined recipes use {@code data/<namespace>/enderfall_machine/*.json}.
          * Requires 1-5 positional item inputs plus one item output; tanks must be distinct.
          */
         public Builder persistentMachine(uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec value,

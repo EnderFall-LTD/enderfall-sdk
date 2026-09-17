@@ -18,6 +18,8 @@ public final class BlockDefinition {
     public BlockRef block() { return properties.block(); }
     public BlockDefinition horizontalFacing() { properties.horizontalFacing(); return this; }
     public BlockDefinition sixWayFacing() { properties.sixWayFacing(); return this; }
+    public BlockDefinition waterlogged() { properties.waterlogged(); return this; }
+    public BlockDefinition scheduledTicks() { properties.scheduledTicks(); return this; }
     public BlockDefinition states(BlockStateDefinition definition) { properties.states(definition); return this; }
     public BlockDefinition stateShapes(BlockStateShapes shapes) { properties.stateShapes(shapes); return this; }
     public BlockDefinition shape(BlockShape shape) { properties.shape(shape); return this; }

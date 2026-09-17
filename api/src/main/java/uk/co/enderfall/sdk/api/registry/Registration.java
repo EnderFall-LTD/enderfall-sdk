@@ -179,6 +179,8 @@ public final class Registration {
         public BlockOptions strength(float value) { return strength(value, value); }
         public BlockOptions horizontalFacing() { builder.horizontalFacing(); return this; }
         public BlockOptions sixWayFacing() { builder.sixWayFacing(); return this; }
+        public BlockOptions waterlogged() { builder.waterlogged(); return this; }
+        public BlockOptions scheduledTicks() { builder.scheduledTicks(); return this; }
         public BlockOptions states(uk.co.enderfall.sdk.api.block.BlockStateDefinition definition) { builder.states(definition); return this; }
         public BlockOptions stateShapes(uk.co.enderfall.sdk.api.block.BlockStateShapes shapes) { builder.stateShapes(shapes); return this; }
         public BlockOptions shape(uk.co.enderfall.sdk.api.block.BlockShape value) { builder.shape(value); return this; }

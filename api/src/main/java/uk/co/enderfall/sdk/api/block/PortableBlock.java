@@ -23,11 +23,37 @@ public interface PortableBlock {
     default PortableBlockState onPlace(BlockPlacementContext context) { return context.state(); }
 
     /**
+     * Placement transition used by scheduled-tick-aware blocks. Existing implementations
+     * of {@link #onPlace(BlockPlacementContext)} remain valid through this default bridge.
+     */
+    default BlockTransition onPlaced(BlockPlacementContext context) {
+        return BlockTransition.stable(onPlace(context));
+    }
+
+    /**
      * Derives this block's custom state after the adjacent block in
      * {@link BlockNeighborContext#direction()} changes. The optional neighbour state is
      * present only for another SDK portable block. This callback must not mutate the world.
      */
     default PortableBlockState onNeighborUpdate(BlockNeighborContext context) { return context.state(); }
+
+    /**
+     * Neighbor transition used by scheduled-tick-aware blocks. Return
+     * {@link BlockTransition#after(PortableBlockState, int)} to debounce or delay work.
+     * Existing implementations of {@link #onNeighborUpdate(BlockNeighborContext)} remain
+     * valid through this default bridge.
+     */
+    default BlockTransition onNeighborChanged(BlockNeighborContext context) {
+        return BlockTransition.stable(onNeighborUpdate(context));
+    }
+
+    /**
+     * Runs on the server thread after a tick requested by a prior transition. The result
+     * may update declared state and request another bounded follow-up tick.
+     */
+    default BlockTransition onScheduledTick(BlockScheduledTickContext context) {
+        return BlockTransition.stable(context.state());
+    }
 
     /**
      * Server-side block-use callback through the SDK interaction bus. Already handled or

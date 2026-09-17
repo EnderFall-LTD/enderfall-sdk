@@ -49,6 +49,8 @@ public interface PlatformAdapter {
     default boolean supportsSixWayFacing() { return false; }
     default boolean supportsBlockStates() { return false; }
     default boolean supportsStateShapes() { return false; }
+    default boolean supportsScheduledBlockTicks() { return false; }
+    default boolean supportsWaterloggedBlocks() { return false; }
     default java.util.Optional<uk.co.enderfall.sdk.api.block.PortableBlockState> blockState(
             uk.co.enderfall.sdk.api.registry.BlockRef block,
             uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {

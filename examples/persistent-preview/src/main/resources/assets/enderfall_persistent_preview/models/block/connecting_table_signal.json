@@ -1,0 +1,1 @@
+{"parent":"minecraft:block/block","textures":{"signal":"minecraft:block/redstone_block","particle":"minecraft:block/oak_planks"},"elements":[{"from":[7,15.75,7],"to":[9,16,9],"faces":{"up":{"texture":"#signal"},"north":{"texture":"#signal"},"south":{"texture":"#signal"},"west":{"texture":"#signal"},"east":{"texture":"#signal"}}}]}

@@ -26,6 +26,23 @@ class BlockStateDefinitionTest {
         assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder().states(large).sixWayFacing().build());
     }
 
+    @Test void nativeWaterloggingCountsStatesAndRejectsPropertyCollision() {
+        var waterlogged = BlockStateDefinition.builder().property(BlockProperty.bool("waterlogged"), false).build();
+        assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder()
+                .states(waterlogged).waterlogged().build());
+        var largeBuilder = BlockStateDefinition.builder();
+        for (int i = 0; i < 12; i++) largeBuilder.property(BlockProperty.bool("flag_" + i), false);
+        var large = largeBuilder.build();
+        assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder()
+                .states(large).waterlogged().sixWayFacing().build());
+        var spec = uk.co.enderfall.sdk.api.registry.BlockSpec.builder().waterlogged().scheduledTicks().build();
+        assertTrue(spec.waterlogged());
+        assertTrue(spec.scheduledTicks());
+        var copied = uk.co.enderfall.sdk.api.registry.BlockSpec.builder().copyFrom(spec).build();
+        assertFalse(copied.waterlogged());
+        assertFalse(copied.scheduledTicks());
+    }
+
     @Test void completeStateRoundTripsAndRejectsMissingOrUnknownProperties() {
         var open = BlockProperty.bool("open");
         var schema = BlockStateDefinition.builder().property(open, false).build();

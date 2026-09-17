@@ -62,9 +62,9 @@ Instances are shared definitions, not placed-block instances: per-position mutab
 data belongs in declared persistent storage. [Static shapes](block-shapes.md) are
 supported, together with opt-in [horizontal facing](directional-blocks.md).
 Custom placement, general typed block states and state-dependent shapes are now
-available, including pure neighbor-derived state updates. Scheduled ticks and
-waterlogging are still pending;
-this initial interface is not yet a replacement
+available, including neighbor-derived state updates, opt-in scheduled transitions
+and real waterlogging. Bounded world queries and many specialized vanilla hooks are
+still pending, so this initial interface is not yet a replacement
 for every Minecraft `Block` method. See [the furniture-port roadmap](furniture-port.md).
 
 ## Copy semantics

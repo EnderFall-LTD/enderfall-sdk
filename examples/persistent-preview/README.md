@@ -4,6 +4,20 @@ An isolated development fixture of the experimental block-owned inventory. Norma
 demo builds and published runtime contents are unchanged. Use a disposable world:
 save/reload and item-loss/duplication behaviour still need gameplay validation.
 
+## Connecting table and waterlogging test
+
+Place several **Connecting Waterlogged Table** blocks side by side. Each block's
+model, selection outline and collision should grow an arm only toward matching
+tables. Breaking a middle block must remove the two exposed arms. A tiny red marker
+appears for four server ticks after a connection actually changes, exercising the
+portable scheduled-tick callback without continuously ticking the block.
+
+Place one in a water source or use a water bucket on it. Water must remain inside
+the non-full shape, flow/update normally around it, and be recoverable with an empty
+bucket. Repeat after save/reload. The block class and registration are identical for
+all nine targets; compile parity is automated, while these visible gameplay checks
+remain manual acceptance.
+
 ## Workbench shape test
 
 `enderfall_persistent_preview:orientation_test` is a separate six-way orientation

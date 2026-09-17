@@ -37,8 +37,8 @@ over static shapes. It must reference the exact schema assigned with `states`.
 Geometry is authored facing north and automatically rotated when horizontal or
 six-way facing is enabled. Ordinary and persistent blocks use the same generated
 implementation. Material copying intentionally copies neither schema nor geometry.
-This does not yet provide scheduled ticks, waterlogging or separate dynamic
-collision/outline definitions. Rendered models still come from blockstate assets.
+This does not yet provide separate dynamic collision/outline definitions. Rendered
+models still come from blockstate assets.
 
 ## Custom placement
 
@@ -78,8 +78,42 @@ state and do not perform world writes. The generator emits Minecraft's older
 1.20.1/1.21.1 signature or its 1.21.4/26.2 replacement automatically.
 
 This hook is enough for direct per-side connection properties. Rules that must inspect
-several other positions need a future bounded world-view API, and delayed reactions
-still need the planned scheduled-tick hook.
+several other positions still need a future bounded world-view API.
+
+## Scheduled transitions
+
+Opt in from the block class with `properties.scheduledTicks()`. Existing `onPlace`
+and `onNeighborUpdate` overrides continue working. A block that needs delayed work
+can instead return a `BlockTransition`:
+
+```java
+@Override public BlockTransition onNeighborChanged(BlockNeighborContext neighbor) {
+    PortableBlockState changed = neighbor.state().with(CONNECTED, neighbor.sameBlock());
+    return BlockTransition.after(changed, 4);
+}
+
+@Override public BlockTransition onScheduledTick(BlockScheduledTickContext tick) {
+    return BlockTransition.stable(tick.state().with(SETTLING, false));
+}
+```
+
+Delays are at least one server tick. Scheduled callbacks receive the exact dimension,
+position and game time, run on the server thread, preserve native state, and may
+schedule one further callback. Returning null, another block's schema, or an invalid
+delay fails explicitly.
+
+## Waterlogging
+
+Call `properties.waterlogged()` in the block class. The generated native block then
+uses Minecraft's real `waterlogged` property, detects water during placement, supports
+water-bucket insertion and pickup, exposes the correct fluid state, and schedules
+vanilla water ticks after neighbor changes. Do not also declare a custom property
+named `waterlogged`. Waterlogging doubles the native state count and therefore counts
+toward the 4096-state safety limit.
+
+The persistent preview's `connecting_table` combines per-side connections,
+state-dependent geometry, waterlogging, and a four-tick settling transition in one
+unchanged Java 17 block class.
 
 ## Reading and changing a placed block
 

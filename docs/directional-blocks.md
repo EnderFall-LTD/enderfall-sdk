@@ -54,7 +54,7 @@ shapes are precomputed per registered block, not rebuilt per frame or placement.
 This is a built-in facing behavior used alongside the typed state API. Portable
 block classes may customize their declared properties during placement with
 `PortableBlock.onPlace(BlockPlacementContext)`. Waterlogging and neighbor-driven
-connections are still pending. Unsupported
+connections are available through the portable block-state API. Unsupported
 baseline/reference runtimes reject the feature rather than ignoring it.
 
 The preview workbench opts in and has an asymmetric rear brace, with matching

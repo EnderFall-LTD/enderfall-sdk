@@ -6,13 +6,46 @@ final class BlockShapeSources {
     static String emit(String target) {
         BlockEntityNativePolicy.require(target);
         boolean legacyNeighborSignature = target.startsWith("1.20.1-") || target.startsWith("1.21.1-");
+        boolean legacyWaterSignature = target.startsWith("1.20.1-");
+        String waterActor = target.startsWith("26.2-")
+                ? "net.minecraft.world.entity.LivingEntity" : "net.minecraft.world.entity.player.Player";
+        String waterMethods = legacyWaterSignature ? """
+                    @Override public boolean canPlaceLiquid(BlockGetter level, BlockPos pos, BlockState state,
+                            net.minecraft.world.level.material.Fluid fluid) {
+                        return specification.waterlogged()
+                                && net.minecraft.world.level.block.SimpleWaterloggedBlock.super.canPlaceLiquid(level, pos, state, fluid);
+                    }
+                    @Override public net.minecraft.world.item.ItemStack pickupBlock(
+                            net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state) {
+                        return specification.waterlogged()
+                                ? net.minecraft.world.level.block.SimpleWaterloggedBlock.super.pickupBlock(level, pos, state)
+                                : net.minecraft.world.item.ItemStack.EMPTY;
+                    }
+                """ : """
+                    @Override public boolean canPlaceLiquid(${WATER_ACTOR} actor, BlockGetter level, BlockPos pos,
+                            BlockState state, net.minecraft.world.level.material.Fluid fluid) {
+                        return specification.waterlogged()
+                                && net.minecraft.world.level.block.SimpleWaterloggedBlock.super.canPlaceLiquid(actor, level, pos, state, fluid);
+                    }
+                    @Override public net.minecraft.world.item.ItemStack pickupBlock(${WATER_ACTOR} actor,
+                            net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state) {
+                        return specification.waterlogged()
+                                ? net.minecraft.world.level.block.SimpleWaterloggedBlock.super.pickupBlock(actor, level, pos, state)
+                                : net.minecraft.world.item.ItemStack.EMPTY;
+                    }
+                """.replace("${WATER_ACTOR}", waterActor);
         String neighborHook = legacyNeighborSignature ? """
                     @Override
                     @SuppressWarnings("deprecation")
                     public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
                             net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+                        if (state.hasProperty(BlockStateProperties.WATERLOGGED) && state.getValue(BlockStateProperties.WATERLOGGED)) {
+                            level.scheduleTick(pos, net.minecraft.world.level.material.Fluids.WATER,
+                                    net.minecraft.world.level.material.Fluids.WATER.getTickDelay(level));
+                        }
                         BlockState nativeState = super.updateShape(state, direction, neighborState, level, pos, neighborPos);
-                        return nativeState.getBlock() == this ? portableNeighborUpdate(nativeState, direction, neighborState) : nativeState;
+                        return nativeState.getBlock() == this ? portableNeighborUpdate(nativeState, direction, neighborState,
+                                delay -> level.scheduleTick(pos, this, delay)) : nativeState;
                     }
                 """ : """
                     @Override
@@ -21,9 +54,14 @@ final class BlockShapeSources {
                             net.minecraft.world.level.ScheduledTickAccess scheduledTicks, BlockPos pos,
                             Direction direction, BlockPos neighborPos, BlockState neighborState,
                             net.minecraft.util.RandomSource random) {
+                        if (state.hasProperty(BlockStateProperties.WATERLOGGED) && state.getValue(BlockStateProperties.WATERLOGGED)) {
+                            scheduledTicks.scheduleTick(pos, net.minecraft.world.level.material.Fluids.WATER,
+                                    net.minecraft.world.level.material.Fluids.WATER.getTickDelay(level));
+                        }
                         BlockState nativeState = super.updateShape(state, level, scheduledTicks, pos,
                                 direction, neighborPos, neighborState, random);
-                        return nativeState.getBlock() == this ? portableNeighborUpdate(nativeState, direction, neighborState) : nativeState;
+                        return nativeState.getBlock() == this ? portableNeighborUpdate(nativeState, direction, neighborState,
+                                delay -> scheduledTicks.scheduleTick(pos, this, delay)) : nativeState;
                     }
                 """;
         return """
@@ -47,7 +85,7 @@ final class BlockShapeSources {
                 import uk.co.enderfall.sdk.api.registry.BlockSpec;
 
                 /** Native shell only. Shape authoring is entirely portable. */
-                public class PortableShapeBlock extends Block {
+                public class PortableShapeBlock extends Block implements net.minecraft.world.level.block.SimpleWaterloggedBlock {
                     private static final ThreadLocal<BlockSpec> CONSTRUCTION = new ThreadLocal<>();
                     /** Scoped because Block constructs state definitions before subclass fields exist. */
                     public static <T> T construct(BlockSpec spec, java.util.function.Supplier<T> factory) {
@@ -131,6 +169,7 @@ final class BlockShapeSources {
                     public final void initializeFacing() {
                         BlockState state = stateDefinition.any();
                         if (this instanceof Directional) state = state.setValue(facingProperty(), Direction.NORTH);
+                        if (specification.waterlogged()) state = state.setValue(BlockStateProperties.WATERLOGGED, false);
                         for (var entry : specification.states().defaultState().serializedValues().entrySet()) {
                             var property = (PortableProperty) stateDefinition.getProperty(entry.getKey());
                             state = state.setValue(property, entry.getValue());
@@ -180,19 +219,31 @@ final class BlockShapeSources {
                         super.createBlockStateDefinition(builder);
                         if (this instanceof Directional) builder.add(facingProperty());
                         BlockSpec spec = CONSTRUCTION.get();
-                        if (spec != null) for (var property : spec.states().properties()) builder.add(new PortableProperty(property));
+                        if (spec != null) {
+                            if (spec.waterlogged()) builder.add(BlockStateProperties.WATERLOGGED);
+                            for (var property : spec.states().properties()) builder.add(new PortableProperty(property));
+                        }
                     }
                     @Override public BlockState getStateForPlacement(BlockPlaceContext context) {
                         BlockState placed;
                         if (this instanceof SixWayDirectional) placed = defaultBlockState().setValue(facingProperty(), context.getNearestLookingDirection().getOpposite());
                         else if (this instanceof Directional) placed = defaultBlockState().setValue(facingProperty(), context.getHorizontalDirection().getOpposite());
                         else placed = super.getStateForPlacement(context);
+                        if (placed != null && specification.waterlogged()) placed = placed.setValue(BlockStateProperties.WATERLOGGED,
+                                context.getLevel().getFluidState(context.getClickedPos()).getType()
+                                        == net.minecraft.world.level.material.Fluids.WATER);
                         if (placed == null || specification.behavior().isEmpty()) return placed;
                         var portableContext = new uk.co.enderfall.sdk.api.block.BlockPlacementContext(
                                 portableState(placed), direction(context.getClickedFace()),
                                 direction(context.getHorizontalDirection()), direction(context.getNearestLookingDirection()));
-                        var portable = java.util.Objects.requireNonNull(
-                                specification.behavior().orElseThrow().onPlace(portableContext),
+                        if (specification.scheduledTicks()) {
+                            var transition = java.util.Objects.requireNonNull(
+                                    specification.behavior().orElseThrow().onPlaced(portableContext),
+                                    "PortableBlock.onPlaced returned null");
+                            return applyTransition(placed, transition,
+                                    delay -> context.getLevel().scheduleTick(context.getClickedPos(), this, delay));
+                        }
+                        var portable = java.util.Objects.requireNonNull(specification.behavior().orElseThrow().onPlace(portableContext),
                                 "PortableBlock.onPlace returned null");
                         return withPortableState(placed, portable);
                     }
@@ -207,7 +258,8 @@ final class BlockShapeSources {
                         };
                     }
                     @SuppressWarnings("deprecation") // Legacy FML deprecates the still-required built-in registry field.
-                    private BlockState portableNeighborUpdate(BlockState state, Direction direction, BlockState neighborState) {
+                    private BlockState portableNeighborUpdate(BlockState state, Direction direction, BlockState neighborState,
+                            java.util.function.IntConsumer schedule) {
                         if (specification.behavior().isEmpty()) return state;
                         var neighborId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(neighborState.getBlock());
                         java.util.Optional<uk.co.enderfall.sdk.api.block.PortableBlockState> portableNeighbor =
@@ -217,12 +269,50 @@ final class BlockShapeSources {
                                 portableState(state), direction(direction),
                                 uk.co.enderfall.sdk.api.ResourceId.parse(neighborId.toString()),
                                 neighborState.getBlock() == this, portableNeighbor);
-                        var portable = java.util.Objects.requireNonNull(
-                                specification.behavior().orElseThrow().onNeighborUpdate(context),
+                        if (specification.scheduledTicks()) {
+                            var transition = java.util.Objects.requireNonNull(
+                                    specification.behavior().orElseThrow().onNeighborChanged(context),
+                                    "PortableBlock.onNeighborChanged returned null");
+                            return applyTransition(state, transition, schedule);
+                        }
+                        var portable = java.util.Objects.requireNonNull(specification.behavior().orElseThrow().onNeighborUpdate(context),
                                 "PortableBlock.onNeighborUpdate returned null");
                         return withPortableState(state, portable);
                     }
                 // ${NEIGHBOR_HOOK}
+                    @Override @SuppressWarnings("deprecation")
+                    public void tick(BlockState state, net.minecraft.server.level.ServerLevel level,
+                            BlockPos pos, net.minecraft.util.RandomSource random) {
+                        super.tick(state, level, pos, random);
+                        if (!specification.scheduledTicks() || specification.behavior().isEmpty() || state.getBlock() != this) return;
+                        var context = new uk.co.enderfall.sdk.api.block.BlockScheduledTickContext(portableState(state),
+                                new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                                        uk.co.enderfall.sdk.api.ResourceId.parse(level.dimension().${DIMENSION_LOCATION}.toString()),
+                                        pos.getX(), pos.getY(), pos.getZ()), level.getGameTime());
+                        var transition = java.util.Objects.requireNonNull(
+                                specification.behavior().orElseThrow().onScheduledTick(context),
+                                "PortableBlock.onScheduledTick returned null");
+                        BlockState updated = applyTransition(state, transition, delay -> level.scheduleTick(pos, this, delay));
+                        if (updated != state) level.setBlock(pos, updated, Block.UPDATE_ALL);
+                    }
+                    private BlockState applyTransition(BlockState state,
+                            uk.co.enderfall.sdk.api.block.BlockTransition transition,
+                            java.util.function.IntConsumer schedule) {
+                        BlockState updated = withPortableState(state, transition.state());
+                        transition.scheduleAfterTicks().ifPresent(schedule);
+                        return updated;
+                    }
+                    @Override @SuppressWarnings("deprecation")
+                    public net.minecraft.world.level.material.FluidState getFluidState(BlockState state) {
+                        return state.hasProperty(BlockStateProperties.WATERLOGGED) && state.getValue(BlockStateProperties.WATERLOGGED)
+                                ? net.minecraft.world.level.material.Fluids.WATER.getSource(false) : super.getFluidState(state);
+                    }
+                    @Override public boolean placeLiquid(net.minecraft.world.level.LevelAccessor level, BlockPos pos,
+                            BlockState state, net.minecraft.world.level.material.FluidState fluid) {
+                        return specification.waterlogged()
+                                && net.minecraft.world.level.block.SimpleWaterloggedBlock.super.placeLiquid(level, pos, state, fluid);
+                    }
+                // ${WATER_METHODS}
                     @Override @SuppressWarnings("deprecation")
                     public BlockState rotate(BlockState state, Rotation rotation) {
                         return this instanceof Directional ? state.setValue(facingProperty(),
@@ -258,6 +348,8 @@ final class BlockShapeSources {
                         return collision == null ? super.getCollisionShape(state, world, pos, context) : collision[directionIndex(state)];
                     }
                 }
-                """.replace("// ${NEIGHBOR_HOOK}", neighborHook.stripTrailing());
+                """.replace("// ${NEIGHBOR_HOOK}", neighborHook.stripTrailing())
+                .replace("// ${WATER_METHODS}", waterMethods.stripTrailing())
+                .replace("${DIMENSION_LOCATION}", target.startsWith("26.2-") ? "identifier()" : "location()");
     }
 }

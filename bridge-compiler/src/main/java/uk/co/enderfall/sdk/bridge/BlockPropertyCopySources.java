@@ -17,6 +17,8 @@ final class BlockPropertyCopySources {
                     @Override public boolean supportsSixWayFacing() { return true; }
                     @Override public boolean supportsBlockStates() { return true; }
                     @Override public boolean supportsStateShapes() { return true; }
+                    @Override public boolean supportsScheduledBlockTicks() { return true; }
+                    @Override public boolean supportsWaterloggedBlocks() { return true; }
                     @Override
                     public java.util.Optional<uk.co.enderfall.sdk.api.block.PortableBlockState> blockState(
                             uk.co.enderfall.sdk.api.registry.BlockRef reference,

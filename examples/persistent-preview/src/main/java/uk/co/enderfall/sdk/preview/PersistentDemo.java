@@ -19,7 +19,8 @@ public final class PersistentDemo implements EnderfallMod {
         context.creativeTabs().register("preview", CreativeTabSpec.builder("itemGroup.enderfall_persistent_preview", item)
                 .entry(item).entry(new ItemRef(timedStorage.block().id()))
                 .entry(new ItemRef(tankStorage.block().id())).entry(mixer)
-                .entry(new ItemRef(PreviewBlocks.ORIENTATION_TEST.id())).build());
+                .entry(new ItemRef(PreviewBlocks.ORIENTATION_TEST.id()))
+                .entry(new ItemRef(PreviewBlocks.CONNECTING_TABLE.id())).build());
         context.logger().info("Persistent workbench preview registered; use a disposable test world.");
     }
 }

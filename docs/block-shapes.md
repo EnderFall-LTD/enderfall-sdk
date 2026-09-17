@@ -52,4 +52,5 @@ Build and source parity alone do not prove these in-game behaviors.
 
 Opt-in [horizontal facing](directional-blocks.md) now rotates these shapes with
 native placement and rotation. Arbitrary state-dependent geometry and
-neighbor-driven connections remain pending.
+neighbor-driven connections are available through typed state transitions; live
+connecting-table gameplay acceptance remains pending.

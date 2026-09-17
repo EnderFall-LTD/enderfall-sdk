@@ -34,7 +34,7 @@ explicit extension points, never SDK-generated or loader-owned implementation cl
 
 | Stage | Concrete furniture evidence | SDK work and acceptance |
 | --- | --- | --- |
-| 1. Custom block definitions | `common/blocks/BarrelModBlock.java`, `TableBlock.java` | Factory/configuration, server-use hooks, static cuboid shapes, typed boolean/integer/enum state, state-dependent shapes, server-world state mutation, opt-in horizontal/six-way facing, custom initial-state placement and pure neighbor-derived state updates are implemented. Still need scheduled-tick hooks and waterlogging. Prove a directional connecting table with identical source on all targets. |
+| 1. Custom block definitions | `common/blocks/BarrelModBlock.java`, `TableBlock.java` | Factory/configuration, server-use hooks, static cuboid shapes, typed boolean/integer/enum state, state-dependent shapes, server-world state mutation, opt-in horizontal/six-way facing, custom initial-state placement, neighbor-derived state, scheduled transitions and real waterlogging are implemented. The portable connecting-table fixture compiles unchanged on all targets; live connection, bucket, fluid-tick and save/reload acceptance remains. |
 | 2. General containers | `common/blocks/entity/BarrelModBlockEntity.java` | 27-slot storage menu, slot transfer rules, openers tracking, sounds, open block state, loot-table-backed inventory and drops. Existing timed workbench menus are not a substitute. Prove simultaneous viewers, death/disconnect, save/reload and hopper transfer. |
 | 3. Items and durable data | `registry/ModComponents.java`, `common/items/WrenchItem.java` | Portable letter author/text data persisted and synchronized, with legacy representation on pre-component targets. Custom use-on-block behavior, tooltips and wrench/hammer state changes. Verify copies, stacks, dropped items and reconnects preserve data. |
 | 4. Recipes and richer screens | `common/menus/WorkstationMenu.java`, `client/screens/WorkstationScreen.java` | Selectable/filterable recipes, custom layouts, selection validation, scroll/input widgets, secure editable text and synchronized results. Current positional recipes and label/button screens only cover part of this. |
@@ -57,8 +57,8 @@ clients and neighbors. Generated feature runtimes register schemas and defaults 
 ordinary and persistent blocks. Portable block classes can select their initial
 custom state from a loader-neutral placement context and derive a replacement state
 when a specific neighbour changes. See [block-state definitions](block-state-definitions.md).
-Scheduled ticks, waterlogging and the complete connecting-table acceptance scenario
-remain open, so stage 1 is not complete.
+Scheduled ticks and waterlogging now have generated implementations. The complete
+connecting-table gameplay scenario remains open, so stage 1 is not yet accepted.
 
 - `PortableBlock` is a loader-neutral definition interface.
 - Registration factories execute once per block ID at initialization preflight.

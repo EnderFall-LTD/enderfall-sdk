@@ -11,6 +11,8 @@ public final class PreviewBlocks {
     public static final Registration.Blocks BLOCKS = Registration.blocks("enderfall_persistent_preview");
     public static final BlockRef ORIENTATION_TEST = BLOCKS.block("orientation_test", PreviewOrientationBlock::new,
             p -> p.strength(2, 4).withItem());
+    public static final BlockRef CONNECTING_TABLE = BLOCKS.block("connecting_table", PreviewConnectingTableBlock::new,
+            p -> p.copyFrom(ResourceId.of("minecraft", "oak_planks")).strength(2, 4).withItem());
     public static final BlockRef WORKBENCH = BLOCKS.block("workbench", PreviewWorkbenchBlock::new, p -> p
             .copyFrom(ResourceId.of("minecraft", "oak_planks")).strength(2, 4));
     public static final BlockRef TIMED_WORKBENCH = BLOCKS.block("timed_workbench", p -> p

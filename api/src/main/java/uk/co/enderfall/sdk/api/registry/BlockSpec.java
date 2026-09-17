@@ -14,8 +14,12 @@ public final class BlockSpec {
     public java.util.Optional<uk.co.enderfall.sdk.api.block.BlockStateShapes> stateShapes() { return java.util.Optional.ofNullable(stateShapes); }
     private final boolean horizontalFacing;
     private final boolean sixWayFacing;
+    private final boolean waterlogged;
+    private final boolean scheduledTicks;
     public boolean sixWayFacing() { return sixWayFacing; }
     public boolean horizontalFacing() { return horizontalFacing; }
+    public boolean waterlogged() { return waterlogged; }
+    public boolean scheduledTicks() { return scheduledTicks; }
     private final uk.co.enderfall.sdk.api.block.BlockShape outlineShape;
     private final uk.co.enderfall.sdk.api.block.BlockShape collisionShape;
     public java.util.Optional<uk.co.enderfall.sdk.api.block.BlockShape> outlineShape() { return java.util.Optional.ofNullable(outlineShape); }
@@ -39,12 +43,17 @@ public final class BlockSpec {
         if (stateShapes != null && stateShapes.definition() != states)
             throw new IllegalArgumentException("State shapes must use the block's state definition");
         int facingStates = builder.sixWayFacing ? 6 : builder.horizontalFacing ? 4 : 1;
-        if (states.stateCount() * facingStates > uk.co.enderfall.sdk.api.block.BlockStateDefinition.MAX_STATES)
-            throw new IllegalArgumentException("Combined facing and custom state count exceeds limit");
+        int nativeStates = facingStates * (builder.waterlogged ? 2 : 1);
+        if (states.stateCount() * nativeStates > uk.co.enderfall.sdk.api.block.BlockStateDefinition.MAX_STATES)
+            throw new IllegalArgumentException("Combined native and custom state count exceeds limit");
         if (facingStates > 1 && states.properties().stream().anyMatch(property -> property.name().equals("facing")))
             throw new IllegalArgumentException("Custom facing property conflicts with built-in facing");
+        if (builder.waterlogged && states.properties().stream().anyMatch(property -> property.name().equals("waterlogged")))
+            throw new IllegalArgumentException("Custom waterlogged property conflicts with built-in waterlogging");
         horizontalFacing = builder.horizontalFacing;
         sixWayFacing = builder.sixWayFacing;
+        waterlogged = builder.waterlogged;
+        scheduledTicks = builder.scheduledTicks;
         outlineShape = builder.outlineShape;
         collisionShape = builder.collisionShape;
         copySource = builder.copySource;
@@ -109,10 +118,16 @@ public final class BlockSpec {
         }
         private boolean horizontalFacing;
         private boolean sixWayFacing;
+        private boolean waterlogged;
+        private boolean scheduledTicks;
         /** Adds north/east/south/west facing, player-facing placement and rotated custom shapes. */
         public Builder horizontalFacing() { horizontalFacing = true; sixWayFacing = false; return this; }
         /** Six-direction facing with placement opposite the player's nearest look direction. */
         public Builder sixWayFacing() { sixWayFacing = true; horizontalFacing = false; return this; }
+        /** Enables vanilla water placement, bucket interaction, fluid state and fluid ticking. */
+        public Builder waterlogged() { waterlogged = true; return this; }
+        /** Enables portable placement, neighbor and scheduled-tick transitions. */
+        public Builder scheduledTicks() { scheduledTicks = true; return this; }
         private uk.co.enderfall.sdk.api.block.BlockShape outlineShape;
         private uk.co.enderfall.sdk.api.block.BlockShape collisionShape;
         /** Sets both outline and collision; later individual setters can override either. */

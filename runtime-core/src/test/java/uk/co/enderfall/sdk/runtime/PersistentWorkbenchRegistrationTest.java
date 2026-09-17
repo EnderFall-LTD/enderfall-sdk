@@ -42,6 +42,8 @@ class PersistentWorkbenchRegistrationTest {
                         if (method.getName().equals("supportsHorizontalFacing")) return shapes;
                         if (method.getName().equals("supportsSixWayFacing")) return shapes;
                         if (method.getName().equals("supportsBlockStates")) return shapes;
+                        if (method.getName().equals("supportsScheduledBlockTicks")) return shapes;
+                        if (method.getName().equals("supportsWaterloggedBlocks")) return shapes;
                         calls.add(method.getName());
                         lastArguments = args;
                         return null;
@@ -104,6 +106,21 @@ class PersistentWorkbenchRegistrationTest {
         var supported = new Fixture(true, true);
         supported.blocks.registerPersistentWithItem("machine", spec, ItemSpec.builder().build(), STORAGE);
         assertSame(spec, supported.lastArguments[1]);
+    }
+
+    @Test void scheduledTicksAndWaterloggingFailBeforeNativeRegistrationWhenUnsupported() {
+        for (var spec : List.of(BlockSpec.builder().scheduledTicks().build(),
+                BlockSpec.builder().waterlogged().build())) {
+            var unsupported = new Fixture(true);
+            var error = assertThrows(UnsupportedOperationException.class, () -> unsupported.blocks
+                    .registerPersistentWithItem("machine", spec, ItemSpec.builder().build(), STORAGE));
+            assertTrue(error.getMessage().contains(MOD));
+            assertTrue(error.getMessage().contains(TARGET));
+            assertTrue(unsupported.calls.isEmpty());
+            var supported = new Fixture(true, true);
+            supported.blocks.registerPersistentWithItem("machine", spec, ItemSpec.builder().build(), STORAGE);
+            assertSame(spec, supported.lastArguments[1]);
+        }
     }
 
     @Test void customStateSupportIsCheckedBeforeReservingAnItemId() {

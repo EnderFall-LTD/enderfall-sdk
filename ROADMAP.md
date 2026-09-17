@@ -6,8 +6,9 @@ Use [the furniture-port milestone](docs/furniture-port.md) as the concrete featu
 checklist. Custom block factories/configuration/server-use hooks, static cuboid
 outline/collision shapes, typed custom state, state-dependent geometry, server-world
 state mutation, opt-in horizontal/six-way facing, custom initial-state placement,
-rotation, mirroring and pure neighbor-derived state updates are implemented.
-Scheduled-tick hooks and waterlogging are next, followed by general storage menus.
+rotation, mirroring, neighbor-derived state, scheduled transitions and real
+waterlogging are implemented. The connecting-table fixture now needs cross-target
+gameplay acceptance, followed by general storage menus.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

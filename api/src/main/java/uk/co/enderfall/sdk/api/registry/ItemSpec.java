@@ -40,6 +40,12 @@ public final class ItemSpec {
     }
 
     public static final class Builder {
+        public Builder copyFrom(ItemSpec source) {
+            Objects.requireNonNull(source, "source");
+            maxStackSize = source.maxStackSize; durability = source.durability;
+            fireResistant = source.fireResistant; rarity = source.rarity;
+            return this;
+        }
         private int maxStackSize = 64;
         private int durability;
         private boolean fireResistant;

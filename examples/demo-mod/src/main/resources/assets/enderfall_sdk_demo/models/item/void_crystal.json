@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "enderfall_sdk_demo:item/void_crystal"
+  }
+}

@@ -1,0 +1,96 @@
+package uk.co.enderfall.sdk.testmod;
+
+import io.netty.channel.Channel;
+import io.netty.channel.nio.AbstractNioChannel;
+import java.lang.reflect.Field;
+import java.nio.channels.SelectionKey;
+import java.util.concurrent.atomic.AtomicBoolean;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.network.Connection;
+import uk.co.enderfall.sdk.api.ClientModContext;
+import uk.co.enderfall.sdk.api.event.SdkEvents;
+import uk.co.enderfall.sdk.api.event.TickEvent;
+
+/** Read-only observer for named 1.20.1 development clients; never shipped in an SDK runtime. */
+final class LegacyConnectionDiagnostics {
+    private final ClientModContext context;
+    private final Field connecting;
+    private final Field channelField;
+    private final Field selectionKeyField;
+    private final Field readPendingField;
+    private final AtomicBoolean pending = new AtomicBoolean();
+    private long nextSample;
+    private volatile boolean failed;
+
+    private LegacyConnectionDiagnostics(ClientModContext context) throws ReflectiveOperationException {
+        this.context = context;
+        // The harness runs named development classes, not obfuscated launcher artifacts.
+        connecting = ConnectScreen.class.getDeclaredField("connection");
+        channelField = Connection.class.getDeclaredField("channel");
+        selectionKeyField = AbstractNioChannel.class.getDeclaredField("selectionKey");
+        readPendingField = AbstractNioChannel.class.getDeclaredField("readPending");
+        connecting.setAccessible(true);
+        channelField.setAccessible(true);
+        selectionKeyField.setAccessible(true);
+        readPendingField.setAccessible(true);
+    }
+
+    static void install(ClientModContext context) {
+        if (!"true".equalsIgnoreCase(System.getenv("ENDERFALL_LEGACY_CONNECTION_DIAGNOSTICS"))) return;
+        try {
+            LegacyConnectionDiagnostics observer = new LegacyConnectionDiagnostics(context);
+            context.events().subscribe(SdkEvents.TICK, event -> {
+                if (event.side() == TickEvent.Side.CLIENT && event.phase() == TickEvent.Phase.END) observer.sample();
+            });
+        } catch (ReflectiveOperationException | RuntimeException exception) {
+            throw new IllegalStateException("Cannot install legacy connection diagnostics", exception);
+        }
+    }
+
+    private void sample() {
+        if (failed || ContractGameplay.connectionReady || System.nanoTime() < nextSample) return;
+        nextSample = System.nanoTime() + 1_000_000_000L;
+        Minecraft client = Minecraft.getInstance();
+        if (!(client.screen instanceof ConnectScreen screen)) return;
+        try {
+            Connection connection = (Connection) connecting.get(screen);
+            if (connection == null) return;
+            Channel channel = (Channel) channelField.get(connection);
+            if (channel == null || !pending.compareAndSet(false, true)) return;
+            // Observe on Netty's own event loop. Do not change reads, pipelines, listeners,
+            // protocol attributes, or connection state, and never log packet contents.
+            channel.eventLoop().execute(() -> {
+                try {
+                    // The boolean autoRead flag alone does not establish whether the NIO selector
+                    // is watching for incoming data. Inspect both, on the owning event loop.
+                    String readInterest = "not-nio";
+                    String readPending = "not-nio";
+                    if (channel instanceof AbstractNioChannel) {
+                        SelectionKey key = (SelectionKey) selectionKeyField.get(channel);
+                        readInterest = key == null || !key.isValid() ? "no-valid-key"
+                                : Boolean.toString((key.interestOps() & SelectionKey.OP_READ) != 0);
+                        readPending = Boolean.toString(readPendingField.getBoolean(channel));
+                    }
+                    context.logger().info("ENDERFALL_LEGACY_CONNECTION_STATE {} active={} open={} autoRead={} readInterest={} readPending={} protocol={} listener={}",
+                            context.platform().targetId(), channel.isActive(), channel.isOpen(),
+                            channel.config().isAutoRead(), readInterest, readPending,
+                            channel.attr(Connection.ATTRIBUTE_PROTOCOL).get(),
+                            connection.getPacketListener() == null ? "none" : connection.getPacketListener().getClass().getSimpleName());
+                } catch (ReflectiveOperationException | RuntimeException exception) {
+                    fail(exception);
+                } finally {
+                    pending.set(false);
+                }
+            });
+        } catch (ReflectiveOperationException | RuntimeException exception) {
+            fail(exception);
+        }
+    }
+
+    private void fail(Exception exception) {
+        failed = true;
+        context.logger().error("ENDERFALL_GAMEPLAY_FAILED {} connection observer: {}",
+                context.platform().targetId(), exception.getClass().getSimpleName());
+    }
+}

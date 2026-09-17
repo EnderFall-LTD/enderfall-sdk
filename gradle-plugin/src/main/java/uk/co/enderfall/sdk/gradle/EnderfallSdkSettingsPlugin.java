@@ -20,6 +20,7 @@ import uk.co.enderfall.sdk.gradle.model.ModDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetCatalog;
 import uk.co.enderfall.sdk.gradle.model.TargetDefinition;
 import uk.co.enderfall.sdk.gradle.model.VersionDefinition;
+import uk.co.enderfall.sdk.gradle.task.EnderfallDoctorTask;
 
 /** Settings plugin that materializes one isolated target project per selected matrix entry. */
 public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
@@ -69,8 +70,10 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         settings.getGradle().beforeProject(project -> {
             TargetDefinition target = byProjectPath.get(project.getPath());
             if (target != null) {
+                boolean workspaceDevelopment = settings.getProviders()
+                        .gradleProperty("enderfall.workspaceRepository").isPresent();
                 TargetProjectConfigurator.configure(project, settings.getRootDir(), extension.modDefinition(), target,
-                        dependencyRepositories);
+                        dependencyRepositories, workspaceDevelopment);
             } else if (project == project.getRootProject()) {
                 configureRoot(project, extension, selected);
             }
@@ -116,25 +119,30 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         registerProxy(project, "runClient", development, "runClient");
         registerProxy(project, "runServer", development, "runServer");
         registerProxy(project, "generateData", development, "generateData");
+        if (development.loader().equals("neoforge") || development.loader().equals("forge")) {
+            registerProxy(project, "prepareClient", development,
+                    "createMinecraftArtifacts", "prepareClientRun");
+            registerProxy(project, "prepareServer", development,
+                    "createMinecraftArtifacts", "prepareServerRun");
+        }
 
-        project.getTasks().register("enderfallDoctor", task -> {
+        java.util.List<String> doctorLines = new ArrayList<>();
+        doctorLines.add("EnderFall SDK " + TargetCatalog.SDK_VERSION);
+        doctorLines.add("Mod: " + extension.modDefinition().getName()
+                + " (" + extension.modDefinition().getId() + ')');
+        doctorLines.add("Development target: " + development.id());
+        for (TargetDefinition target : selected.values()) {
+            String runtimeStatus = TargetCatalog.hasRuntimeAdapter(target)
+                    ? "COMPILE_VALIDATED" : "UNAVAILABLE";
+            doctorLines.add("  " + target.id() + " | Java " + target.javaVersion()
+                    + " | loader " + target.loaderVersion() + " | API "
+                    + (target.platformApiVersion().isBlank() ? "included" : target.platformApiVersion())
+                    + " | runtime " + runtimeStatus);
+        }
+        project.getTasks().register("enderfallDoctor", EnderfallDoctorTask.class, task -> {
             task.setGroup("enderfall sdk");
             task.setDescription("Prints the resolved EnderFall SDK configuration and target matrix.");
-            task.doLast(ignored -> {
-                project.getLogger().lifecycle("EnderFall SDK {}", TargetCatalog.SDK_VERSION);
-                project.getLogger().lifecycle("Mod: {} ({})", extension.modDefinition().getName(),
-                        extension.modDefinition().getId());
-                project.getLogger().lifecycle("Development target: {}", development.id());
-                for (TargetDefinition target : selected.values()) {
-                    String runtimeStatus = TargetCatalog.hasRuntimeAdapter(target)
-                            ? "COMPILE_VALIDATED" : "UNAVAILABLE";
-                    project.getLogger().lifecycle("  {} | Java {} | loader {} | API {} | runtime {}",
-                            target.id(),
-                            target.javaVersion(), target.loaderVersion(),
-                            target.platformApiVersion().isBlank() ? "included" : target.platformApiVersion(),
-                            runtimeStatus);
-                }
-            });
+            task.getLines().set(doctorLines);
         });
     }
 
@@ -147,11 +155,13 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         });
     }
 
-    private static void registerProxy(Project root, String name, TargetDefinition target, String targetTask) {
+    private static void registerProxy(Project root, String name, TargetDefinition target, String... targetTasks) {
         root.getTasks().register(name, task -> {
             task.setGroup("enderfall sdk");
-            task.setDescription("Runs " + targetTask + " for " + target.id());
-            task.dependsOn(projectPath(target) + ':' + targetTask);
+            task.setDescription("Runs " + String.join(" and ", targetTasks) + " for " + target.id());
+            for (String targetTask : targetTasks) {
+                task.dependsOn(projectPath(target) + ':' + targetTask);
+            }
         });
     }
 
@@ -165,14 +175,17 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             return java.util.Map.of();
         }
         boolean runtimeInvocation = requested.stream()
-                .anyMatch(java.util.Set.of("runClient", "runServer", "generateData")::contains);
+                .anyMatch(java.util.Set.of(
+                        "runClient", "runServer", "generateData", "prepareClient", "prepareServer")::contains);
         boolean aggregateInvocation = requested.stream()
                 .anyMatch(java.util.Set.of("buildAll", "checkAll")::contains);
         if (!runtimeInvocation) {
             return selected;
         }
         if (aggregateInvocation) {
-            throw new GradleException("Run runClient, runServer, or generateData separately from buildAll/checkAll");
+            throw new GradleException(
+                    "Run runClient, runServer, generateData, prepareClient, or prepareServer "
+                            + "separately from buildAll/checkAll");
         }
         String selectedTarget = settings.getProviders().gradleProperty("enderfall.target")
                 .getOrElse(extension.getDevelopmentTarget());
@@ -261,6 +274,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             script = "plugins {\n"
                     + "    id 'net.fabricmc.fabric-loom-remap' version '1.17.20'\n"
                     + "}\n\n"
+                    + autoConnectVariables()
                     + "dependencies {\n"
                     + "    minecraft 'com.mojang:minecraft:" + minecraftVersion + "'\n"
                     + "    mappings loom.officialMojangMappings()\n"
@@ -274,7 +288,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                     + "}\n\n"
                     + "loom {\n"
                     + "    runs {\n"
-                    + "        client { runDir 'run/client' }\n"
+                    + fabricClientRun()
                     + "        server { runDir 'run/server'; programArgs 'nogui' }\n"
                     + "    }\n"
                     + "}\n\n"
@@ -283,6 +297,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             script = "plugins {\n"
                     + "    id 'net.fabricmc.fabric-loom' version '1.17.20'\n"
                     + "}\n\n"
+                    + autoConnectVariables()
                     + "dependencies {\n"
                     + "    minecraft 'com.mojang:minecraft:26.2'\n"
                     + "    implementation 'net.fabricmc:fabric-loader:0.19.5'\n"
@@ -294,7 +309,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                     + "}\n\n"
                     + "loom {\n"
                     + "    runs {\n"
-                    + "        client { runDir 'run/client' }\n"
+                    + fabricClientRun()
                     + "        server { runDir 'run/server'; programArgs 'nogui' }\n"
                     + "    }\n"
                     + "}\n\n"
@@ -308,6 +323,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             script = "plugins {\n"
                     + "    id 'net.neoforged.moddev.legacyforge' version '2.0.146'\n"
                     + "}\n\n"
+                    + autoConnectVariables()
                     + "dependencies {\n"
                     + "    modImplementation 'uk.co.enderfall.sdk:" + runtimeArtifact + ":"
                     + TargetCatalog.SDK_VERSION + "'\n"
@@ -316,7 +332,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                     + legacyVersion
                     + "    validateAccessTransformers = true\n"
                     + "    runs {\n"
-                    + "        client { client(); gameDirectory = file('run/client') }\n"
+                    + modDevClientRun(!target.loader().equals("neoforge"))
                     + "        server { server(); gameDirectory = file('run/server'); programArgument '--nogui' }\n"
                     + "    }\n"
                     + "    mods {\n"
@@ -336,6 +352,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             script = "plugins {\n"
                     + "    id 'net.neoforged.moddev' version '2.0.146'\n"
                     + "}\n\n"
+                    + autoConnectVariables()
                     + "dependencies {\n"
                     + "    implementation 'uk.co.enderfall.sdk:" + runtimeArtifact + ":"
                     + TargetCatalog.SDK_VERSION + "'\n"
@@ -343,7 +360,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                     + "neoForge {\n"
                     + "    version = '" + neoVersion + "'\n"
                     + "    runs {\n"
-                    + "        client { client(); gameDirectory = file('run/client') }\n"
+                    + modDevClientRun(true)
                     + "        server { server(); gameDirectory = file('run/server'); programArgument '--nogui' }\n"
                     + "    }\n"
                     + "    mods {\n"
@@ -363,5 +380,31 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         } catch (IOException exception) {
             throw new GradleException("Cannot write generated target build for " + target.id(), exception);
         }
+    }
+
+    private static String autoConnectVariables() {
+        return "def enderfallTestServerHost = System.getenv('ENDERFALL_TEST_SERVER_HOST') ?: '127.0.0.1'\n"
+                + "def enderfallTestServerPort = System.getenv('ENDERFALL_TEST_SERVER_PORT')\n\n";
+    }
+
+    private static String fabricClientRun() {
+        return "        client {\n"
+                + "            runDir 'run/client'\n"
+                + "            if (enderfallTestServerPort) {\n"
+                + "                programArgs '--quickPlayMultiplayer', enderfallTestServerHost + ':' + enderfallTestServerPort\n"
+                + "            }\n"
+                + "        }\n";
+    }
+
+    private static String modDevClientRun(boolean quickPlayAutoConnect) {
+        return "        client {\n"
+                + "            client()\n"
+                + "            gameDirectory = file('run/client')\n"
+                + (quickPlayAutoConnect
+                ? "            if (enderfallTestServerPort) {\n"
+                + "                programArgument '--quickPlayMultiplayer'\n"
+                + "                programArgument enderfallTestServerHost + ':' + enderfallTestServerPort\n"
+                + "            }\n" : "")
+                + "        }\n";
     }
 }

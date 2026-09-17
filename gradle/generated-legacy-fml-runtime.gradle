@@ -1,0 +1,217 @@
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+def targets = [
+    '1.20.1-forge': [loader: 'forge', loaderVersion: '47.4.23'],
+    '1.20.1-neoforge': [loader: 'neoforge', loaderVersion: '47.1.106']
+]
+def targetId = project.ext.enderfallGeneratedLegacyFmlTarget
+def target = targets[targetId]
+if (target == null) {
+    throw new GradleException("Unsupported generated legacy FML target '${targetId}'. Valid targets: "
+        + targets.keySet().sort().join(', '))
+}
+description = "Generated EnderFall SDK runtime parity target for Minecraft 1.20.1 on ${target.loader}"
+apply plugin: 'maven-publish'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+    withSourcesJar()
+    withJavadocJar()
+}
+
+def canonicalRoot = rootProject.layout.projectDirectory.dir('bridge-runtime')
+def bridgeProfile = providers.gradleProperty('enderfall.persistence').orNull == 'true' ? 'enderfallPersistenceWorldState2' : 'enderfallBridge'
+def generatedSources = layout.buildDirectory.dir("generated/sources/${bridgeProfile}")
+def generatedResources = layout.buildDirectory.dir("generated/resources/${bridgeProfile}")
+configurations {
+    bridgeCompilerRuntime
+    shade
+}
+sourceSets.main {
+    java.setSrcDirs([generatedSources])
+    resources.setSrcDirs([generatedResources])
+}
+legacyForge {
+    if (target.loader == 'forge') {
+        version = "1.20.1-${target.loaderVersion}"
+    } else {
+        enable { neoForgeVersion = "1.20.1-${target.loaderVersion}" }
+    }
+    validateAccessTransformers = true
+    runs {
+        client { client(); gameDirectory = file('run/client') }
+        server { server(); gameDirectory = file('run/server'); programArgument '--nogui' }
+    }
+    mods { enderfall_sdk { sourceSet sourceSets.main } }
+}
+dependencies {
+    compileOnly project(':api')
+    compileOnly(project(':runtime-core')) { transitive = false }
+    shade project(':api')
+    shade project(':runtime-core')
+    shade 'org.tomlj:tomlj:1.1.1'
+    shade 'org.antlr:antlr4-runtime:4.11.1'
+    bridgeCompilerRuntime project(':bridge-compiler')
+}
+apply from: rootProject.file('gradle/fml-shared-runtime.gradle')
+def bridgeLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(17)
+}
+def storageSources = layout.buildDirectory.dir('generated/blockEntityStorage/java')
+def generateStorage = tasks.register('generateBlockEntityStorage', JavaExec) {
+    group = 'development'
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BlockEntityStorageMain'
+    javaLauncher = bridgeLauncher
+    inputs.property('target', targetId)
+    outputs.dir(storageSources)
+    args targetId, storageSources.get().asFile.absolutePath
+}
+def storageClasspath = sourceSets.main.compileClasspath
+tasks.register('compileBlockEntityStorageJava', JavaCompile) {
+    group = 'development'
+    dependsOn generateStorage
+    source storageSources
+    classpath = storageClasspath
+    destinationDirectory = layout.buildDirectory.dir('classes/blockEntityStorage')
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
+def generateBridgeRuntime = tasks.register('generateBridgeRuntime', JavaExec) {
+    def persistence = providers.gradleProperty('enderfall.persistence').orElse('false').get()
+    inputs.property('persistence', persistence)
+    args '--persistence', persistence
+    group = 'build'
+    description = "Generates ${targetId} using the shared legacy FML rules."
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BridgeCompilerMain'
+    javaLauncher = bridgeLauncher
+    inputs.dir(canonicalRoot)
+    inputs.property('targetId', targetId)
+    outputs.dir(generatedSources)
+    outputs.dir(generatedResources)
+    args '--target', targetId,
+        '--canonical-root', canonicalRoot.asFile.absolutePath,
+        '--output-sources', generatedSources.get().asFile.absolutePath,
+        '--output-resources', generatedResources.get().asFile.absolutePath
+}
+
+def previewSources = layout.buildDirectory.dir('generated/blockEntityPreview/java')
+def generatePreview = tasks.register('generateBlockEntityPreview', JavaExec) {
+    group = 'development'
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BlockEntityPreviewMain'
+    javaLauncher = bridgeLauncher
+    inputs.property('target', targetId)
+    outputs.dir(previewSources)
+    args targetId, previewSources.get().asFile.absolutePath
+}
+def previewClasspath = sourceSets.main.compileClasspath + sourceSets.main.output
+tasks.register('compileBlockEntityPreviewJava', JavaCompile) {
+    group = 'development'
+    dependsOn generatePreview
+    source previewSources
+    classpath = previewClasspath
+    destinationDirectory = layout.buildDirectory.dir('classes/blockEntityPreview')
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+def verifyBridgeTargetCoordinates = tasks.register('verifyBridgeTargetCoordinates', JavaExec) {
+    group = 'verification'
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.TargetCoordinateMain'
+    javaLauncher = bridgeLauncher
+    args '--target', targetId,
+        '--expect', 'minecraftVersion=1.20.1',
+        '--expect', 'javaVersion=17',
+        '--expect', "loader=${target.loader}",
+        '--expect', "loaderVersion=${target.loaderVersion}",
+        '--expect', 'platformApiVersion='
+}
+tasks.withType(JavaCompile).configureEach { options.release = 17 }
+tasks.named('compileJava') { dependsOn generateBridgeRuntime }
+def sdkArtifactVersion = version.toString()
+tasks.named('processResources') {
+    dependsOn generateBridgeRuntime
+    inputs.property('version', sdkArtifactVersion)
+    filesMatching('META-INF/mods.toml') { expand(version: sdkArtifactVersion) }
+}
+tasks.named('sourcesJar') { dependsOn generateBridgeRuntime }
+tasks.named('javadoc') { dependsOn generateBridgeRuntime }
+tasks.named('shadowJar') {
+    configurations = [project.configurations.shade]
+    archiveClassifier = ''
+    relocate 'org.tomlj', 'uk.co.enderfall.sdk.internal.tomlj'
+    relocate 'org.antlr.v4.runtime', 'uk.co.enderfall.sdk.internal.antlr'
+    exclude 'org/checkerframework/**'
+}
+tasks.named('jar') { archiveClassifier = 'plain' }
+def generatedReobfJar = obfuscation.reobfuscate(tasks.named('shadowJar'), sourceSets.main)
+tasks.named('assemble') { dependsOn generatedReobfJar }
+
+tasks.named('check') { dependsOn verifyBridgeTargetCoordinates }
+if (providers.gradleProperty('enderfall.referenceRuntimes').orNull != 'false') {
+def referencePath = ":runtime-${target.loader}-1.20.1"
+evaluationDependsOn(referencePath)
+def reference = project(referencePath)
+def referenceRoot = reference.layout.projectDirectory
+// Both reviewed legacy loaders already share precisely these Java sources.
+def referenceJavaRoot = rootProject.layout.projectDirectory.dir('runtime-forge-1.20.1/src/main/java')
+def referenceResourcesRoot = referenceRoot.dir('src/main/resources')
+def referenceCompile = reference.tasks.named('compileJava', JavaCompile)
+def generatedCompile = tasks.named('compileJava', JavaCompile)
+def referenceResources = reference.tasks.named('processResources')
+def processedResources = tasks.named('processResources')
+def referenceShadow = reference.tasks.named('shadowJar', AbstractArchiveTask)
+def generatedShadow = tasks.named('shadowJar', AbstractArchiveTask)
+def referenceReobfJar = reference.tasks.named('reobfShadowJar', AbstractArchiveTask)
+
+def verifyGeneratedBridgeParity = tasks.register('verifyGeneratedBridgeParity', JavaExec) {
+    group = 'verification'
+    description = 'Compares generated source, resource, and compiled class trees with the working reference.'
+    dependsOn generateBridgeRuntime, referenceCompile, generatedCompile, referenceResources, processedResources
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BridgeParityMain'
+    javaLauncher = bridgeLauncher
+    args '--forbidden-root', layout.projectDirectory.dir('src/main/java').asFile.absolutePath,
+        '--forbidden-root', layout.projectDirectory.dir('src/main/resources').asFile.absolutePath,
+        '--expected', referenceJavaRoot.asFile.absolutePath,
+        '--actual', generatedSources.get().asFile.absolutePath,
+        '--expected', referenceResourcesRoot.asFile.absolutePath,
+        '--actual', generatedResources.get().asFile.absolutePath,
+        '--expected', referenceCompile.get().destinationDirectory.get().asFile.absolutePath,
+        '--actual', generatedCompile.get().destinationDirectory.get().asFile.absolutePath,
+        '--expected', referenceResources.get().destinationDir.absolutePath,
+        '--actual', processedResources.get().destinationDir.absolutePath
+}
+def verifyGeneratedBridgeArtifactParity = tasks.register('verifyGeneratedBridgeArtifactParity', JavaExec) {
+    group = 'verification'
+    description = 'Proves both development and reobfuscated runtime JARs are byte-identical to the references.'
+    dependsOn generatedReobfJar, referenceReobfJar
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BridgeParityMain'
+    javaLauncher = bridgeLauncher
+    args '--expected-file', referenceShadow.get().archiveFile.get().asFile.absolutePath,
+        '--actual-file', generatedShadow.get().archiveFile.get().asFile.absolutePath,
+        '--expected-file', referenceReobfJar.get().archiveFile.get().asFile.absolutePath,
+        '--actual-file', generatedReobfJar.get().archiveFile.get().asFile.absolutePath
+}
+tasks.named('check') {
+    dependsOn verifyBridgeTargetCoordinates, verifyGeneratedBridgeParity, verifyGeneratedBridgeArtifactParity
+}
+}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = "enderfall-sdk-runtime-1.20.1-${target.loader}"
+            // Match the reference development dependency used by the local consumer harness.
+            // Production reobfuscated JARs in build/libs are verified independently above.
+            artifact tasks.shadowJar
+            artifact tasks.sourcesJar
+            artifact tasks.javadocJar
+        }
+    }
+}
+
+apply from: rootProject.file('gradle/persistence-fixture.gradle')

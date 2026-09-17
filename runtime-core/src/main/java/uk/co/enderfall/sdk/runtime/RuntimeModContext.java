@@ -8,6 +8,7 @@ import uk.co.enderfall.sdk.api.command.CommandManager;
 import uk.co.enderfall.sdk.api.config.ConfigManager;
 import uk.co.enderfall.sdk.api.data.DataGenerationManager;
 import uk.co.enderfall.sdk.api.event.EventBus;
+import uk.co.enderfall.sdk.api.gameplay.PlayerManager;
 import uk.co.enderfall.sdk.api.logging.ModLogger;
 import uk.co.enderfall.sdk.api.network.NetworkManager;
 import uk.co.enderfall.sdk.api.platform.CapabilitySet;
@@ -15,6 +16,9 @@ import uk.co.enderfall.sdk.api.platform.PlatformInfo;
 import uk.co.enderfall.sdk.api.registry.BlockRegistrar;
 import uk.co.enderfall.sdk.api.registry.CreativeTabRegistrar;
 import uk.co.enderfall.sdk.api.registry.ItemRegistrar;
+import uk.co.enderfall.sdk.api.recipe.RecipeRegistrar;
+import uk.co.enderfall.sdk.api.ui.MenuManager;
+import uk.co.enderfall.sdk.api.ui.WorkbenchManager;
 import uk.co.enderfall.sdk.runtime.config.DefaultConfigManager;
 import uk.co.enderfall.sdk.runtime.network.DefaultNetworkManager;
 
@@ -25,8 +29,14 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     private final RegistrationGate gate = new RegistrationGate();
     private final ModLogger logger;
     private final DefaultEventBus events;
+    private final DefaultBlockEntityRendererRegistrar blockEntityRenderers;
+    private final DefaultPlayerManager players;
+    private final DefaultMenuManager menus;
+    private final DefaultRecipeRegistrar recipes;
+    private final DefaultWorkbenchManager workbenches;
     private final DefaultItemRegistrar items;
     private final DefaultBlockRegistrar blocks;
+    private final DefaultBlockStateManager blockStates;
     private final DefaultCreativeTabRegistrar creativeTabs;
     private final DefaultCommandManager commands;
     private final DefaultConfigManager configs;
@@ -39,8 +49,14 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
         logger = new SystemModLogger(modId);
         events = new DefaultEventBus(logger);
         String target = adapter.platformInfo().targetId();
+        blockEntityRenderers = new DefaultBlockEntityRendererRegistrar(modId, target, adapter, gate);
+        players = new DefaultPlayerManager(modId, target, adapter);
+        menus = new DefaultMenuManager(modId, target, adapter, gate, logger, events);
+        recipes = new DefaultRecipeRegistrar(modId, target, adapter, gate);
+        workbenches = new DefaultWorkbenchManager(modId, target, adapter, gate);
         items = new DefaultItemRegistrar(modId, target, adapter, gate);
         blocks = new DefaultBlockRegistrar(modId, target, adapter, gate, items);
+        blockStates = new DefaultBlockStateManager(adapter);
         creativeTabs = new DefaultCreativeTabRegistrar(modId, target, adapter, gate);
         commands = new DefaultCommandManager(modId, target, adapter, gate);
         configs = new DefaultConfigManager(modId, target, adapter, gate, logger);
@@ -51,6 +67,12 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     public void freezeRegistrations() {
         gate.freeze();
     }
+
+    @Override public uk.co.enderfall.sdk.api.render.BlockEntityRendererRegistrar blockEntityRenderers() {
+        return blockEntityRenderers;
+    }
+
+    @Override public uk.co.enderfall.sdk.api.block.BlockStateManager blockStates() { return blockStates; }
 
     public boolean registrationsFrozen() {
         return gate.frozen();
@@ -115,6 +137,26 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     @Override
     public EventBus events() {
         return events;
+    }
+
+    @Override
+    public PlayerManager players() {
+        return players;
+    }
+
+    @Override
+    public MenuManager menus() {
+        return menus;
+    }
+
+    @Override
+    public RecipeRegistrar recipes() {
+        return recipes;
+    }
+
+    @Override
+    public WorkbenchManager workbenches() {
+        return workbenches;
     }
 
     @Override

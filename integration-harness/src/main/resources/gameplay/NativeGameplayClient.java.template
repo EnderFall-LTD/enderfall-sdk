@@ -1,0 +1,280 @@
+package uk.co.enderfall.sdk.testmod;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.@CLICK_TYPE@;
+import net.minecraft.world.item.ItemStack;
+import uk.co.enderfall.sdk.api.ClientModContext;
+import uk.co.enderfall.sdk.api.EnderfallClientMod;
+import uk.co.enderfall.sdk.api.event.SdkEvents;
+import uk.co.enderfall.sdk.api.event.TickEvent;
+
+/** Generated test-only driver. Not SDK runtime code or part of the portability contract. */
+public final class NativeGameplayClient implements EnderfallClientMod {
+    private static final String BLOCK = "enderfall_sdk_test:test_block";
+    private static final String CATALYST = "enderfall_sdk_test:catalyst";
+    private static final String HAMMER = "enderfall_sdk_test:hammer";
+    private ClientModContext context;
+    private Phase phase = Phase.CONNECT;
+    private int ticks;
+    private int acknowledgedAt;
+    private int firstContainer;
+    private long deadline;
+
+    @Override
+    public void initialize(ClientModContext context) {
+        this.context = context;
+        new ContractTestClient().initialize(context);
+        if (!ContractGameplay.enabled()) throw new IllegalStateException("Native probe outside gameplay harness");
+        @CONNECTION_OBSERVER@
+        context.events().subscribe(SdkEvents.TICK, event -> {
+            if (event.side() == TickEvent.Side.CLIENT && event.phase() == TickEvent.Phase.END
+                    && ContractGameplay.connectionReady && phase != Phase.DONE) {
+                if (deadline == 0) deadline = System.nanoTime() + 60_000_000_000L;
+                try {
+                    require(System.nanoTime() < deadline, "Timed out in " + phase);
+                    ticks++;
+                    tick();
+                } catch (RuntimeException failure) {
+                    context.logger().error("ENDERFALL_GAMEPLAY_FAILED {} {}: {}",
+                            context.platform().targetId(), phase, failure.getMessage());
+                    phase = Phase.DONE;
+                    System.setProperty(ContractGameplay.COMPLETE_PROPERTY, "true");
+                }
+            }
+        });
+    }
+
+    private void tick() {
+        Minecraft client = Minecraft.getInstance();
+        switch (phase) {
+            case CONNECT -> {
+                // Wait until terrain loading has finished; its screen would replace an early menu.
+                if (client.player == null || screen() != null) return;
+                request("open-menu");
+                advance(Phase.MENU);
+            }
+            case MENU -> {
+                Button button = button("synchronized");
+                if (button == null) return;
+                @PRESS_BUTTON@
+                advance(Phase.CONFIRMED);
+            }
+            case CONFIRMED -> {
+                if (button("confirmed") == null) return;
+                marker("MENU_STATE_CONFIRMED");
+                request("menu-confirmed");
+                advance(Phase.WORKBENCH);
+            }
+            case WORKBENCH -> {
+                if (!workbench()) return;
+                firstContainer = menu().containerId;
+                expect(0, "", 0); expect(1, "", 0); expect(2, "", 0);
+                if (inventorySlot(BLOCK) < 0 || inventorySlot(CATALYST) < 0) return;
+                moveOne(BLOCK, 0);
+                moveAll(CATALYST, 1);
+                request("insufficient");
+                advance(Phase.INSUFFICIENT);
+            }
+            case INSUFFICIENT -> {
+                if (!settled("insufficient")) return;
+                expect(0, BLOCK, 1); expect(1, CATALYST, 2); expect(2, "", 0);
+                marker("INSUFFICIENT_REJECTED");
+                moveOne(BLOCK, 0);
+                advance(Phase.RESULT);
+            }
+            case RESULT -> {
+                if (!matches(menu().getSlot(2).getItem(), HAMMER, 1)) return;
+                expect(0, BLOCK, 2); expect(1, CATALYST, 2);
+                click(2, 0, @CLICK_TYPE@.PICKUP);
+                int destination = emptyInventorySlot();
+                require(destination >= 0, "No free inventory slot for normal craft");
+                click(destination, 0, @CLICK_TYPE@.PICKUP);
+                require(menu().getCarried().isEmpty(), "Normal craft left a carried stack");
+                request("crafted-once");
+                advance(Phase.FIRST);
+            }
+            case FIRST -> {
+                if (!settled("crafted-once")) return;
+                expect(0, "", 0); expect(1, CATALYST, 1); expect(2, "", 0);
+                require(inventoryCount(HAMMER) == 1, "Normal craft not synchronized to inventory");
+                click(inventorySlot(BLOCK), 0, @CLICK_TYPE@.QUICK_MOVE);
+                advance(Phase.SECOND_RESULT);
+            }
+            case SECOND_RESULT -> {
+                if (!matches(menu().getSlot(2).getItem(), HAMMER, 1)) return;
+                expect(0, BLOCK, 2); expect(1, CATALYST, 1);
+                request("fill-inventory");
+                advance(Phase.FULL_INVENTORY);
+            }
+            case FULL_INVENTORY -> {
+                if (!settled("inventory-full")) return;
+                require(emptyInventorySlot() < 0 && inventoryCount(HAMMER) == 36,
+                        "Full-inventory setup did not synchronize all 36 slots");
+                require(menu().getCarried().isEmpty(), "Full-inventory setup left a carried stack");
+                expect(0, BLOCK, 2); expect(1, CATALYST, 1); expect(2, HAMMER, 1);
+                click(2, 0, @CLICK_TYPE@.QUICK_MOVE);
+                click(2, 0, @CLICK_TYPE@.QUICK_MOVE);
+                advance(Phase.BLOCKED_RESULT);
+            }
+            case BLOCKED_RESULT -> {
+                // Observe slot synchronization before asking the server to restore space.
+                if (++acknowledgedAt < 20) return;
+                expect(0, BLOCK, 2); expect(1, CATALYST, 1); expect(2, HAMMER, 1);
+                require(emptyInventorySlot() < 0 && inventoryCount(HAMMER) == 36
+                        && menu().getCarried().isEmpty(), "Full-inventory clicks changed items");
+                marker("FULL_INVENTORY_UNCHANGED");
+                request("full-inventory-attempted");
+                advance(Phase.CAPACITY_RESTORED);
+            }
+            case CAPACITY_RESTORED -> {
+                if (!settled("capacity-restored")) return;
+                expect(0, BLOCK, 2); expect(1, CATALYST, 1); expect(2, HAMMER, 1);
+                require(inventoryCount(HAMMER) == 1 && emptyInventorySlot() >= 0,
+                        "Restored inventory capacity did not synchronize");
+                click(2, 0, @CLICK_TYPE@.QUICK_MOVE);
+                // A repeated click on the exhausted output must not create another result.
+                click(2, 0, @CLICK_TYPE@.PICKUP);
+                request("crafted-twice");
+                advance(Phase.RETURN_ITEMS);
+            }
+            case RETURN_ITEMS -> {
+                if (!settled("return-items") || inventorySlot(BLOCK) < 0 || inventorySlot(CATALYST) < 0) return;
+                expect(0, "", 0); expect(1, "", 0); expect(2, "", 0);
+                require(menu().getCarried().isEmpty() && inventoryCount(HAMMER) == 2,
+                        "Shift craft duplicated or lost its result");
+                moveAll(BLOCK, 0);
+                moveAll(CATALYST, 1);
+                request("return-loaded");
+                advance(Phase.RETURN_LOADED);
+            }
+            case RETURN_LOADED -> {
+                if (!settled("return-loaded")) return;
+                expect(0, BLOCK, 1); expect(1, CATALYST, 1); expect(2, "", 0);
+                screen().onClose();
+                request("closed");
+                advance(Phase.REOPEN);
+            }
+            case REOPEN -> {
+                if (!settled("reopened") || !workbench() || menu().containerId == firstContainer) return;
+                expect(0, "", 0); expect(1, "", 0); expect(2, "", 0);
+                require(inventoryCount(BLOCK) == 1 && inventoryCount(CATALYST) == 1 && inventoryCount(HAMMER) == 2,
+                        "Close/reopen did not synchronize returned inputs");
+                marker("REOPEN_EMPTY");
+                screen().onClose();
+                request("finished");
+                advance(Phase.DONE);
+            }
+            case DONE -> { }
+        }
+    }
+
+    private Screen screen() {
+        Minecraft client = Minecraft.getInstance();
+        return @SCREEN@;
+    }
+
+    private Button button(String message) {
+        Screen screen = screen();
+        if (screen == null || !screen.getTitle().getString().equals("EnderFall Contract")) return null;
+        for (var child : screen.children()) {
+            if (child instanceof Button button && button.getMessage().getString().equals(message)) return button;
+        }
+        return null;
+    }
+
+    private boolean workbench() {
+        Screen screen = screen();
+        return Minecraft.getInstance().player != null && screen instanceof AbstractContainerScreen<?>
+                && screen.getTitle().getString().equals("Contract Assembly") && menu().slots.size() == 39;
+    }
+
+    private AbstractContainerMenu menu() { return Minecraft.getInstance().player.containerMenu; }
+
+    private void click(int slot, int mouseButton, @CLICK_TYPE@ kind) {
+        require(slot >= 0 && slot < menu().slots.size(), "Invalid probe slot " + slot);
+        Minecraft client = Minecraft.getInstance();
+        client.gameMode.@CLICK_METHOD@(menu().containerId, slot, mouseButton, kind, client.player);
+    }
+
+    private void moveOne(String item, int destination) {
+        int source = inventorySlot(item);
+        click(source, 0, @CLICK_TYPE@.PICKUP);
+        click(destination, 1, @CLICK_TYPE@.PICKUP);
+        click(source, 0, @CLICK_TYPE@.PICKUP);
+        require(menu().getCarried().isEmpty(), "Move-one left a carried stack");
+    }
+
+    private void moveAll(String item, int destination) {
+        click(inventorySlot(item), 0, @CLICK_TYPE@.PICKUP);
+        click(destination, 0, @CLICK_TYPE@.PICKUP);
+        require(menu().getCarried().isEmpty(), "Move-all left a carried stack");
+    }
+
+    private int inventorySlot(String item) {
+        for (int index = 3; index < menu().slots.size(); index++) {
+            ItemStack stack = menu().getSlot(index).getItem();
+            if (!stack.isEmpty() && id(stack).equals(item)) return index;
+        }
+        return -1;
+    }
+
+    private int emptyInventorySlot() {
+        for (int index = 3; index < menu().slots.size(); index++) {
+            if (menu().getSlot(index).getItem().isEmpty()) return index;
+        }
+        return -1;
+    }
+
+    private int inventoryCount(String item) {
+        int count = 0;
+        for (int index = 3; index < menu().slots.size(); index++) {
+            ItemStack stack = menu().getSlot(index).getItem();
+            if (!stack.isEmpty() && id(stack).equals(item)) count += stack.getCount();
+        }
+        return count;
+    }
+
+    private static String id(ItemStack stack) { return @ITEM_ID@; }
+    private static boolean matches(ItemStack stack, String item, int count) {
+        return count == 0 ? stack.isEmpty() : !stack.isEmpty() && id(stack).equals(item) && stack.getCount() == count;
+    }
+
+    private void expect(int slot, String item, int count) {
+        require(matches(menu().getSlot(slot).getItem(), item, count),
+                "Slot " + slot + " expected " + item + " x" + count + ", got " + menu().getSlot(slot).getItem());
+    }
+
+    private boolean settled(String acknowledgement) {
+        if (!ContractGameplay.clientAcknowledgement.equals(acknowledgement)) return false;
+        if (acknowledgedAt == 0) acknowledgedAt = ticks;
+        return ticks - acknowledgedAt >= 20;
+    }
+
+    private void request(String message) {
+        ContractGameplay.clientAcknowledgement = "";
+        context.networking().sendToServer(ContractGameplay.PACKET, message);
+    }
+
+    private void advance(Phase next) {
+        phase = next;
+        acknowledgedAt = 0;
+        deadline = System.nanoTime() + 60_000_000_000L;
+    }
+
+    private void marker(String check) {
+        context.logger().info("ENDERFALL_GAMEPLAY_{} {}", check, context.platform().targetId());
+    }
+
+    private static void require(boolean condition, String message) {
+        if (!condition) throw new IllegalStateException(message);
+    }
+
+    private enum Phase { CONNECT, MENU, CONFIRMED, WORKBENCH, INSUFFICIENT, RESULT, FIRST,
+        SECOND_RESULT, FULL_INVENTORY, BLOCKED_RESULT, CAPACITY_RESTORED,
+        RETURN_ITEMS, RETURN_LOADED, REOPEN, DONE }
+}

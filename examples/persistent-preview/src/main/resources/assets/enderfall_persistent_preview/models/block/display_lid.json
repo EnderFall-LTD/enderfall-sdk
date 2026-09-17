@@ -1,0 +1,11 @@
+{
+  "textures": {"lid": "minecraft:block/oak_planks", "particle": "minecraft:block/oak_planks"},
+  "elements": [{
+    "from": [1, 0, 1], "to": [15, 2, 15],
+    "faces": {
+      "down": {"texture": "#lid"}, "up": {"texture": "#lid"},
+      "north": {"texture": "#lid"}, "south": {"texture": "#lid"},
+      "west": {"texture": "#lid"}, "east": {"texture": "#lid"}
+    }
+  }]
+}

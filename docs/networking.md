@@ -15,6 +15,10 @@ SDK protocol major/minor and packet ID/schema/required flags. A protocol-major m
 or missing required packet disconnects. Optional packets are used only when the remote
 manifest advertises the exact schema.
 
-Mixed-loader compatibility means clients and servers on the **same Minecraft version**.
-Cross-version protocol translation is out of scope. Networking is not called stable
-until every directed loader pairing passes the real automated client/server suite.
+A multiplayer connection must use the same Minecraft version, loader, EnderFall SDK
+target, and compatible mod set on both sides. Cross-loader connections and cross-version
+protocol translation are deliberately out of scope: EnderFall builds each loader target
+from the same portable source, but does not make different loader runtimes interoperable.
+Every catalog target now passes the real automated same-loader client/server suite.
+Formal stable status still follows the SDK release policy and the remaining full
+foundation-feature and release-candidate gates.

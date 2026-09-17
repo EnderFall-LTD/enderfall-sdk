@@ -18,10 +18,13 @@ import uk.co.enderfall.sdk.api.data.ShapedRecipeSpec;
 import uk.co.enderfall.sdk.api.data.ShapelessRecipeSpec;
 import uk.co.enderfall.sdk.api.data.TagSpec;
 import uk.co.enderfall.sdk.api.platform.MinecraftVersion;
+import uk.co.enderfall.sdk.api.recipe.CountedIngredient;
+import uk.co.enderfall.sdk.api.recipe.WorkbenchRecipeSpec;
 
 /** Deterministic build-time resource collector. Game-load tests validate each target format. */
 public final class JsonDataGenerationContext implements DataGenerationContext {
     private static final MinecraftVersion SINGULAR_DATA_PATHS = new MinecraftVersion("1.21.0");
+    private static final MinecraftVersion HOLDER_SET_INGREDIENTS = new MinecraftVersion("1.21.2");
     private static final MinecraftVersion ITEM_DEFINITIONS = new MinecraftVersion("1.21.4");
 
     private final MinecraftVersion minecraftVersion;
@@ -78,6 +81,27 @@ public final class JsonDataGenerationContext implements DataGenerationContext {
     }
 
     @Override
+    public void workbenchRecipe(ResourceId id, WorkbenchRecipeSpec recipe) {
+        StringBuilder json = new StringBuilder("{\n  \"type\": ")
+                .append(quote(recipe.type().id().toString()))
+                .append(",\n  \"ingredients\": [");
+        for (int index = 0; index < recipe.ingredients().size(); index++) {
+            if (index > 0) {
+                json.append(',');
+            }
+            CountedIngredient counted = recipe.ingredients().get(index);
+            json.append("\n    { \"ingredient\": ")
+                    .append(ingredient(counted.ingredient()))
+                    .append(", \"count\": ").append(counted.count()).append(" }");
+        }
+        String resultKey = minecraftVersion.compareTo(SINGULAR_DATA_PATHS) >= 0 ? "id" : "item";
+        json.append("\n  ],\n  \"result\": { \"").append(resultKey).append("\": ")
+                .append(quote(recipe.result().item().toString()))
+                .append(", \"count\": ").append(recipe.result().count()).append(" }\n}\n");
+        put(dataPath(id, dataDirectory("recipe")), json.toString());
+    }
+
+    @Override
     public void itemModel(ResourceId item, ModelSpec model) {
         requireKind(model, ModelSpec.Kind.GENERATED_ITEM, ModelSpec.Kind.HANDHELD_ITEM);
         String parent = model.kind() == ModelSpec.Kind.HANDHELD_ITEM ? "item/handheld" : "item/generated";
@@ -97,6 +121,60 @@ public final class JsonDataGenerationContext implements DataGenerationContext {
                 + "  \"textures\": {\n    \"all\": " + quote(model.texture().toString()) + "\n  }\n}\n");
         put(assetPath(block, "blockstates"), "{\n  \"variants\": {\n    \"\": { \"model\": "
                 + quote(block.namespace() + ":block/" + block.path()) + " }\n  }\n}\n");
+        put(assetPath(block, "models/item"), "{\n  \"parent\": "
+                + quote(block.namespace() + ":block/" + block.path()) + "\n}\n");
+        if (minecraftVersion.compareTo(ITEM_DEFINITIONS) >= 0) {
+            put(assetPath(block, "items"), "{\n  \"model\": {\n    \"type\": \"minecraft:model\",\n"
+                    + "    \"model\": " + quote(block.namespace() + ":item/" + block.path()) + "\n  }\n}\n");
+        }
+    }
+
+    @Override
+    public void horizontalBlockState(ResourceId block, ResourceId model) {
+        facingBlockState(block, model, false);
+    }
+
+    @Override
+    public void blockStates(ResourceId block,
+            uk.co.enderfall.sdk.api.block.BlockStateDefinition definition,
+            java.util.function.Function<uk.co.enderfall.sdk.api.block.PortableBlockState, ResourceId> model) {
+        Objects.requireNonNull(block, "block");
+        Objects.requireNonNull(definition, "definition");
+        Objects.requireNonNull(model, "model");
+        StringBuilder json = new StringBuilder("{\n  \"variants\": {\n");
+        boolean first = true;
+        for (var state : definition.states()) {
+            if (!first) json.append(",\n");
+            first = false;
+            String key = state.serializedValues().entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + entry.getValue())
+                    .collect(java.util.stream.Collectors.joining(","));
+            var selected = Objects.requireNonNull(model.apply(state), "model returned null");
+            json.append("    ").append(quote(key)).append(": { \"model\": ")
+                    .append(quote(selected.toString())).append(" }");
+        }
+        put(assetPath(block, "blockstates"), json.append("\n  }\n}\n").toString());
+    }
+
+    @Override
+    public void sixWayBlockState(ResourceId block, ResourceId model) {
+        facingBlockState(block, model, true);
+    }
+
+    private void facingBlockState(ResourceId block, ResourceId model, boolean sixWay) {
+        Objects.requireNonNull(block, "block");
+        Objects.requireNonNull(model, "model");
+        String[] directions = sixWay ? new String[] { "north", "east", "south", "west", "up", "down" }
+                : new String[] { "north", "east", "south", "west" };
+        StringBuilder json = new StringBuilder("{\n  \"variants\": {\n");
+        for (int i = 0; i < directions.length; i++) {
+            if (i != 0) json.append(",\n");
+            json.append("    ").append(quote("facing=" + directions[i])).append(": { \"model\": ")
+                    .append(quote(model.toString())).append(", \"y\": ").append(i < 4 ? i * 90 : 0);
+            if (i >= 4) json.append(", \"x\": ").append(i == 4 ? 270 : 90);
+            json.append(", \"uvlock\": true }");
+        }
+        put(assetPath(block, "blockstates"), json.append("\n  }\n}\n").toString());
     }
 
     @Override
@@ -166,6 +244,12 @@ public final class JsonDataGenerationContext implements DataGenerationContext {
     }
 
     private String ingredient(Ingredient ingredient) {
+        if (minecraftVersion.compareTo(HOLDER_SET_INGREDIENTS) >= 0) {
+            String value = ingredient.kind() == Ingredient.Kind.TAG
+                    ? '#' + ingredient.id().toString()
+                    : ingredient.id().toString();
+            return quote(value);
+        }
         String key = ingredient.kind() == Ingredient.Kind.ITEM ? "item" : "tag";
         return "{ \"" + key + "\": " + quote(ingredient.id().toString()) + " }";
     }
@@ -181,6 +265,31 @@ public final class JsonDataGenerationContext implements DataGenerationContext {
 
     private static String assetPath(ResourceId id, String directory) {
         return "assets/" + id.namespace() + '/' + directory + '/' + id.path() + ".json";
+    }
+
+    @Override
+    public void machineRecipe(ResourceId id, uk.co.enderfall.sdk.api.recipe.MachineRecipeSpec recipe) {
+        Objects.requireNonNull(recipe, "recipe");
+        if (recipe.itemInputs().isEmpty() || recipe.itemInputs().size() > 5 || recipe.itemOutputs().size() != 1) {
+            throw new IllegalArgumentException("Machine menu supports 1-5 item inputs and one item output");
+        }
+        String inputs = recipe.itemInputs().stream().map(entry -> "{"
+                + quote(entry.ingredient().kind() == Ingredient.Kind.TAG ? "tag" : "item") + ":"
+                + quote(entry.ingredient().id().toString()) + ",\"count\":" + entry.count() + "}")
+                .collect(java.util.stream.Collectors.joining(","));
+        String fluids = recipe.fluidInputs().stream().map(entry -> "{"
+                + quote(entry.kind() == uk.co.enderfall.sdk.api.recipe.FluidIngredient.Kind.TAG ? "tag" : "fluid")
+                + ":" + quote(entry.id().toString()) + ",\"amount\":" + entry.amount() + "}")
+                .collect(java.util.stream.Collectors.joining(","));
+        String outputs = recipe.itemOutputs().stream().map(entry -> "{\"item\":" + quote(entry.item().toString())
+                + ",\"count\":" + entry.count() + "}").collect(java.util.stream.Collectors.joining(","));
+        String fluidOutputs = recipe.fluidOutputs().stream().map(entry -> "{\"fluid\":" + quote(entry.fluid().toString())
+                + ",\"amount\":" + entry.amount() + "}").collect(java.util.stream.Collectors.joining(","));
+        String json = "{\"type\":" + quote(recipe.type().toString()) + ",\"duration_ticks\":" + recipe.durationTicks()
+                + ",\"item_inputs\":[" + inputs + "],\"fluid_inputs\":[" + fluids + "],\"item_outputs\":["
+                + outputs + "],\"fluid_outputs\":[" + fluidOutputs + "]}\n";
+        if (json.getBytes(StandardCharsets.UTF_8).length > 65536) throw new IllegalArgumentException("Machine recipe exceeds 64 KiB");
+        put(dataPath(id, "enderfall_machine"), json);
     }
 
     private void put(String path, String content) {

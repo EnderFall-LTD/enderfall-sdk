@@ -1,0 +1,58 @@
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.bundling.Jar
+
+// One portable fixture and generated launcher/resources for every SDK development target.
+if (providers.gradleProperty('enderfall.persistenceFixture').orNull != 'true') return
+if (providers.gradleProperty('enderfall.blockEntityPreview').orNull == 'true') {
+    throw new GradleException('Choose enderfall.persistenceFixture or enderfall.blockEntityPreview, not both: they register the same preview mod ID.')
+}
+if (providers.gradleProperty('enderfall.persistence').orNull != 'true') {
+    throw new GradleException('Persistence fixture requires -Penderfall.persistence=true')
+}
+def coordinate = project.name.substring('runtime-generated-'.length())
+def split = coordinate.indexOf('-')
+def loader = coordinate.substring(0, split)
+def target = coordinate.substring(split + 1) + '-' + loader
+def generatedFixture = layout.buildDirectory.dir('generated/persistenceFixture')
+def portable = rootProject.tasks.named('compilePersistenceFixturePortableJava', JavaCompile)
+def generateFixture = tasks.register('generatePersistenceFixture', JavaExec) {
+    group = 'development'
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.PersistenceFixtureMain'
+    inputs.property('target', target)
+    inputs.dir(rootProject.layout.projectDirectory.dir('examples/persistent-preview/src/main/resources'))
+    outputs.dir(generatedFixture)
+    args target, rootProject.file('examples/persistent-preview').absolutePath, generatedFixture.get().asFile.absolutePath
+}
+def fixture = sourceSets.create('persistenceFixture') {
+    java.setSrcDirs([generatedFixture.map { it.dir('java') }])
+    resources.setSrcDirs([generatedFixture.map { it.dir('resources') }])
+    compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output + files(portable.flatMap { it.destinationDirectory })
+    runtimeClasspath += sourceSets.main.runtimeClasspath
+}
+fixture.output.classesDirs.from(portable.flatMap { it.destinationDirectory })
+tasks.named(fixture.compileJavaTaskName) { dependsOn generateFixture, portable }
+tasks.named(fixture.processResourcesTaskName) { dependsOn generateFixture }
+def fixtureJar = tasks.register('persistenceFixtureJar', Jar) {
+    group = 'development'
+    archiveFileName = "enderfall-persistence-fixture-${target}-dev.jar"
+    destinationDirectory = layout.buildDirectory.dir('persistenceFixture')
+    from fixture.output
+    from rootProject.file('LICENSE')
+}
+if (loader == 'fabric') {
+    loom.runs.configureEach {
+        runDir "run/persistence-fixture/${name}"
+    }
+    tasks.withType(JavaExec).matching { it.name in ['runClient', 'runServer'] }.configureEach {
+        dependsOn fixtureJar
+        classpath += files(fixtureJar.flatMap { it.archiveFile }) + sourceSets.main.runtimeClasspath
+        systemProperty 'fabric.addMods', fixtureJar.get().archiveFile.get().asFile.absolutePath
+    }
+} else {
+    def platform = target.startsWith('1.20.1-') ? extensions.getByName('legacyForge') : extensions.getByName('neoForge')
+    platform.mods.create('enderfall_persistent_preview') { sourceSet fixture }
+    platform.runs.configureEach { gameDirectory = file("run/persistence-fixture/${name}") }
+    tasks.matching { it.name in ['runClient', 'runServer'] }.configureEach { dependsOn fixture.classesTaskName }
+}

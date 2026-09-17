@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "enderfall_sdk_demo:item/ender_alloy_block"
+  }
+}

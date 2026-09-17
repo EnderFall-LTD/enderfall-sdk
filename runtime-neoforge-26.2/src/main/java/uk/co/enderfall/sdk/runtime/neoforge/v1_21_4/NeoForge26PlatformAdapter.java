@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -16,9 +17,14 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -46,6 +52,7 @@ import uk.co.enderfall.sdk.api.event.InteractionEvent;
 import uk.co.enderfall.sdk.api.event.LifecycleEvent;
 import uk.co.enderfall.sdk.api.event.SdkEvents;
 import uk.co.enderfall.sdk.api.event.TickEvent;
+import uk.co.enderfall.sdk.api.gameplay.PlayerSnapshot;
 import uk.co.enderfall.sdk.api.network.PacketDirection;
 import uk.co.enderfall.sdk.api.platform.Capability;
 import uk.co.enderfall.sdk.api.platform.CapabilitySet;
@@ -54,9 +61,11 @@ import uk.co.enderfall.sdk.api.platform.PlatformInfo;
 import uk.co.enderfall.sdk.api.registry.BlockSpec;
 import uk.co.enderfall.sdk.api.registry.CreativeTabSpec;
 import uk.co.enderfall.sdk.api.registry.ItemSpec;
+import uk.co.enderfall.sdk.api.recipe.WorkbenchRecipeTypeRef;
 import uk.co.enderfall.sdk.runtime.ImmutableCapabilitySet;
 import uk.co.enderfall.sdk.runtime.PayloadReceiver;
 import uk.co.enderfall.sdk.runtime.PlatformAdapter;
+import uk.co.enderfall.sdk.runtime.PortableWorkbenchDefinition;
 import uk.co.enderfall.sdk.runtime.RuntimeModContext;
 
 final class NeoForgePlatformAdapter implements PlatformAdapter {
@@ -65,13 +74,20 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
     private final PlatformInfo platformInfo = new NeoForgePlatformInfo();
     private final CapabilitySet capabilities = new ImmutableCapabilitySet(EnumSet.of(
             Capability.REGISTRIES, Capability.EVENTS, Capability.COMMANDS,
-            Capability.CONFIGURATION, Capability.NETWORKING, Capability.DATA_GENERATION));
+            Capability.CONFIGURATION, Capability.NETWORKING, Capability.DATA_GENERATION,
+            Capability.PLAYER_ACTIONS, Capability.SYNCHRONIZED_SCREENS,
+            Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS));
     private final DeferredRegister.Items itemRegister;
     private final DeferredRegister.Blocks blockRegister;
     private final DeferredRegister<CreativeModeTab> creativeTabRegister;
+    private final DeferredRegister<RecipeType<?>> recipeTypeRegister;
+    private final DeferredRegister<RecipeSerializer<?>> recipeSerializerRegister;
+    private final DeferredRegister<MenuType<?>> menuRegister;
     private final Map<ResourceId, Supplier<? extends Item>> items = new LinkedHashMap<>();
     private final Map<ResourceId, Supplier<? extends Block>> blocks = new LinkedHashMap<>();
     private final Map<ResourceId, PayloadBinding> payloads = new LinkedHashMap<>();
+    private final Map<ResourceId, NeoForge26RecipeBinding> recipeTypes = new LinkedHashMap<>();
+    private final Map<ResourceId, NeoForge26WorkbenchBinding> workbenches = new LinkedHashMap<>();
     private volatile MinecraftServer server;
     private RuntimeModContext context;
 
@@ -81,9 +97,15 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
         itemRegister = DeferredRegister.createItems(modId);
         blockRegister = DeferredRegister.createBlocks(modId);
         creativeTabRegister = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, modId);
+        recipeTypeRegister = DeferredRegister.create(Registries.RECIPE_TYPE, modId);
+        recipeSerializerRegister = DeferredRegister.create(Registries.RECIPE_SERIALIZER, modId);
+        menuRegister = DeferredRegister.create(Registries.MENU, modId);
         itemRegister.register(modBus);
         blockRegister.register(modBus);
         creativeTabRegister.register(modBus);
+        recipeTypeRegister.register(modBus);
+        recipeSerializerRegister.register(modBus);
+        menuRegister.register(modBus);
     }
 
     void attach(RuntimeModContext runtimeContext) {
@@ -91,7 +113,7 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
         modBus.addListener(this::registerPayloadHandlers);
         installEvents();
         if (platformInfo.environment() == Environment.CLIENT) {
-            NeoForgeClientHooks.install(modBus, context);
+            NeoForgeClientHooks.install(modBus, context, workbenches.values());
         }
     }
 
@@ -152,6 +174,65 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
     }
 
     @Override
+    public void registerWorkbenchRecipeType(WorkbenchRecipeTypeRef recipeType) {
+        ResourceId id = recipeType.id();
+        if (recipeTypes.containsKey(id)) {
+            throw new IllegalStateException("[" + modId + "] Duplicate workbench recipe type " + id);
+        }
+
+        Identifier nativeId = identifier(id);
+        Supplier<RecipeType<NeoForge26WorkbenchRecipe>> type = recipeTypeRegister.register(
+                id.path(), () -> RecipeType.simple(nativeId));
+        AtomicReference<NeoForge26RecipeBinding> bindingReference = new AtomicReference<>();
+        Supplier<RecipeSerializer<NeoForge26WorkbenchRecipe>> serializer = recipeSerializerRegister.register(
+                id.path(), () -> {
+                    NeoForge26RecipeBinding binding = bindingReference.get();
+                    if (binding == null) {
+                        throw new IllegalStateException("[" + modId + "] Recipe serializer initialized too early for " + id);
+                    }
+                    return new RecipeSerializer<>(NeoForge26WorkbenchRecipe.codec(binding),
+                            NeoForge26WorkbenchRecipe.streamCodec(binding));
+                });
+        NeoForge26RecipeBinding binding = new NeoForge26RecipeBinding(
+                nativeId, type, serializer, recipeType.inputSlots());
+        bindingReference.set(binding);
+        recipeTypes.put(id, binding);
+    }
+
+    @Override
+    public void registerWorkbench(PortableWorkbenchDefinition definition) {
+        ResourceId id = definition.reference().id();
+        if (workbenches.containsKey(id)) {
+            throw new IllegalStateException("[" + modId + "] Duplicate workbench " + id);
+        }
+        NeoForge26RecipeBinding recipes = recipeTypes.get(definition.spec().recipeType().id());
+        if (recipes == null) {
+            throw new IllegalStateException("[" + modId + "] Workbench " + id
+                    + " references unregistered recipe type " + definition.spec().recipeType().id());
+        }
+
+        AtomicReference<NeoForge26WorkbenchBinding> bindingReference = new AtomicReference<>();
+        Supplier<MenuType<NeoForge26WorkbenchMenu>> menuType = menuRegister.register(id.path(), () ->
+                new MenuType<>((containerId, inventory) -> new NeoForge26WorkbenchMenu(
+                        containerId, inventory, requireBinding(bindingReference, id)), FeatureFlags.VANILLA_SET));
+        NeoForge26WorkbenchBinding binding = new NeoForge26WorkbenchBinding(definition, recipes, menuType);
+        bindingReference.set(binding);
+        workbenches.put(id, binding);
+    }
+
+    @Override
+    public void openWorkbench(java.util.UUID playerId, PortableWorkbenchDefinition definition) {
+        NeoForge26WorkbenchBinding binding = workbenches.get(definition.reference().id());
+        if (binding == null) {
+            throw new IllegalStateException("[" + modId + "] Unknown workbench " + definition.reference().id());
+        }
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        player.openMenu(new SimpleMenuProvider(
+                (containerId, inventory, ignored) -> new NeoForge26WorkbenchMenu(containerId, inventory, binding),
+                Component.literal(definition.spec().title())));
+    }
+
+    @Override
     public void registerPayload(ResourceId id, PacketDirection direction, int maximumBytes,
                                 PayloadReceiver receiver) {
         CustomPacketPayload.Type<NeoForgeRawPayload> type = new CustomPacketPayload.Type<>(identifier(id));
@@ -193,6 +274,90 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
                 .map(ServerPlayer::getUUID).toList();
     }
 
+    @Override
+    public Optional<PlayerSnapshot> playerSnapshot(java.util.UUID playerId) {
+        ServerPlayer player = onlinePlayer(playerId);
+        return player == null ? Optional.empty() : Optional.of(new PlayerSnapshot(
+                playerId, player.getHealth(), player.getMaxHealth()));
+    }
+
+    @Override
+    public int countPlayerItem(java.util.UUID playerId, ResourceId itemId) {
+        return requireOnlinePlayer(playerId).getInventory().countItem(requireItem(itemId));
+    }
+
+    @Override
+    public boolean consumePlayerItems(java.util.UUID playerId, Map<ResourceId, Integer> requirements) {
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        for (Map.Entry<ResourceId, Integer> requirement : requirements.entrySet()) {
+            if (player.getInventory().countItem(requireItem(requirement.getKey())) < requirement.getValue()) {
+                return false;
+            }
+        }
+        for (Map.Entry<ResourceId, Integer> requirement : requirements.entrySet()) {
+            Item item = requireItem(requirement.getKey());
+            int remaining = requirement.getValue();
+            for (int slot = 0; slot < player.getInventory().getContainerSize() && remaining > 0; slot++) {
+                ItemStack stack = player.getInventory().getItem(slot);
+                if (stack.is(item)) {
+                    int removed = Math.min(remaining, stack.getCount());
+                    stack.shrink(removed);
+                    remaining -= removed;
+                }
+            }
+        }
+        player.getInventory().setChanged();
+        player.containerMenu.broadcastChanges();
+        return true;
+    }
+
+    @Override
+    public void givePlayerItem(java.util.UUID playerId, ResourceId itemId, int amount) {
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        ItemStack stack = new ItemStack(requireItem(itemId), amount);
+        player.getInventory().add(stack);
+        if (!stack.isEmpty()) {
+            player.drop(stack, false);
+        }
+        player.containerMenu.broadcastChanges();
+    }
+
+    @Override
+    public void sendPlayerMessage(java.util.UUID playerId, String message, boolean actionBar) {
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        if (actionBar) {
+            player.sendOverlayMessage(Component.literal(message));
+        } else {
+            player.sendSystemMessage(Component.literal(message));
+        }
+    }
+
+    @Override
+    public void healPlayer(java.util.UUID playerId, double amount) {
+        requireOnlinePlayer(playerId).heal((float) amount);
+    }
+
+    @Override
+    public void addPlayerExperience(java.util.UUID playerId, int points) {
+        requireOnlinePlayer(playerId).giveExperiencePoints(points);
+    }
+
+    @Override
+    public void showMenu(uk.co.enderfall.sdk.runtime.PortableMenuView view,
+                         java.util.function.Consumer<String> actionSender, Runnable closeSender) {
+        NeoForgeClientHooks.showMenu(view, actionSender, closeSender);
+    }
+
+    @Override
+    public void updateMenu(long sessionId, uk.co.enderfall.sdk.api.ui.MenuState state) {
+        NeoForgeClientHooks.updateMenu(sessionId, state);
+    }
+
+    @Override
+    public void closeMenu(long sessionId) {
+        NeoForgeClientHooks.closeMenu(sessionId);
+    }
+
     private void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("0.1").optional();
         for (PayloadBinding binding : payloads.values()) {
@@ -203,6 +368,7 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
                 case CLIENTBOUND -> registrar.playToClient(binding.type(), codec,
                         (payload, networkContext) -> receive(binding, payload, networkContext));
                 case BIDIRECTIONAL -> registrar.playBidirectional(binding.type(), codec,
+                        (payload, networkContext) -> receive(binding, payload, networkContext),
                         (payload, networkContext) -> receive(binding, payload, networkContext));
             }
         }
@@ -248,16 +414,22 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
         });
         NeoForge.EVENT_BUS.addListener((PlayerInteractEvent.RightClickItem event) -> {
             Identifier target = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
-            if (interaction(InteractionEvent.Kind.USE_ITEM, event.getEntity().getUUID(), target)) {
-                event.setCancellationResult(InteractionResult.FAIL);
+            InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM,
+                    event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
+                    event.getEntity().getUUID(), target);
+            if (result != InteractionResult.PASS) {
+                event.setCancellationResult(result);
                 event.setCanceled(true);
             }
         });
         NeoForge.EVENT_BUS.addListener((PlayerInteractEvent.RightClickBlock event) -> {
             Identifier target = BuiltInRegistries.BLOCK.getKey(
                     event.getLevel().getBlockState(event.getPos()).getBlock());
-            if (interaction(InteractionEvent.Kind.USE_BLOCK, event.getEntity().getUUID(), target)) {
-                event.setCancellationResult(InteractionResult.FAIL);
+            InteractionResult result = interaction(InteractionEvent.Kind.USE_BLOCK,
+                    event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
+                    event.getEntity().getUUID(), target);
+            if (result != InteractionResult.PASS) {
+                event.setCancellationResult(result);
                 event.setCanceled(true);
             }
         });
@@ -270,12 +442,14 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
                         event.getEntity().getGameProfile().name()));
     }
 
-    private boolean interaction(InteractionEvent.Kind kind, java.util.UUID playerId,
+    private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
+                                java.util.UUID playerId,
                                 Identifier target) {
-        InteractionEvent event = new InteractionEvent(kind, playerId,
+        InteractionEvent event = new InteractionEvent(kind, side, playerId,
                 ResourceId.of(target.getNamespace(), target.getPath()));
         context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
-        return event.cancelled();
+        return event.cancelled() ? InteractionResult.FAIL
+                : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
 
     private void publishLifecycle(LifecycleEvent.Stage stage) {
@@ -309,8 +483,30 @@ final class NeoForgePlatformAdapter implements PlatformAdapter {
         return current;
     }
 
+    private ServerPlayer onlinePlayer(java.util.UUID playerId) {
+        MinecraftServer current = server;
+        return current == null ? null : current.getPlayerList().getPlayer(playerId);
+    }
+
+    private ServerPlayer requireOnlinePlayer(java.util.UUID playerId) {
+        ServerPlayer player = onlinePlayer(playerId);
+        if (player == null) {
+            throw new IllegalArgumentException("Unknown player " + playerId);
+        }
+        return player;
+    }
+
     private static Identifier identifier(ResourceId id) {
         return Identifier.fromNamespaceAndPath(id.namespace(), id.path());
+    }
+
+    private static NeoForge26WorkbenchBinding requireBinding(
+            AtomicReference<NeoForge26WorkbenchBinding> reference, ResourceId id) {
+        NeoForge26WorkbenchBinding binding = reference.get();
+        if (binding == null) {
+            throw new IllegalStateException("Workbench menu initialized too early for " + id);
+        }
+        return binding;
     }
 
     private static Item.Properties itemProperties(ItemSpec spec) {

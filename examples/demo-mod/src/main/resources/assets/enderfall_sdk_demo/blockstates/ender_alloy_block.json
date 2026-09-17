@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "enderfall_sdk_demo:block/ender_alloy_block" }
+  }
+}

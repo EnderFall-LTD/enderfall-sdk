@@ -19,7 +19,14 @@ sourceSets.main {
         '**/NeoForgePlatformAdapter.java',
         '**/NeoForgeCommandBridge.java',
         '**/NeoForgeClientHooks.java',
-        '**/NeoForgePlatformInfo.java'
+        '**/NeoForgePlatformInfo.java',
+        '**/NeoForgePortableMenuScreen.java',
+        '**/NeoForgeRecipeBinding.java',
+        '**/NeoForgeWorkbenchBinding.java',
+        '**/NeoForgeWorkbenchInput.java',
+        '**/NeoForgeWorkbenchRecipe.java',
+        '**/NeoForgeWorkbenchMenu.java',
+        '**/NeoForgeWorkbenchScreen.java'
     )
 }
 

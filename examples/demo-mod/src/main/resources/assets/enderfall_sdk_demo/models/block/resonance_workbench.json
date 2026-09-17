@@ -1,0 +1,34 @@
+{
+  "ambientocclusion": true,
+  "textures": {
+    "casing": "enderfall_sdk_demo:block/ender_alloy_casing",
+    "energy": "enderfall_sdk_demo:block/resonance_lamp",
+    "particle": "enderfall_sdk_demo:block/ender_alloy_casing"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 12, 16],
+      "faces": {
+        "down": { "texture": "#casing", "cullface": "down" },
+        "up": { "texture": "#energy" },
+        "north": { "texture": "#casing", "cullface": "north" },
+        "south": { "texture": "#casing", "cullface": "south" },
+        "west": { "texture": "#casing", "cullface": "west" },
+        "east": { "texture": "#casing", "cullface": "east" }
+      }
+    },
+    {
+      "from": [1, 12, 1],
+      "to": [15, 15, 15],
+      "faces": {
+        "down": { "texture": "#casing" },
+        "up": { "texture": "#energy" },
+        "north": { "texture": "#energy" },
+        "south": { "texture": "#energy" },
+        "west": { "texture": "#energy" },
+        "east": { "texture": "#energy" }
+      }
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import org.gradle.plugin.compatibility.compatibility
+
 plugins {
     `java-gradle-plugin`
     `maven-publish`
@@ -34,7 +36,7 @@ tasks.withType<Jar>().configureEach {
 
 gradlePlugin {
     website = "https://sdk.enderfall.co.uk"
-    vcsUrl = "https://github.com/EnderFall/enderfall-sdk"
+    vcsUrl = "https://github.com/EnderFall-LTD/enderfall-sdk"
     plugins {
         create("enderfallSdk") {
             id = "uk.co.enderfall.sdk"
@@ -42,6 +44,11 @@ gradlePlugin {
             displayName = "EnderFall SDK"
             description = "Build one portable Minecraft mod source set for supported loaders and versions."
             tags = listOf("minecraft", "fabric", "neoforge", "forge", "multiloader", "multiversion")
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
         }
     }
 }

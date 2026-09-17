@@ -13,7 +13,10 @@ java {
     withJavadocJar()
 }
 
-sourceSets.main.java.srcDir(project(':runtime-neoforge-1.21.4').file('src/main/java'))
+sourceSets.main {
+    java.srcDir(project(':runtime-neoforge-1.21.4').file('src/main/java'))
+    java.exclude('**/NeoForgeWorkbenchRecipe.java', '**/NeoForgeWorkbenchMenu.java')
+}
 
 neoForge {
     version = '21.1.249'
@@ -37,7 +40,11 @@ dependencies {
     shade 'org.antlr:antlr4-runtime:4.11.1'
 }
 
-tasks.withType(JavaCompile).configureEach { options.release = 21 }
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    // Replacement classes intentionally keep the internal binary names used by shared bootstrap code.
+    options.compilerArgs.add('-Xlint:-auxiliaryclass')
+}
 
 def sdkArtifactVersion = version.toString()
 tasks.processResources {

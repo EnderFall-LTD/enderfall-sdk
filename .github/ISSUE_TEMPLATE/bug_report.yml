@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a reproducible EnderFall SDK problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please separate build success from behaviour observed in a running game.
+  - type: input
+    id: sdk-version
+    attributes:
+      label: EnderFall SDK version
+      placeholder: 0.1.0-beta.1
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Minecraft and loader target
+      placeholder: 1.21.4-fabric
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include portable source, commands, and exact steps needed to reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour and logs
+      description: Drag log files here after removing tokens, usernames, and private server addresses.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reproduced this with the latest release in the same SDK major.
+          required: true
+        - label: I removed credentials and other private information from the report.
+          required: true

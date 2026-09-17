@@ -1,0 +1,30 @@
+// FML only exposes source sets assigned to a mod to that mod's class loader.
+// Use the relocated core (including API) in development as in published runtimes.
+def coreJar = project(':runtime-core').tasks.named('shadowJar')
+def sharedDirectory = layout.buildDirectory.dir('fmlSharedRuntime')
+def unpackShared = tasks.register('prepareFmlSharedRuntime', Sync) {
+    dependsOn coreJar
+    from { zipTree(coreJar.get().archiveFile.get().asFile) }
+    into sharedDirectory
+    exclude 'META-INF/**', 'module-info.class'
+    doLast {
+        for (def required : ['uk/co/enderfall/sdk/api/EnderfallMod.class',
+                'uk/co/enderfall/sdk/internal/tomlj/Toml.class',
+                'uk/co/enderfall/sdk/internal/antlr/atn/ATN.class']) {
+            if (!new File(destinationDir, required).isFile()) {
+                throw new GradleException("Incomplete FML shared runtime: missing ${required}")
+            }
+        }
+        if (new File(destinationDir, 'org/antlr').exists() || new File(destinationDir, 'org/tomlj').exists()) {
+            throw new GradleException('FML shared runtime contains unrelocated parser classes')
+        }
+    }
+}
+def shared = sourceSets.create('sdkSharedRuntime') {
+    java.setSrcDirs([])
+    resources.setSrcDirs([])
+}
+shared.output.dir([builtBy: unpackShared], sharedDirectory)
+def platform = extensions.findByName('legacyForge') ?: extensions.getByName('neoForge')
+platform.mods.named('enderfall_sdk') { sourceSet shared }
+tasks.matching { it.name in ['runClient', 'runServer'] }.configureEach { dependsOn unpackShared }

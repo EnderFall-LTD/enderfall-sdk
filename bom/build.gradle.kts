@@ -30,7 +30,7 @@ publishing {
             pom {
                 name = "EnderFall SDK BOM"
                 description = project.description
-                url = "https://github.com/EnderFall/enderfall-sdk"
+                url = "https://github.com/EnderFall-LTD/enderfall-sdk"
             }
         }
     }

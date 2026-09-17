@@ -1,7 +1,7 @@
 site_name: EnderFall SDK
 site_url: https://sdk.enderfall.co.uk
-repo_url: https://github.com/EnderFall/enderfall-sdk
-repo_name: EnderFall/enderfall-sdk
+repo_url: https://github.com/EnderFall-LTD/enderfall-sdk
+repo_name: EnderFall-LTD/enderfall-sdk
 copyright: Copyright 2026 EnderFall
 
 theme:
@@ -15,13 +15,27 @@ nav:
   - Home: index.md
   - Quick start: quick-start.md
   - Architecture: architecture.md
+  - Bridge compiler: bridge-compiler.md
+  - Bridge migration: bridge-migration.md
   - Compatibility: compatibility.md
   - Portable API: portable-api.md
+  - Registration: registration.md
+  - Furniture port: furniture-port.md
+  - Block entities: block-entities.md
+  - Block-entity rendering: block-entity-rendering.md
+  - Block shapes: block-shapes.md
+  - Directional blocks: directional-blocks.md
+  - Block-state definitions: block-state-definitions.md
+  - Feature status: feature-status.md
   - Source boundaries: source-boundaries.md
   - Configuration: configuration.md
+  - Fluids: fluids.md
+  - Machine recipes: machine-recipes.md
   - Networking: networking.md
   - Targets: targets.md
   - Testing and releases: testing-and-releases.md
+  - Gameplay tests: gameplay-testing.md
+  - Repository and services: repository-and-services.md
   - Publishing: publishing.md
   - Migration notes:
       - 0.1 baseline: migrations/0.1.md

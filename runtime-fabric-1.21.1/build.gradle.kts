@@ -14,7 +14,8 @@ java {
 
 sourceSets.main {
     java.srcDir(project(":runtime-fabric-1.21.4").file("src/main/java"))
-    java.exclude("**/FabricPlatformAdapter.java")
+    java.exclude("**/FabricPlatformAdapter.java", "**/FabricWorkbenchRecipe.java",
+        "**/FabricWorkbenchMenu.java")
 }
 
 loom {
@@ -42,7 +43,7 @@ tasks.withType<JavaCompile>().configureEach {
 val sdkArtifactVersion = version.toString()
 tasks.processResources {
     inputs.property("version", sdkArtifactVersion)
-    filesMatching("fabric.mod.json") { expand("version" to sdkArtifactVersion) }
+    expand(mapOf("version" to sdkArtifactVersion))
 }
 
 publishing {

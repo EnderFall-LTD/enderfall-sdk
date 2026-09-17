@@ -37,7 +37,7 @@ publishing {
             pom {
                 name = "EnderFall SDK Runtime Core"
                 description = project.description
-                url = "https://github.com/EnderFall/enderfall-sdk"
+                url = "https://github.com/EnderFall-LTD/enderfall-sdk"
             }
         }
     }

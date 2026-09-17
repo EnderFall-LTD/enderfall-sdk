@@ -17,10 +17,12 @@ import uk.co.enderfall.sdk.api.platform.PlatformInfo;
 import uk.co.enderfall.sdk.api.registry.BlockSpec;
 import uk.co.enderfall.sdk.api.registry.CreativeTabSpec;
 import uk.co.enderfall.sdk.api.registry.ItemSpec;
+import uk.co.enderfall.sdk.api.recipe.WorkbenchRecipeTypeRef;
 import uk.co.enderfall.sdk.runtime.ImmutableCapabilitySet;
 import uk.co.enderfall.sdk.runtime.PayloadReceiver;
 import uk.co.enderfall.sdk.runtime.PlatformAdapter;
 import uk.co.enderfall.sdk.runtime.RuntimeModBootstrap;
+import uk.co.enderfall.sdk.runtime.PortableWorkbenchDefinition;
 
 /** Standalone entrypoint used by the Gradle plugin to execute portable data definitions. */
 public final class PortableDataGeneratorMain {
@@ -94,6 +96,8 @@ public final class PortableDataGeneratorMain {
         @Override public void registerBlock(ResourceId id, BlockSpec spec, ItemSpec blockItemSpec) { }
         @Override public void registerCreativeTab(ResourceId id, CreativeTabSpec spec) { }
         @Override public void registerCommand(CommandSpec command) { }
+        @Override public void registerWorkbenchRecipeType(WorkbenchRecipeTypeRef recipeType) { }
+        @Override public void registerWorkbench(PortableWorkbenchDefinition definition) { }
         @Override public void registerPayload(ResourceId id, PacketDirection direction, int maximumBytes,
                                               PayloadReceiver receiver) { }
 

@@ -26,6 +26,27 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
         this.items = items;
     }
 
+    private void requirePropertyCopy(BlockSpec spec) {
+        if (spec.stateShapes().isPresent() && !adapter.supportsStateShapes()) {
+            throw new UnsupportedOperationException("[" + modId + "] State-dependent shapes are unavailable on " + target);
+        }
+        if (!spec.states().properties().isEmpty() && !adapter.supportsBlockStates()) {
+            throw new UnsupportedOperationException("[" + modId + "] Custom block states are unavailable on " + target);
+        }
+        if (spec.sixWayFacing() && !adapter.supportsSixWayFacing()) {
+            throw new UnsupportedOperationException("[" + modId + "] Six-way facing is unavailable on " + target);
+        }
+        if (spec.horizontalFacing() && !adapter.supportsHorizontalFacing()) {
+            throw new UnsupportedOperationException("[" + modId + "] Horizontal facing is unavailable on " + target);
+        }
+        if ((spec.outlineShape().isPresent() || spec.collisionShape().isPresent()) && !adapter.supportsBlockShapes()) {
+            throw new UnsupportedOperationException("[" + modId + "] Custom block shapes are unavailable on " + target);
+        }
+        if (spec.copySource().isPresent() && !adapter.supportsBlockPropertyCopy()) {
+            throw new UnsupportedOperationException("[" + modId + "] Native block property copying requires a generated feature runtime on " + target);
+        }
+    }
+
     @Override
     public BlockRef register(ResourceId id, BlockSpec spec) {
         return registerInternal(id, spec, null);
@@ -39,6 +60,8 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
     @Override
     public BlockRef registerWithItem(String path, BlockSpec blockSpec, ItemSpec itemSpec) {
         gate.requireOpen(modId, target);
+        requirePropertyCopy(Objects.requireNonNull(blockSpec, "blockSpec"));
+        Objects.requireNonNull(itemSpec, "itemSpec");
         ResourceId id = ResourceId.of(modId, path);
         items.reserve(id);
         return registerInternal(id, blockSpec, Objects.requireNonNull(itemSpec, "itemSpec"));
@@ -50,11 +73,38 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
             throw new IllegalArgumentException("[" + modId + "] Cannot register block in namespace " + id.namespace());
         }
         Objects.requireNonNull(spec, "spec");
+        requirePropertyCopy(spec);
         BlockRef reference = new BlockRef(id);
         if (blocks.putIfAbsent(id, reference) != null) {
             throw new IllegalStateException("[" + modId + "] Duplicate block ID " + id + " on " + target);
         }
         adapter.registerBlock(id, spec, blockItemSpec);
+        return reference;
+    }
+
+    @Override
+    public BlockRef registerPersistentWithItem(String path, BlockSpec blockSpec, ItemSpec itemSpec,
+            uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec storage) {
+        gate.requireOpen(modId, target);
+        ResourceId id = ResourceId.of(modId, path);
+        Objects.requireNonNull(blockSpec, "blockSpec");
+        requirePropertyCopy(blockSpec);
+        Objects.requireNonNull(itemSpec, "itemSpec");
+        Objects.requireNonNull(storage, "storage");
+        if (!storage.block().id().equals(id)) {
+            throw new IllegalArgumentException("[" + modId + "] Persistent storage must belong to " + id + " on " + target);
+        }
+        if (!adapter.supportsPersistentWorkbenches()) {
+            throw new UnsupportedOperationException("[" + modId + "] Persistent blocks are not enabled on " + target);
+        }
+        if (blocks.containsKey(id)) {
+            throw new IllegalStateException("[" + modId + "] Duplicate block ID " + id + " on " + target);
+        }
+        // Reserve before native registration: a partially failed native registration must stop startup.
+        items.reserve(id);
+        BlockRef reference = new BlockRef(id);
+        blocks.put(id, reference);
+        adapter.registerPersistentBlock(id, blockSpec, itemSpec, storage);
         return reference;
     }
 }

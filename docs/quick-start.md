@@ -1,6 +1,6 @@
 # Quick start
 
-Create a repository from `EnderFall/enderfall-sdk-template`, then initialize its identity:
+Create a repository from `EnderFall-LTD/enderfall-sdk-template`, then initialize its identity:
 
 ```bash
 ./gradlew initializeMod \

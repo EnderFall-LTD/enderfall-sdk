@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "enderfall_persistent_preview",
+  "version": "0.0.0-dev",
+  "name": "EnderFall Persistent Workbench Preview",
+  "license": "Apache-2.0",
+  "environment": "*",
+  "entrypoints": { "main": ["uk.co.enderfall.sdk.preview.FabricPreviewEntrypoint"] },
+  "depends": { "fabricloader": ">=0.16.0", "fabric-api": "*", "minecraft": "1.21.4", "java": ">=21", "enderfall_sdk": "*" }
+}

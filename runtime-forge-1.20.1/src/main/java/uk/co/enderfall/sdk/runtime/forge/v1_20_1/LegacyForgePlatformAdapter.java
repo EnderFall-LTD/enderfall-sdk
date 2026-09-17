@@ -1,26 +1,30 @@
 package uk.co.enderfall.sdk.runtime.forge.v1_20_1;
 
-import io.netty.buffer.Unpooled;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -37,9 +41,10 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.event.EventNetworkChannel;
+import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -48,6 +53,7 @@ import uk.co.enderfall.sdk.api.command.CommandSpec;
 import uk.co.enderfall.sdk.api.event.InteractionEvent;
 import uk.co.enderfall.sdk.api.event.LifecycleEvent;
 import uk.co.enderfall.sdk.api.event.SdkEvents;
+import uk.co.enderfall.sdk.api.gameplay.PlayerSnapshot;
 import uk.co.enderfall.sdk.api.network.PacketDirection;
 import uk.co.enderfall.sdk.api.platform.Capability;
 import uk.co.enderfall.sdk.api.platform.CapabilitySet;
@@ -56,9 +62,11 @@ import uk.co.enderfall.sdk.api.platform.PlatformInfo;
 import uk.co.enderfall.sdk.api.registry.BlockSpec;
 import uk.co.enderfall.sdk.api.registry.CreativeTabSpec;
 import uk.co.enderfall.sdk.api.registry.ItemSpec;
+import uk.co.enderfall.sdk.api.recipe.WorkbenchRecipeTypeRef;
 import uk.co.enderfall.sdk.runtime.ImmutableCapabilitySet;
 import uk.co.enderfall.sdk.runtime.PayloadReceiver;
 import uk.co.enderfall.sdk.runtime.PlatformAdapter;
+import uk.co.enderfall.sdk.runtime.PortableWorkbenchDefinition;
 import uk.co.enderfall.sdk.runtime.RuntimeModContext;
 
 final class LegacyForgePlatformAdapter implements PlatformAdapter {
@@ -68,13 +76,20 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
     private final PlatformInfo platformInfo = new LegacyForgePlatformInfo();
     private final CapabilitySet capabilities = new ImmutableCapabilitySet(EnumSet.of(
             Capability.REGISTRIES, Capability.EVENTS, Capability.COMMANDS,
-            Capability.CONFIGURATION, Capability.NETWORKING, Capability.DATA_GENERATION));
+            Capability.CONFIGURATION, Capability.NETWORKING, Capability.DATA_GENERATION,
+            Capability.PLAYER_ACTIONS, Capability.SYNCHRONIZED_SCREENS,
+            Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS));
     private final DeferredRegister<Item> itemRegister;
     private final DeferredRegister<Block> blockRegister;
     private final DeferredRegister<CreativeModeTab> creativeTabRegister;
+    private final DeferredRegister<RecipeType<?>> recipeTypeRegister;
+    private final DeferredRegister<RecipeSerializer<?>> recipeSerializerRegister;
+    private final DeferredRegister<MenuType<?>> menuRegister;
     private final Map<ResourceId, RegistryObject<? extends Item>> items = new LinkedHashMap<>();
     private final Map<ResourceId, RegistryObject<? extends Block>> blocks = new LinkedHashMap<>();
     private final Map<ResourceId, PayloadBinding> payloads = new LinkedHashMap<>();
+    private final Map<ResourceId, LegacyForgeRecipeBinding> recipeTypes = new LinkedHashMap<>();
+    private final Map<ResourceId, LegacyForgeWorkbenchBinding> workbenches = new LinkedHashMap<>();
     private volatile MinecraftServer server;
     private RuntimeModContext context;
 
@@ -84,16 +99,22 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
         itemRegister = DeferredRegister.create(ForgeRegistries.ITEMS, modId);
         blockRegister = DeferredRegister.create(ForgeRegistries.BLOCKS, modId);
         creativeTabRegister = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, modId);
+        recipeTypeRegister = DeferredRegister.create(ForgeRegistries.RECIPE_TYPES, modId);
+        recipeSerializerRegister = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, modId);
+        menuRegister = DeferredRegister.create(ForgeRegistries.MENU_TYPES, modId);
         itemRegister.register(modBus);
         blockRegister.register(modBus);
         creativeTabRegister.register(modBus);
+        recipeTypeRegister.register(modBus);
+        recipeSerializerRegister.register(modBus);
+        menuRegister.register(modBus);
     }
 
     void attach(RuntimeModContext runtimeContext) {
         context = runtimeContext;
         installEvents();
         if (platformInfo.environment() == Environment.CLIENT) {
-            LegacyForgeClientHooks.install(modBus, context);
+            LegacyForgeClientHooks.install(modBus, context, workbenches.values());
         }
     }
 
@@ -140,27 +161,75 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
     @Override public void registerCommand(CommandSpec command) { LegacyForgeCommandBridge.register(command); }
 
     @Override
+    public void registerWorkbenchRecipeType(WorkbenchRecipeTypeRef recipeType) {
+        ResourceId id = recipeType.id();
+        if (recipeTypes.containsKey(id)) {
+            throw new IllegalStateException("[" + modId + "] Duplicate workbench recipe type " + id);
+        }
+        AtomicReference<LegacyForgeRecipeBinding> bindingReference = new AtomicReference<>();
+        RegistryObject<RecipeType<LegacyForgeWorkbenchRecipe>> type = recipeTypeRegister.register(id.path(), () ->
+                new RecipeType<>() {
+                    @Override public String toString() { return id.toString(); }
+                });
+        RegistryObject<RecipeSerializer<LegacyForgeWorkbenchRecipe>> serializer = recipeSerializerRegister.register(
+                id.path(), () -> new LegacyForgeWorkbenchRecipe.Serializer(
+                        requireRecipeBinding(bindingReference, id)));
+        LegacyForgeRecipeBinding binding = new LegacyForgeRecipeBinding(
+                type, serializer, recipeType.inputSlots());
+        bindingReference.set(binding);
+        recipeTypes.put(id, binding);
+    }
+
+    @Override
+    public void registerWorkbench(PortableWorkbenchDefinition definition) {
+        ResourceId id = definition.reference().id();
+        LegacyForgeRecipeBinding recipes = recipeTypes.get(definition.spec().recipeType().id());
+        if (recipes == null) {
+            throw new IllegalStateException("[" + modId + "] Workbench " + id
+                    + " references unregistered recipe type " + definition.spec().recipeType().id());
+        }
+        if (workbenches.containsKey(id)) {
+            throw new IllegalStateException("[" + modId + "] Duplicate workbench " + id);
+        }
+        AtomicReference<LegacyForgeWorkbenchBinding> bindingReference = new AtomicReference<>();
+        RegistryObject<MenuType<LegacyForgeWorkbenchMenu>> menuType = menuRegister.register(id.path(), () ->
+                new MenuType<>((containerId, inventory) -> new LegacyForgeWorkbenchMenu(
+                        containerId, inventory, requireWorkbenchBinding(bindingReference, id)),
+                        FeatureFlags.VANILLA_SET));
+        LegacyForgeWorkbenchBinding binding = new LegacyForgeWorkbenchBinding(definition, recipes, menuType);
+        bindingReference.set(binding);
+        workbenches.put(id, binding);
+    }
+
+    @Override
+    public void openWorkbench(java.util.UUID playerId, PortableWorkbenchDefinition definition) {
+        LegacyForgeWorkbenchBinding binding = workbenches.get(definition.reference().id());
+        if (binding == null) {
+            throw new IllegalStateException("[" + modId + "] Unknown workbench " + definition.reference().id());
+        }
+        requireOnlinePlayer(playerId).openMenu(new SimpleMenuProvider(
+                (containerId, inventory, ignored) -> new LegacyForgeWorkbenchMenu(containerId, inventory, binding),
+                Component.literal(definition.spec().title())));
+    }
+
+    @Override
     public void registerPayload(ResourceId id, PacketDirection direction, int maximumBytes,
                                 PayloadReceiver receiver) {
         ResourceLocation location = location(id);
         Predicate<String> accepted = NetworkRegistry.acceptMissingOr(CHANNEL_VERSION);
-        EventNetworkChannel channel = NetworkRegistry.ChannelBuilder.named(location)
+        SimpleChannel channel = NetworkRegistry.ChannelBuilder.named(location)
                 .networkProtocolVersion(() -> CHANNEL_VERSION)
                 .clientAcceptedVersions(accepted)
                 .serverAcceptedVersions(accepted)
-                .eventNetworkChannel();
+                .simpleChannel();
         PayloadBinding binding = new PayloadBinding(location, direction, maximumBytes, receiver, channel);
         if (payloads.putIfAbsent(id, binding) != null) {
             throw new IllegalStateException("[" + modId + "] Duplicate payload " + id);
         }
-        if (direction == PacketDirection.SERVERBOUND || direction == PacketDirection.BIDIRECTIONAL) {
-            channel.addListener((NetworkEvent.ServerCustomPayloadEvent event) -> receive(binding, event,
-                    PacketDirection.SERVERBOUND));
-        }
-        if (direction == PacketDirection.CLIENTBOUND || direction == PacketDirection.BIDIRECTIONAL) {
-            channel.addListener((NetworkEvent.ClientCustomPayloadEvent event) -> receive(binding, event,
-                    PacketDirection.CLIENTBOUND));
-        }
+        channel.registerMessage(0, byte[].class,
+                (payload, buffer) -> buffer.writeByteArray(payload),
+                buffer -> buffer.readByteArray(maximumBytes),
+                (payload, source) -> receive(binding, payload, source));
     }
 
     @Override
@@ -169,7 +238,7 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
         if (FMLEnvironment.dist != Dist.CLIENT) {
             throw new IllegalStateException("Cannot send to a server from a dedicated server process");
         }
-        LegacyForgeClientHooks.sendToServer(binding.location(), payload);
+        LegacyForgeClientHooks.sendToServer(binding.channel(), payload);
     }
 
     @Override
@@ -179,14 +248,14 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
         if (player == null) {
             throw new IllegalArgumentException("Unknown player " + playerId);
         }
-        player.connection.send(clientbound(binding.location(), payload));
+        player.connection.send(binding.channel().toVanillaPacket(payload, NetworkDirection.PLAY_TO_CLIENT));
     }
 
     @Override
     public void sendToAll(ResourceId id, byte[] payload) {
         PayloadBinding binding = requirePayload(id, payload.length);
         for (ServerPlayer player : requireServer().getPlayerList().getPlayers()) {
-            player.connection.send(clientbound(binding.location(), payload));
+            player.connection.send(binding.channel().toVanillaPacket(payload, NetworkDirection.PLAY_TO_CLIENT));
         }
     }
 
@@ -197,21 +266,100 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
                 .map(ServerPlayer::getUUID).toList();
     }
 
-    private void receive(PayloadBinding binding, NetworkEvent event, PacketDirection direction) {
-        FriendlyByteBuf buffer = event.getPayload();
-        int length = buffer.readableBytes();
-        NetworkEvent.Context networkContext = event.getSource().get();
+    @Override
+    public Optional<PlayerSnapshot> playerSnapshot(java.util.UUID playerId) {
+        ServerPlayer player = onlinePlayer(playerId);
+        return player == null ? Optional.empty() : Optional.of(new PlayerSnapshot(
+                playerId, player.getHealth(), player.getMaxHealth()));
+    }
+
+    @Override
+    public int countPlayerItem(java.util.UUID playerId, ResourceId itemId) {
+        return requireOnlinePlayer(playerId).getInventory().countItem(requireItem(itemId));
+    }
+
+    @Override
+    public boolean consumePlayerItems(java.util.UUID playerId, Map<ResourceId, Integer> requirements) {
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        for (Map.Entry<ResourceId, Integer> requirement : requirements.entrySet()) {
+            if (player.getInventory().countItem(requireItem(requirement.getKey())) < requirement.getValue()) {
+                return false;
+            }
+        }
+        for (Map.Entry<ResourceId, Integer> requirement : requirements.entrySet()) {
+            Item item = requireItem(requirement.getKey());
+            int remaining = requirement.getValue();
+            for (int slot = 0; slot < player.getInventory().getContainerSize() && remaining > 0; slot++) {
+                ItemStack stack = player.getInventory().getItem(slot);
+                if (stack.is(item)) {
+                    int removed = Math.min(remaining, stack.getCount());
+                    stack.shrink(removed);
+                    remaining -= removed;
+                }
+            }
+        }
+        player.getInventory().setChanged();
+        player.containerMenu.broadcastChanges();
+        return true;
+    }
+
+    @Override
+    public void givePlayerItem(java.util.UUID playerId, ResourceId itemId, int amount) {
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        ItemStack stack = new ItemStack(requireItem(itemId), amount);
+        player.getInventory().add(stack);
+        if (!stack.isEmpty()) {
+            player.drop(stack, false);
+        }
+        player.containerMenu.broadcastChanges();
+    }
+
+    @Override
+    public void sendPlayerMessage(java.util.UUID playerId, String message, boolean actionBar) {
+        requireOnlinePlayer(playerId).displayClientMessage(Component.literal(message), actionBar);
+    }
+
+    @Override
+    public void healPlayer(java.util.UUID playerId, double amount) {
+        requireOnlinePlayer(playerId).heal((float) amount);
+    }
+
+    @Override
+    public void addPlayerExperience(java.util.UUID playerId, int points) {
+        requireOnlinePlayer(playerId).giveExperiencePoints(points);
+    }
+
+    @Override
+    public void showMenu(uk.co.enderfall.sdk.runtime.PortableMenuView view,
+                         java.util.function.Consumer<String> actionSender, Runnable closeSender) {
+        LegacyForgeClientHooks.showMenu(view, actionSender, closeSender);
+    }
+
+    @Override
+    public void updateMenu(long sessionId, uk.co.enderfall.sdk.api.ui.MenuState state) {
+        LegacyForgeClientHooks.updateMenu(sessionId, state);
+    }
+
+    @Override
+    public void closeMenu(long sessionId) {
+        LegacyForgeClientHooks.closeMenu(sessionId);
+    }
+
+    private void receive(PayloadBinding binding, byte[] payload,
+                         Supplier<NetworkEvent.Context> source) {
+        int length = payload.length;
+        NetworkEvent.Context networkContext = source.get();
         if (length > binding.maximumBytes()) {
             networkContext.getNetworkManager().disconnect(Component.literal(
                     "Payload " + binding.location() + " exceeds " + binding.maximumBytes() + " bytes"));
             networkContext.setPacketHandled(true);
             return;
         }
-        byte[] bytes = new byte[length];
-        buffer.readBytes(bytes);
         Optional<java.util.UUID> playerId = Optional.ofNullable(networkContext.getSender())
                 .map(ServerPlayer::getUUID);
-        networkContext.enqueueWork(() -> binding.receiver().receive(bytes, direction, playerId,
+        PacketDirection direction = playerId.isPresent()
+                ? PacketDirection.SERVERBOUND : PacketDirection.CLIENTBOUND;
+        networkContext.enqueueWork(() -> binding.receiver().receive(payload, direction, playerId,
                 reason -> networkContext.getNetworkManager().disconnect(Component.literal(reason))));
         networkContext.setPacketHandled(true);
     }
@@ -254,16 +402,22 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
         });
         MinecraftForge.EVENT_BUS.addListener((PlayerInteractEvent.RightClickItem event) -> {
             ResourceLocation target = ForgeRegistries.ITEMS.getKey(event.getItemStack().getItem());
-            if (interaction(InteractionEvent.Kind.USE_ITEM, event.getEntity().getUUID(), target)) {
-                event.setCancellationResult(InteractionResult.FAIL);
+            InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM,
+                    event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
+                    event.getEntity().getUUID(), target);
+            if (result != InteractionResult.PASS) {
+                event.setCancellationResult(result);
                 event.setCanceled(true);
             }
         });
         MinecraftForge.EVENT_BUS.addListener((PlayerInteractEvent.RightClickBlock event) -> {
             ResourceLocation target = ForgeRegistries.BLOCKS.getKey(
                     event.getLevel().getBlockState(event.getPos()).getBlock());
-            if (interaction(InteractionEvent.Kind.USE_BLOCK, event.getEntity().getUUID(), target)) {
-                event.setCancellationResult(InteractionResult.FAIL);
+            InteractionResult result = interaction(InteractionEvent.Kind.USE_BLOCK,
+                    event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
+                    event.getEntity().getUUID(), target);
+            if (result != InteractionResult.PASS) {
+                event.setCancellationResult(result);
                 event.setCanceled(true);
             }
         });
@@ -275,14 +429,16 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
                         event.getEntity().getGameProfile().getName()));
     }
 
-    private boolean interaction(InteractionEvent.Kind kind, java.util.UUID playerId, ResourceLocation target) {
+    private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
+                                          java.util.UUID playerId, ResourceLocation target) {
         if (target == null) {
-            return false;
+            return InteractionResult.PASS;
         }
-        InteractionEvent event = new InteractionEvent(kind, playerId,
+        InteractionEvent event = new InteractionEvent(kind, side, playerId,
                 ResourceId.of(target.getNamespace(), target.getPath()));
         context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
-        return event.cancelled();
+        return event.cancelled() ? InteractionResult.FAIL
+                : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
 
     private void publishLifecycle(LifecycleEvent.Stage stage) {
@@ -316,9 +472,17 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
         return current;
     }
 
-    private static ClientboundCustomPayloadPacket clientbound(ResourceLocation location, byte[] payload) {
-        return new ClientboundCustomPayloadPacket(location,
-                new FriendlyByteBuf(Unpooled.wrappedBuffer(payload)));
+    private ServerPlayer onlinePlayer(java.util.UUID playerId) {
+        MinecraftServer current = server;
+        return current == null ? null : current.getPlayerList().getPlayer(playerId);
+    }
+
+    private ServerPlayer requireOnlinePlayer(java.util.UUID playerId) {
+        ServerPlayer player = onlinePlayer(playerId);
+        if (player == null) {
+            throw new IllegalArgumentException("Unknown player " + playerId);
+        }
+        return player;
     }
 
     private static ResourceLocation location(ResourceId id) {
@@ -327,6 +491,24 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
             throw new IllegalArgumentException("Invalid resource ID " + id);
         }
         return location;
+    }
+
+    private static LegacyForgeRecipeBinding requireRecipeBinding(
+            AtomicReference<LegacyForgeRecipeBinding> reference, ResourceId id) {
+        LegacyForgeRecipeBinding binding = reference.get();
+        if (binding == null) {
+            throw new IllegalStateException("Recipe serializer initialized too early for " + id);
+        }
+        return binding;
+    }
+
+    private static LegacyForgeWorkbenchBinding requireWorkbenchBinding(
+            AtomicReference<LegacyForgeWorkbenchBinding> reference, ResourceId id) {
+        LegacyForgeWorkbenchBinding binding = reference.get();
+        if (binding == null) {
+            throw new IllegalStateException("Workbench menu initialized too early for " + id);
+        }
+        return binding;
     }
 
     private static Item.Properties itemProperties(ItemSpec spec) {
@@ -373,6 +555,6 @@ final class LegacyForgePlatformAdapter implements PlatformAdapter {
 
     private record PayloadBinding(ResourceLocation location, PacketDirection direction,
                                   int maximumBytes, PayloadReceiver receiver,
-                                  EventNetworkChannel channel) {
+                                  SimpleChannel channel) {
     }
 }

@@ -1,0 +1,8 @@
+{
+  "type": "enderfall_persistent_preview:washing",
+  "duration_ticks": 60,
+  "item_inputs": [{"item": "minecraft:amethyst_shard", "count": 1}],
+  "fluid_inputs": [{"fluid": "minecraft:water", "amount": 81000}],
+  "item_outputs": [{"item": "minecraft:prismarine_crystals", "count": 1}],
+  "fluid_outputs": [{"fluid": "minecraft:water", "amount": 40500}]
+}

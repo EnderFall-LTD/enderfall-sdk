@@ -1,0 +1,26 @@
+name: Portable API proposal
+description: Propose a feature that can have a defined contract across supported targets.
+title: "[API]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Mod-author use case
+      description: Describe the portable code authors should be able to write.
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed portable contract
+      description: Explain behaviour, failure handling, and any capability-gated parts.
+    validations:
+      required: true
+  - type: textarea
+    id: platforms
+    attributes:
+      label: Known target differences
+      description: Note relevant Minecraft, Fabric, Forge, or NeoForge differences.
+    validations:
+      required: true

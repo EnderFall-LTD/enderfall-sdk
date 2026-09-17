@@ -1,0 +1,94 @@
+# Furniture-mod portability milestone
+
+The target is to rebuild LYIVX's Furniture Mod against SDK APIs in one portable
+source tree, with SDK-owned generation for every supported Minecraft/loader target.
+Third-party integrations may live in optional target-specific modules. Client
+registration remains a separate entry point for dedicated-server safety, not
+duplicated source per target. This does not require existing native subclasses to
+compile unchanged, and it does not promise automatic support for future versions.
+
+This is an initial source-backed gap assessment of representative classes in
+`Furnection/LYIVXs Furniture Mod 1.21.4/common/src/main/java/net/lyivx/ls_furniture`,
+not a completed exhaustive method-by-method port audit. The original mod is untouched.
+
+## Source-shape compatibility requirement
+
+The port must remain recognizable to existing maintainers and add-on authors. Keep
+the existing responsibility boundaries where they are sound: blocks remain block
+classes, block entities own placed data, menus own server container rules, screens
+own client presentation, renderers own dynamic rendering, and registry classes group
+registrations. For example, a future portable `BarrelModBlock`,
+`BarrelModBlockEntity`, `WorkstationMenu`, `WorkstationScreen`, and renderer should
+still be separate types with those jobs. The SDK must not force the whole mod into a
+single declarative file or expose generated loader classes as the add-on API.
+
+Native Minecraft inheritance cannot remain source-compatible across every target,
+so portable classes implement SDK contracts instead of extending one target's native
+classes. Within that necessary boundary, preserve public resource IDs, saved-data
+semantics, packet intent, menu responsibilities, and useful domain method names where
+practical. Optimize internals incrementally; do not redesign the mod merely because it
+is being made portable. Add-ons should depend on stable portable interfaces, refs and
+explicit extension points, never SDK-generated or loader-owned implementation classes.
+
+## Required work, in dependency order
+
+| Stage | Concrete furniture evidence | SDK work and acceptance |
+| --- | --- | --- |
+| 1. Custom block definitions | `common/blocks/BarrelModBlock.java`, `TableBlock.java` | Factory/configuration, server-use hooks, static cuboid shapes, typed boolean/integer/enum state, state-dependent shapes, server-world state mutation, opt-in horizontal/six-way facing, custom initial-state placement and pure neighbor-derived state updates are implemented. Still need scheduled-tick hooks and waterlogging. Prove a directional connecting table with identical source on all targets. |
+| 2. General containers | `common/blocks/entity/BarrelModBlockEntity.java` | 27-slot storage menu, slot transfer rules, openers tracking, sounds, open block state, loot-table-backed inventory and drops. Existing timed workbench menus are not a substitute. Prove simultaneous viewers, death/disconnect, save/reload and hopper transfer. |
+| 3. Items and durable data | `registry/ModComponents.java`, `common/items/WrenchItem.java` | Portable letter author/text data persisted and synchronized, with legacy representation on pre-component targets. Custom use-on-block behavior, tooltips and wrench/hammer state changes. Verify copies, stacks, dropped items and reconnects preserve data. |
+| 4. Recipes and richer screens | `common/menus/WorkstationMenu.java`, `client/screens/WorkstationScreen.java` | Selectable/filterable recipes, custom layouts, selection validation, scroll/input widgets, secure editable text and synchronized results. Current positional recipes and label/button screens only cover part of this. |
+| 5. Specialized furniture behavior | `common/blocks/entity/CounterOvenBlockEntity.java`, `common/blocks/ModBedBlock.java`, `common/entity/SeatEntity.java` | Furnace/fuel semantics, multipart storage/blocks, beds, seat mounting/dismounting and lifecycle. Do not replace these with visually similar inert blocks. |
+| 6. Rendering and presentation | `client/renderers/CustomChestRenderer.java`, `ChoppingBoardRenderer.java`, `client/util/SimpleFluidRenderer.java`, client color registrars | Expand current item/model/fluid rendering for required state-dependent animation, tinting, entity rendering and previews. Verify resource reload, lighting, rotations and dedicated-server isolation. Existing renderer support is a starting point, not complete parity. |
+| 7. Complete port acceptance | All registrations, behaviors, assets, recipes, network handlers and integrations | Finish the full inventory, port every built-in feature, and run functional scenarios per target. Third-party integration absence must not prevent the base mod starting. |
+
+The names above identify reviewed source or discovered feature entry points, not
+a claim that every method in every file has been audited. Remaining audit includes
+the complete asset/datagen paths, loader-specific code, configuration, network
+authorization, interactions between furniture families and optional dependencies.
+
+## First implementation in this milestone
+
+General state groundwork is now available as experimental pure Java definitions:
+typed boolean/integer/enum properties, immutable state values, strict serialization,
+bounded state enumeration, cached state-dependent shapes and model-variant data
+generation. Server-world reads and atomic writes preserve native facing and notify
+clients and neighbors. Generated feature runtimes register schemas and defaults for
+ordinary and persistent blocks. Portable block classes can select their initial
+custom state from a loader-neutral placement context and derive a replacement state
+when a specific neighbour changes. See [block-state definitions](block-state-definitions.md).
+Scheduled ticks, waterlogging and the complete connecting-table acceptance scenario
+remain open, so stage 1 is not complete.
+
+- `PortableBlock` is a loader-neutral definition interface.
+- Registration factories execute once per block ID at initialization preflight.
+- Definition configuration precedes per-registration overrides.
+- Server-use callbacks are dispatched by block ID through the existing isolated
+  interaction bus; cancelled/handled/client events are excluded.
+- Property copying never copies behavior instances or persistent storage.
+- `PreviewWorkbenchBlock` demonstrates the factory path with existing persistent
+  storage. It is not a completed barrel port.
+
+## Static shape implementation
+
+`BlockShape` now provides bounded immutable cuboid unions and authored quarter-turn
+rotation. Ordinary and persistent blocks share one generated native shape shell.
+The preview workbench has matching tabletop/leg model and collision definitions.
+All nine generated targets compile; API/runtime tests, generation contract tests
+and fixture parity pass. Actual in-game targeting, collision and visual checks
+are still pending. See [block shapes](block-shapes.md).
+
+## Completion standard
+
+A stage is not complete merely because generated Java compiles. Each behavior
+needs equivalent outcomes across the selected targets: placements and states,
+inventory and data persistence, interactions, visuals, and client/server handling.
+Record compilation, automated contracts and actual gameplay separately.
+
+Until the missing stages pass, the SDK cannot honestly be described as capable
+of fully rebuilding this furniture mod. Missing built-in furniture functionality
+is SDK work to implement, not something to permanently push into consumer native
+folders. Optional integration modules remain the planned exception.
+
+Reference runtime removal is a separate build migration; the furniture milestone
+does not authorize deletion of old reference sources.

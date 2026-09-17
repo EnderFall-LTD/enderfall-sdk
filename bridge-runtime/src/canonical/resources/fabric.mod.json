@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "enderfall_sdk",
+  "version": "${version}",
+  "name": "EnderFall SDK",
+  "description": "Portable mod runtime for Minecraft 1.21.4 on Fabric",
+  "authors": ["EnderFall"],
+  "license": "Apache-2.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "uk.co.enderfall.sdk.runtime.fabric.v1_21_4.EnderfallFabricRuntime"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": ">=0.119.4+1.21.4",
+    "minecraft": "=1.21.4",
+    "java": ">=21"
+  }
+}

@@ -59,9 +59,10 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                 package dev.example;
                 public final class FunctionalMod { }
                 """);
+        write("src/main/resources/assets/functional_mod/models/item/example.json", "{}\n");
         write("LICENSE", "CC0 test fixture\n");
 
-        BuildResult result = runner("buildAll", "enderfallDoctor").build();
+        BuildResult result = runner("buildAll", "enderfallDoctor", "--configuration-cache").build();
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":buildAll").getOutcome());
         assertTrue(result.getOutput().contains("Development target: 1.21.4-fabric"));
@@ -69,11 +70,15 @@ class EnderfallSdkSettingsPluginFunctionalTest {
         Path neoForge = temporaryDirectory.resolve("build/releases/functional_mod-1.2.3+mc1.21.4-neoforge.jar");
         assertTrue(Files.isRegularFile(fabric));
         assertTrue(Files.isRegularFile(neoForge));
+        assertTrue(Files.isRegularFile(temporaryDirectory.resolve(
+                ".gradle/enderfall-sdk/projects/1_21_4_fabric/build/resources/main/"
+                        + "assets/functional_mod/models/item/example.json")));
         try (JarFile zip = new JarFile(fabric.toFile())) {
             assertTrue(zip.getEntry("fabric.mod.json") != null);
             assertTrue(zip.getEntry("META-INF/enderfall.mod.json") != null);
             assertTrue(zip.getEntry("META-INF/enderfall/portable-source.sha256") != null);
             assertTrue(zip.getEntry("pack.mcmeta") != null);
+            assertTrue(zip.getEntry("assets/functional_mod/models/item/example.json") != null);
             assertEquals("COMPILE_VALIDATED", zip.getManifest().getMainAttributes()
                     .getValue("EnderFall-Runtime-Status"));
         }
@@ -89,6 +94,11 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                     neoForgeZip.getEntry("META-INF/enderfall/portable-source.sha256")).readAllBytes();
             assertTrue(java.util.Arrays.equals(fabricHash, neoForgeHash));
         }
+
+        // The first repeat records newly created generated source/resource directories as stable inputs.
+        runner("buildAll", "enderfallDoctor", "--configuration-cache").build();
+        BuildResult cached = runner("buildAll", "enderfallDoctor", "--configuration-cache").build();
+        assertTrue(cached.getOutput().contains("Reusing configuration cache."));
     }
 
     @Test
@@ -122,6 +132,31 @@ class EnderfallSdkSettingsPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":initializeMod").getOutcome());
         assertTrue(result.getOutput().contains("INITIALIZATION_ONLY"));
         assertTrue(!result.getOutput().contains("Fabric Loom:"));
+    }
+
+    @Test
+    void legacyTargetsExposeNativePreparationProxiesWithoutLaunchingMinecraft() throws IOException {
+        write("settings.gradle.kts", """
+                plugins { id("uk.co.enderfall.sdk") }
+                rootProject.name = "legacy-preparation-fixture"
+                enderfallSdk {
+                    targets { version("1.20.1") { loaders("forge", "neoforge") } }
+                    developmentTarget = "1.20.1-forge"
+                }
+                """);
+        write("build.gradle.kts", """
+                // Initialization intentionally avoids materializing native target projects.
+                val target = providers.gradleProperty("enderfall.target").get().replace('.', '_').replace('-', '_')
+                check(tasks.named("prepareClient").get().dependsOn == setOf(
+                    ":enderfallTargets:$target:createMinecraftArtifacts", ":enderfallTargets:$target:prepareClientRun"))
+                check(tasks.named("prepareServer").get().dependsOn == setOf(
+                    ":enderfallTargets:$target:createMinecraftArtifacts", ":enderfallTargets:$target:prepareServerRun"))
+                tasks.register("initializeMod")
+                """);
+        for (String loader : java.util.List.of("forge", "neoforge")) {
+            BuildResult result = runner("initializeMod", "-Penderfall.target=1.20.1-" + loader).build();
+            assertEquals(TaskOutcome.UP_TO_DATE, result.task(":initializeMod").getOutcome());
+        }
     }
 
     @Test

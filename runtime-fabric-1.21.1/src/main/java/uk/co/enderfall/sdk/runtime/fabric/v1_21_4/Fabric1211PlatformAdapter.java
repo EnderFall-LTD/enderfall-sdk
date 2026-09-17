@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -25,10 +26,15 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -40,6 +46,7 @@ import uk.co.enderfall.sdk.api.event.LifecycleEvent;
 import uk.co.enderfall.sdk.api.event.PlayerEvent;
 import uk.co.enderfall.sdk.api.event.SdkEvents;
 import uk.co.enderfall.sdk.api.event.TickEvent;
+import uk.co.enderfall.sdk.api.gameplay.PlayerSnapshot;
 import uk.co.enderfall.sdk.api.network.PacketDirection;
 import uk.co.enderfall.sdk.api.platform.Capability;
 import uk.co.enderfall.sdk.api.platform.CapabilitySet;
@@ -48,9 +55,11 @@ import uk.co.enderfall.sdk.api.platform.PlatformInfo;
 import uk.co.enderfall.sdk.api.registry.BlockSpec;
 import uk.co.enderfall.sdk.api.registry.CreativeTabSpec;
 import uk.co.enderfall.sdk.api.registry.ItemSpec;
+import uk.co.enderfall.sdk.api.recipe.WorkbenchRecipeTypeRef;
 import uk.co.enderfall.sdk.runtime.ImmutableCapabilitySet;
 import uk.co.enderfall.sdk.runtime.PayloadReceiver;
 import uk.co.enderfall.sdk.runtime.PlatformAdapter;
+import uk.co.enderfall.sdk.runtime.PortableWorkbenchDefinition;
 import uk.co.enderfall.sdk.runtime.RuntimeModContext;
 
 final class FabricPlatformAdapter implements PlatformAdapter {
@@ -58,10 +67,15 @@ final class FabricPlatformAdapter implements PlatformAdapter {
     private final PlatformInfo platformInfo = new FabricPlatformInfo();
     private final CapabilitySet capabilities = new ImmutableCapabilitySet(EnumSet.of(
             Capability.REGISTRIES, Capability.EVENTS, Capability.COMMANDS,
-            Capability.CONFIGURATION, Capability.NETWORKING, Capability.DATA_GENERATION));
+            Capability.CONFIGURATION, Capability.NETWORKING, Capability.DATA_GENERATION,
+            Capability.PLAYER_ACTIONS, Capability.SYNCHRONIZED_SCREENS,
+            Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS));
     private final Map<ResourceId, Item> items = new LinkedHashMap<>();
     private final Map<ResourceId, Block> blocks = new LinkedHashMap<>();
     private final Map<ResourceId, PayloadBinding> payloads = new LinkedHashMap<>();
+    private final Map<ResourceId, FabricRecipeBinding> recipeTypes = new LinkedHashMap<>();
+    private final Map<ResourceId, FabricWorkbenchBinding> workbenches = new LinkedHashMap<>();
+    private final Map<java.util.UUID, ServerPlayer> joiningPlayers = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile MinecraftServer server;
     private RuntimeModContext context;
 
@@ -129,6 +143,47 @@ final class FabricPlatformAdapter implements PlatformAdapter {
     @Override public void registerCommand(CommandSpec command) { FabricCommandBridge.register(command); }
 
     @Override
+    public void registerWorkbenchRecipeType(WorkbenchRecipeTypeRef recipeType) {
+        ResourceId id = recipeType.id();
+        if (recipeTypes.containsKey(id)) throw new IllegalStateException("[" + modId + "] Duplicate recipe type " + id);
+        AtomicReference<FabricRecipeBinding> bindingReference = new AtomicReference<>();
+        RecipeType<FabricWorkbenchRecipe> type = Registry.register(BuiltInRegistries.RECIPE_TYPE, location(id),
+                new RecipeType<>() { @Override public String toString() { return id.toString(); } });
+        RecipeSerializer<FabricWorkbenchRecipe> serializer = Registry.register(
+                BuiltInRegistries.RECIPE_SERIALIZER, location(id),
+                FabricWorkbenchRecipe.serializer(() -> requireRecipeBinding(bindingReference, id)));
+        FabricRecipeBinding binding = new FabricRecipeBinding(type, serializer, recipeType.inputSlots());
+        bindingReference.set(binding);
+        recipeTypes.put(id, binding);
+    }
+
+    @Override
+    public void registerWorkbench(PortableWorkbenchDefinition definition) {
+        ResourceId id = definition.reference().id();
+        FabricRecipeBinding recipes = recipeTypes.get(definition.spec().recipeType().id());
+        if (recipes == null) throw new IllegalStateException("[" + modId + "] Workbench " + id
+                + " references unregistered recipe type " + definition.spec().recipeType().id());
+        if (workbenches.containsKey(id)) throw new IllegalStateException("[" + modId + "] Duplicate workbench " + id);
+        AtomicReference<FabricWorkbenchBinding> bindingReference = new AtomicReference<>();
+        MenuType<FabricWorkbenchMenu> menuType = Registry.register(BuiltInRegistries.MENU, location(id),
+                new MenuType<>((containerId, inventory) -> new FabricWorkbenchMenu(containerId, inventory,
+                        requireWorkbenchBinding(bindingReference, id)), FeatureFlags.VANILLA_SET));
+        FabricWorkbenchBinding binding = new FabricWorkbenchBinding(definition, recipes, menuType);
+        bindingReference.set(binding);
+        workbenches.put(id, binding);
+        if (platformInfo.environment() == Environment.CLIENT) FabricClientHooks.registerWorkbench(menuType);
+    }
+
+    @Override
+    public void openWorkbench(java.util.UUID playerId, PortableWorkbenchDefinition definition) {
+        FabricWorkbenchBinding binding = workbenches.get(definition.reference().id());
+        if (binding == null) throw new IllegalStateException("[" + modId + "] Unknown workbench " + definition.reference().id());
+        requireOnlinePlayer(playerId).openMenu(new SimpleMenuProvider(
+                (containerId, inventory, ignored) -> new FabricWorkbenchMenu(containerId, inventory, binding),
+                Component.literal(definition.spec().title())));
+    }
+
+    @Override
     public void registerPayload(ResourceId id, PacketDirection direction, int maximumBytes,
                                 PayloadReceiver receiver) {
         CustomPacketPayload.Type<FabricRawPayload> type = new CustomPacketPayload.Type<>(location(id));
@@ -163,7 +218,10 @@ final class FabricPlatformAdapter implements PlatformAdapter {
     @Override
     public void sendToPlayer(java.util.UUID playerId, ResourceId id, byte[] payload) {
         PayloadBinding binding = requirePayload(id, payload.length);
-        ServerPlayer player = requireServer().getPlayerList().getPlayer(playerId);
+        ServerPlayer player = joiningPlayers.get(playerId);
+        if (player == null) {
+            player = requireServer().getPlayerList().getPlayer(playerId);
+        }
         if (player == null) {
             throw new IllegalArgumentException("Unknown player " + playerId);
         }
@@ -185,6 +243,85 @@ final class FabricPlatformAdapter implements PlatformAdapter {
                 .map(ServerPlayer::getUUID).toList();
     }
 
+    @Override
+    public Optional<PlayerSnapshot> playerSnapshot(java.util.UUID playerId) {
+        ServerPlayer player = onlinePlayer(playerId);
+        return player == null ? Optional.empty() : Optional.of(new PlayerSnapshot(
+                playerId, player.getHealth(), player.getMaxHealth()));
+    }
+
+    @Override
+    public int countPlayerItem(java.util.UUID playerId, ResourceId itemId) {
+        return requireOnlinePlayer(playerId).getInventory().countItem(requireItem(itemId));
+    }
+
+    @Override
+    public boolean consumePlayerItems(java.util.UUID playerId, Map<ResourceId, Integer> requirements) {
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        for (Map.Entry<ResourceId, Integer> requirement : requirements.entrySet()) {
+            if (player.getInventory().countItem(requireItem(requirement.getKey())) < requirement.getValue()) {
+                return false;
+            }
+        }
+        for (Map.Entry<ResourceId, Integer> requirement : requirements.entrySet()) {
+            Item item = requireItem(requirement.getKey());
+            int remaining = requirement.getValue();
+            for (int slot = 0; slot < player.getInventory().getContainerSize() && remaining > 0; slot++) {
+                ItemStack stack = player.getInventory().getItem(slot);
+                if (stack.is(item)) {
+                    int removed = Math.min(remaining, stack.getCount());
+                    stack.shrink(removed);
+                    remaining -= removed;
+                }
+            }
+        }
+        player.getInventory().setChanged();
+        player.containerMenu.broadcastChanges();
+        return true;
+    }
+
+    @Override
+    public void givePlayerItem(java.util.UUID playerId, ResourceId itemId, int amount) {
+        ServerPlayer player = requireOnlinePlayer(playerId);
+        ItemStack stack = new ItemStack(requireItem(itemId), amount);
+        player.getInventory().add(stack);
+        if (!stack.isEmpty()) {
+            player.drop(stack, false);
+        }
+        player.containerMenu.broadcastChanges();
+    }
+
+    @Override
+    public void sendPlayerMessage(java.util.UUID playerId, String message, boolean actionBar) {
+        requireOnlinePlayer(playerId).displayClientMessage(Component.literal(message), actionBar);
+    }
+
+    @Override
+    public void healPlayer(java.util.UUID playerId, double amount) {
+        requireOnlinePlayer(playerId).heal((float) amount);
+    }
+
+    @Override
+    public void addPlayerExperience(java.util.UUID playerId, int points) {
+        requireOnlinePlayer(playerId).giveExperiencePoints(points);
+    }
+
+    @Override
+    public void showMenu(uk.co.enderfall.sdk.runtime.PortableMenuView view,
+                         java.util.function.Consumer<String> actionSender, Runnable closeSender) {
+        FabricClientHooks.showMenu(view, actionSender, closeSender);
+    }
+
+    @Override
+    public void updateMenu(long sessionId, uk.co.enderfall.sdk.api.ui.MenuState state) {
+        FabricClientHooks.updateMenu(sessionId, state);
+    }
+
+    @Override
+    public void closeMenu(long sessionId) {
+        FabricClientHooks.closeMenu(sessionId);
+    }
+
     private void installEvents() {
         AtomicLong tick = new AtomicLong();
         ServerLifecycleEvents.SERVER_STARTING.register(value -> {
@@ -197,6 +334,7 @@ final class FabricPlatformAdapter implements PlatformAdapter {
         ServerLifecycleEvents.SERVER_STOPPED.register(value -> {
             publishLifecycle(LifecycleEvent.Stage.SERVER_STOPPED);
             context.runtimeConfigs().unloadServerConfigs();
+            joiningPlayers.clear();
             server = null;
         });
         ServerTickEvents.START_SERVER_TICK.register(value -> context.runtimeEvents().publish(
@@ -204,38 +342,55 @@ final class FabricPlatformAdapter implements PlatformAdapter {
         ServerTickEvents.END_SERVER_TICK.register(value -> context.runtimeEvents().publish(
                 SdkEvents.TICK, new TickEvent(TickEvent.Side.SERVER, TickEvent.Phase.END, tick.getAndIncrement())));
         ServerPlayConnectionEvents.JOIN.register((handler, sender, value) -> {
-            context.runtimeNetworking().connectionOpened(handler.player.getUUID());
-            context.runtimeEvents().publish(SdkEvents.PLAYER,
-                    new PlayerEvent(PlayerEvent.Action.JOIN, handler.player.getUUID(),
-                            handler.player.getGameProfile().getName()));
+            java.util.UUID playerId = handler.player.getUUID();
+            // Fabric fires JOIN before the player is guaranteed to be visible through PlayerList.
+            joiningPlayers.put(playerId, handler.player);
+            try {
+                context.runtimeNetworking().connectionOpened(playerId);
+                context.runtimeEvents().publish(SdkEvents.PLAYER,
+                        new PlayerEvent(PlayerEvent.Action.JOIN, playerId,
+                                handler.player.getGameProfile().getName()));
+            } finally {
+                joiningPlayers.remove(playerId, handler.player);
+            }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, value) -> {
-            context.runtimeNetworking().connectionClosed(handler.player.getUUID());
+            java.util.UUID playerId = handler.player.getUUID();
+            joiningPlayers.remove(playerId);
+            context.runtimeNetworking().connectionClosed(playerId);
             context.runtimeEvents().publish(SdkEvents.PLAYER,
-                    new PlayerEvent(PlayerEvent.Action.LEAVE, handler.player.getUUID(),
+                    new PlayerEvent(PlayerEvent.Action.LEAVE, playerId,
                             handler.player.getGameProfile().getName()));
         });
         UseItemCallback.EVENT.register((player, level, hand) -> {
             ResourceLocation target = BuiltInRegistries.ITEM.getKey(player.getItemInHand(hand).getItem());
-            InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM, player.getUUID(), target);
+            InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM,
+                    level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
+                    player.getUUID(), target);
             return result == InteractionResult.FAIL
                     ? InteractionResultHolder.fail(player.getItemInHand(hand))
-                    : InteractionResultHolder.pass(player.getItemInHand(hand));
+                    : result == InteractionResult.SUCCESS
+                            ? InteractionResultHolder.success(player.getItemInHand(hand))
+                            : InteractionResultHolder.pass(player.getItemInHand(hand));
         });
         UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> interaction(
-                InteractionEvent.Kind.USE_BLOCK, player.getUUID(),
+                InteractionEvent.Kind.USE_BLOCK,
+                level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
+                player.getUUID(),
                 BuiltInRegistries.BLOCK.getKey(level.getBlockState(hitResult.getBlockPos()).getBlock())));
         if (platformInfo.environment() == Environment.CLIENT) {
             FabricClientHooks.installLifecycle(context);
         }
     }
 
-    private InteractionResult interaction(InteractionEvent.Kind kind, java.util.UUID playerId,
+    private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
+                                          java.util.UUID playerId,
                                           ResourceLocation target) {
-        InteractionEvent event = new InteractionEvent(kind, playerId,
+        InteractionEvent event = new InteractionEvent(kind, side, playerId,
                 ResourceId.of(target.getNamespace(), target.getPath()));
         context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
-        return event.cancelled() ? InteractionResult.FAIL : InteractionResult.PASS;
+        return event.cancelled() ? InteractionResult.FAIL
+                : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
 
     private void publishLifecycle(LifecycleEvent.Stage stage) {
@@ -269,8 +424,37 @@ final class FabricPlatformAdapter implements PlatformAdapter {
         return current;
     }
 
+    private ServerPlayer onlinePlayer(java.util.UUID playerId) {
+        ServerPlayer joining = joiningPlayers.get(playerId);
+        MinecraftServer current = server;
+        return joining != null ? joining
+                : current == null ? null : current.getPlayerList().getPlayer(playerId);
+    }
+
+    private ServerPlayer requireOnlinePlayer(java.util.UUID playerId) {
+        ServerPlayer player = onlinePlayer(playerId);
+        if (player == null) {
+            throw new IllegalArgumentException("Unknown player " + playerId);
+        }
+        return player;
+    }
+
     private static ResourceLocation location(ResourceId id) {
         return ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path());
+    }
+
+    private static FabricRecipeBinding requireRecipeBinding(
+            AtomicReference<FabricRecipeBinding> reference, ResourceId id) {
+        FabricRecipeBinding binding = reference.get();
+        if (binding == null) throw new IllegalStateException("Recipe serializer initialized too early for " + id);
+        return binding;
+    }
+
+    private static FabricWorkbenchBinding requireWorkbenchBinding(
+            AtomicReference<FabricWorkbenchBinding> reference, ResourceId id) {
+        FabricWorkbenchBinding binding = reference.get();
+        if (binding == null) throw new IllegalStateException("Workbench menu initialized too early for " + id);
+        return binding;
     }
 
     private static Item.Properties itemProperties(ItemSpec spec) {

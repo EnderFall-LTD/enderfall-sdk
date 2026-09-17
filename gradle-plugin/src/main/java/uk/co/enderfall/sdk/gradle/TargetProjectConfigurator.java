@@ -4,9 +4,11 @@ import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.ExternalModuleDependency;
 import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -34,8 +36,9 @@ final class TargetProjectConfigurator {
     }
 
     static void configure(Project project, File consumerRoot, ModDefinition mod, TargetDefinition target,
-                          List<URI> dependencyRepositories) {
+                          List<URI> dependencyRepositories, boolean workspaceDevelopment) {
         project.getPluginManager().apply(JavaPlugin.class);
+        configureWorkspaceDevelopmentDependencies(project, workspaceDevelopment);
         dependencyRepositories.forEach(repositoryUrl -> project.getRepositories().maven(repository -> {
             repository.setUrl(repositoryUrl);
             String host = repositoryUrl.getHost();
@@ -69,11 +72,14 @@ final class TargetProjectConfigurator {
         List<File> allJavaRoots = new ArrayList<>(portableJavaRoots);
         allJavaRoots.addAll(nativeJavaRoots);
         portable.getJava().setSrcDirs(portableJavaRoots);
-        portable.getResources().setSrcDirs(portableResourceRoots);
+        // Loader development runs treat the main source-set output as the mod resource root.
+        // Keep portable Java isolated, but process shared and native resources through main so
+        // assets behave identically in runClient/runServer and in the packaged JAR.
+        portable.getResources().setSrcDirs(List.of());
         main.getJava().setSrcDirs(nativeJavaRoots);
-        main.getResources().setSrcDirs(nativeResourceRoots);
-        main.setCompileClasspath(main.getCompileClasspath().plus(portable.getOutput()));
-        main.setRuntimeClasspath(main.getRuntimeClasspath().plus(portable.getOutput()));
+        main.getResources().setSrcDirs(allResourceRoots);
+        main.setCompileClasspath(main.getCompileClasspath().plus(portable.getOutput().getClassesDirs()));
+        main.setRuntimeClasspath(main.getRuntimeClasspath().plus(portable.getOutput().getClassesDirs()));
 
         project.getDependencies().add(portable.getCompileOnlyConfigurationName(),
                 "uk.co.enderfall.sdk:enderfall-sdk-api:" + TargetCatalog.SDK_VERSION);
@@ -138,9 +144,11 @@ final class TargetProjectConfigurator {
                     task.getConsumerRoot().set(consumerRoot);
                     task.getOutputFile().set(project.getLayout().getBuildDirectory()
                             .file("generated/portableHash/META-INF/enderfall/portable-source.sha256"));
-                });
+        });
         var portableHashRoot = project.getLayout().getBuildDirectory().dir("generated/portableHash");
         main.getResources().srcDir(portableHashRoot);
+        project.getTasks().named(main.getProcessResourcesTaskName(), ProcessResources.class, task ->
+                task.dependsOn(portableHash));
 
         var duplicateCheck = project.getTasks().register("checkDuplicateResources", CheckDuplicateResourcesTask.class,
                 task -> {
@@ -238,6 +246,21 @@ final class TargetProjectConfigurator {
         });
         project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME).configure(task ->
                 task.dependsOn(generateData));
+    }
+
+    private static void configureWorkspaceDevelopmentDependencies(Project project, boolean workspaceDevelopment) {
+        if (!workspaceDevelopment) {
+            return;
+        }
+        project.getConfigurations().configureEach(configuration -> {
+            configuration.getResolutionStrategy().cacheChangingModulesFor(0, TimeUnit.SECONDS);
+            configuration.getDependencies().all(dependency -> {
+                if (dependency instanceof ExternalModuleDependency moduleDependency
+                        && "uk.co.enderfall.sdk".equals(moduleDependency.getGroup())) {
+                    moduleDependency.setChanging(true);
+                }
+            });
+        });
     }
 
     private static void registerUnavailableRuntimeTask(Project project, String taskName, TargetDefinition target) {

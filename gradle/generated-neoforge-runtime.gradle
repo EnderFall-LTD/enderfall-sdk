@@ -1,0 +1,345 @@
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.Sync
+import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+def inherited1214JavaFilesFor1211 = [
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/EnderfallNeoForgeRuntime.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeClientHooks.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeCommandBridge.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeConsumerBootstrap.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgePlatformAdapter.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgePlatformInfo.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgePortableMenuScreen.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeRawPayload.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeRecipeBinding.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeWorkbenchBinding.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeWorkbenchInput.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForgeWorkbenchScreen.java'
+]
+
+def local1211JavaFiles = [
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForge1211WorkbenchMenu.java',
+    'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForge1211WorkbenchRecipe.java'
+]
+
+def generatedNeoForgeTargets = [
+    '26.2-neoforge': [
+        minecraftVersion: '26.2', javaVersion: 25, loader: 'neoforge',
+        loaderVersion: '26.2.0.75', platformApiVersion: '',
+        referenceProjectPath: ':runtime-neoforge-26.2', referenceLayout: 'inherited-1.21.4',
+        inheritedReferenceJavaFiles: ['EnderfallNeoForgeRuntime', 'NeoForgeConsumerBootstrap', 'NeoForgeRawPayload']
+            .collect { 'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/' + it + '.java' },
+        localReferenceJavaFiles: ['ClientHooks', 'CommandBridge', 'PlatformAdapter', 'PlatformInfo',
+            'PortableMenuScreen', 'WorkbenchBinding', 'WorkbenchMenu', 'WorkbenchRecipe', 'WorkbenchScreen']
+            .collect { 'uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/NeoForge26' + it + '.java' },
+        suppressAuxiliaryClassWarning: true
+    ],
+    '1.21.1-neoforge': [
+        minecraftVersion: '1.21.1',
+        javaVersion: 21,
+        loader: 'neoforge',
+        loaderVersion: '21.1.249',
+        platformApiVersion: '',
+        referenceProjectPath: ':runtime-neoforge-1.21.1',
+        referenceLayout: 'inherited-1.21.4',
+        inheritedReferenceJavaFiles: inherited1214JavaFilesFor1211,
+        localReferenceJavaFiles: local1211JavaFiles,
+        suppressAuxiliaryClassWarning: true
+    ],
+    '1.21.4-neoforge': [
+        minecraftVersion: '1.21.4',
+        javaVersion: 21,
+        loader: 'neoforge',
+        loaderVersion: '21.4.157',
+        platformApiVersion: '',
+        referenceProjectPath: ':runtime-neoforge-1.21.4',
+        referenceLayout: 'direct',
+        inheritedReferenceJavaFiles: [],
+        localReferenceJavaFiles: [],
+        suppressAuxiliaryClassWarning: false
+    ]
+]
+
+def targetId = project.ext.enderfallGeneratedNeoForgeTarget
+def target = generatedNeoForgeTargets[targetId]
+if (target == null) {
+    throw new GradleException("Unsupported generated NeoForge target '${targetId}'. Valid targets: "
+        + generatedNeoForgeTargets.keySet().sort().join(', '))
+}
+
+description = "Generated EnderFall SDK runtime parity target for Minecraft ${target.minecraftVersion} on NeoForge"
+
+apply plugin: 'maven-publish'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(target.javaVersion)
+    withSourcesJar()
+    withJavadocJar()
+}
+
+def canonicalBridgeRoot = rootProject.layout.projectDirectory.dir('bridge-runtime')
+def canonicalJavaRoot = canonicalBridgeRoot.dir('src/neoforge/java')
+def canonicalResourcesRoot = canonicalBridgeRoot.dir('src/neoforge/resources')
+def bridgeProfile = providers.gradleProperty('enderfall.persistence').orNull == 'true' ? 'enderfallPersistenceWorldState2' : 'enderfallBridge'
+def generatedBridgeSources = layout.buildDirectory.dir("generated/sources/${bridgeProfile}")
+def generatedBridgeResources = layout.buildDirectory.dir("generated/resources/${bridgeProfile}")
+
+configurations {
+    bridgeCompilerRuntime
+    shade
+}
+
+sourceSets.main {
+    java.setSrcDirs([generatedBridgeSources])
+    resources.setSrcDirs([generatedBridgeResources])
+}
+
+neoForge {
+    version = target.loaderVersion
+    runs {
+        client {
+            client()
+            gameDirectory = file('run/client')
+        }
+        server {
+            server()
+            gameDirectory = file('run/server')
+            programArgument '--nogui'
+        }
+    }
+    mods {
+        enderfall_sdk {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    compileOnly project(':api')
+    compileOnly(project(':runtime-core')) { transitive = false }
+
+    shade project(':api')
+    shade project(':runtime-core')
+    shade 'org.tomlj:tomlj:1.1.1'
+    shade 'org.antlr:antlr4-runtime:4.11.1'
+    bridgeCompilerRuntime project(':bridge-compiler')
+}
+apply from: rootProject.file('gradle/fml-shared-runtime.gradle')
+
+def javaToolchains = extensions.getByType(org.gradle.jvm.toolchain.JavaToolchainService)
+def bridgeLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(target.javaVersion)
+}
+
+if (targetId in ['1.21.1-neoforge', '1.21.4-neoforge', '26.2-neoforge']) {
+    def storageSources = layout.buildDirectory.dir('generated/blockEntityStorage/java')
+    def generateStorage = tasks.register('generateBlockEntityStorage', JavaExec) {
+        group = 'development'
+        classpath = configurations.bridgeCompilerRuntime
+        mainClass = 'uk.co.enderfall.sdk.bridge.BlockEntityStorageMain'
+        javaLauncher = bridgeLauncher
+        inputs.property('target', targetId)
+        outputs.dir(storageSources)
+        args targetId, storageSources.get().asFile.absolutePath
+    }
+    def storageClasspath = sourceSets.main.compileClasspath
+    tasks.register('compileBlockEntityStorageJava', JavaCompile) {
+        group = 'development'
+        dependsOn generateStorage
+        source storageSources
+        classpath = storageClasspath
+        destinationDirectory = layout.buildDirectory.dir('classes/blockEntityStorage')
+        javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(target.javaVersion) }
+    }
+    def previewSources = layout.buildDirectory.dir('generated/blockEntityPreview/java')
+    def generatePreview = tasks.register('generateBlockEntityPreview', JavaExec) {
+        group = 'development'
+        classpath = configurations.bridgeCompilerRuntime
+        mainClass = 'uk.co.enderfall.sdk.bridge.BlockEntityPreviewMain'
+        javaLauncher = bridgeLauncher
+        inputs.property('target', targetId)
+        outputs.dir(previewSources)
+        args targetId, previewSources.get().asFile.absolutePath
+    }
+    def previewClasspath = sourceSets.main.compileClasspath + sourceSets.main.output
+    tasks.register('compileBlockEntityPreviewJava', JavaCompile) {
+        group = 'development'
+        dependsOn generatePreview
+        source previewSources
+        classpath = previewClasspath
+        destinationDirectory = layout.buildDirectory.dir('classes/blockEntityPreview')
+        javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(target.javaVersion) }
+    }
+}
+
+def generateBridgeRuntime = tasks.register('generateBridgeRuntime', JavaExec) {
+    def persistence = providers.gradleProperty('enderfall.persistence').orElse('false').get()
+    inputs.property('persistence', persistence)
+    args '--persistence', persistence
+    group = 'build'
+    description = "Generates the complete ${targetId} runtime from the canonical bridge model."
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BridgeCompilerMain'
+    javaLauncher = bridgeLauncher
+    inputs.dir(canonicalBridgeRoot)
+    inputs.property('targetId', targetId)
+    outputs.dir(generatedBridgeSources)
+    outputs.dir(generatedBridgeResources)
+    args '--target', targetId,
+        '--canonical-root', canonicalBridgeRoot.asFile.absolutePath,
+        '--output-sources', generatedBridgeSources.get().asFile.absolutePath,
+        '--output-resources', generatedBridgeResources.get().asFile.absolutePath
+}
+
+def verifyBridgeTargetCoordinates = tasks.register('verifyBridgeTargetCoordinates', JavaExec) {
+    group = 'verification'
+    description = "Verifies ${targetId} Gradle coordinates against the bridge target catalog."
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.TargetCoordinateMain'
+    javaLauncher = bridgeLauncher
+    args '--target', targetId,
+        '--expect', "minecraftVersion=${target.minecraftVersion}",
+        '--expect', "javaVersion=${target.javaVersion}",
+        '--expect', "loader=${target.loader}",
+        '--expect', "loaderVersion=${target.loaderVersion}",
+        '--expect', "platformApiVersion=${target.platformApiVersion}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = target.javaVersion
+    if (target.suppressAuxiliaryClassWarning) {
+        options.compilerArgs.add('-Xlint:-auxiliaryclass')
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn generateBridgeRuntime
+}
+
+def sdkArtifactVersion = version.toString()
+tasks.named('processResources') {
+    dependsOn generateBridgeRuntime
+    inputs.property('version', sdkArtifactVersion)
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand(version: sdkArtifactVersion)
+    }
+}
+
+tasks.named('sourcesJar') {
+    dependsOn generateBridgeRuntime
+}
+tasks.named('javadoc') {
+    dependsOn generateBridgeRuntime
+}
+
+tasks.named('shadowJar') {
+    configurations = [project.configurations.shade]
+    archiveClassifier = ''
+    relocate 'org.tomlj', 'uk.co.enderfall.sdk.internal.tomlj'
+    relocate 'org.antlr.v4.runtime', 'uk.co.enderfall.sdk.internal.antlr'
+    exclude 'org/checkerframework/**'
+}
+
+tasks.named('jar') {
+    archiveClassifier = 'plain'
+}
+
+tasks.named('assemble') {
+    dependsOn tasks.named('shadowJar')
+}
+
+tasks.named('check') { dependsOn verifyBridgeTargetCoordinates }
+if (providers.gradleProperty('enderfall.referenceRuntimes').orNull != 'false') {
+evaluationDependsOn(target.referenceProjectPath)
+def referenceProject = project(target.referenceProjectPath)
+def referenceRoot = rootProject.layout.projectDirectory.dir(target.referenceProjectPath.substring(1))
+def referenceJavaRoot = referenceRoot.dir('src/main/java')
+def referenceResourcesRoot = referenceRoot.dir('src/main/resources')
+def referenceCompileJava = referenceProject.tasks.named('compileJava', JavaCompile)
+def referenceProcessResources = referenceProject.tasks.named('processResources')
+def referenceShadowJar = referenceProject.tasks.named('shadowJar', AbstractArchiveTask)
+def generatedCompileJava = tasks.named('compileJava', JavaCompile)
+def generatedProcessResources = tasks.named('processResources')
+def generatedShadowJar = tasks.named('shadowJar', AbstractArchiveTask)
+
+def prepareEffectiveReferenceJava = target.referenceLayout == 'inherited-1.21.4'
+    ? tasks.register('prepareEffectiveReferenceJava', Sync) {
+        group = 'verification'
+        description = "Builds the effective ${target.minecraftVersion} NeoForge reference Java tree."
+        duplicatesStrategy = DuplicatesStrategy.FAIL
+        includeEmptyDirs = false
+        from(rootProject.layout.projectDirectory.dir('runtime-neoforge-1.21.4/src/main/java')) {
+            include(target.inheritedReferenceJavaFiles)
+        }
+        from(referenceJavaRoot) {
+            include(target.localReferenceJavaFiles)
+        }
+        into(layout.buildDirectory.dir('parity/effective-reference-java'))
+    }
+    : null
+
+def verifyGeneratedBridgeParity = tasks.register('verifyGeneratedBridgeParity', JavaExec) {
+    group = 'verification'
+    description = "Compares reference, canonical, generated, and compiled ${targetId} runtime trees."
+    dependsOn generateBridgeRuntime, generatedCompileJava, generatedProcessResources,
+        referenceCompileJava, referenceProcessResources
+    if (prepareEffectiveReferenceJava != null) {
+        dependsOn prepareEffectiveReferenceJava
+    }
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BridgeParityMain'
+    javaLauncher = bridgeLauncher
+    args '--forbidden-root', layout.projectDirectory.dir('src/main/java').asFile.absolutePath,
+        '--forbidden-root', layout.projectDirectory.dir('src/main/resources').asFile.absolutePath
+    if (target.referenceLayout == 'direct') {
+        args '--expected', referenceJavaRoot.asFile.absolutePath,
+            '--actual', canonicalJavaRoot.asFile.absolutePath,
+            '--expected', referenceResourcesRoot.asFile.absolutePath,
+            '--actual', canonicalResourcesRoot.asFile.absolutePath,
+            '--expected', canonicalJavaRoot.asFile.absolutePath,
+            '--actual', generatedBridgeSources.get().asFile.absolutePath,
+            '--expected', canonicalResourcesRoot.asFile.absolutePath,
+            '--actual', generatedBridgeResources.get().asFile.absolutePath
+    } else {
+        args '--expected', layout.buildDirectory.dir('parity/effective-reference-java').get().asFile.absolutePath,
+            '--actual', generatedBridgeSources.get().asFile.absolutePath,
+            '--expected', referenceResourcesRoot.asFile.absolutePath,
+            '--actual', generatedBridgeResources.get().asFile.absolutePath
+    }
+    args '--expected', referenceCompileJava.get().destinationDirectory.get().asFile.absolutePath,
+        '--actual', generatedCompileJava.get().destinationDirectory.get().asFile.absolutePath,
+        '--expected', referenceProcessResources.get().destinationDir.absolutePath,
+        '--actual', generatedProcessResources.get().destinationDir.absolutePath
+}
+
+def verifyGeneratedBridgeArtifactParity = tasks.register('verifyGeneratedBridgeArtifactParity', JavaExec) {
+    group = 'verification'
+    description = 'Proves the generated shaded runtime JAR is byte-identical to the reference runtime JAR.'
+    dependsOn generatedShadowJar, referenceShadowJar
+    classpath = configurations.bridgeCompilerRuntime
+    mainClass = 'uk.co.enderfall.sdk.bridge.BridgeParityMain'
+    javaLauncher = bridgeLauncher
+    args '--expected-file', referenceShadowJar.get().archiveFile.get().asFile.absolutePath,
+        '--actual-file', generatedShadowJar.get().archiveFile.get().asFile.absolutePath
+}
+
+tasks.named('check') {
+    dependsOn verifyBridgeTargetCoordinates, verifyGeneratedBridgeParity,
+        verifyGeneratedBridgeArtifactParity
+}
+
+}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = "enderfall-sdk-runtime-${target.minecraftVersion}-neoforge"
+            artifact tasks.shadowJar
+            artifact tasks.sourcesJar
+            artifact tasks.javadocJar
+        }
+    }
+}
+
+apply from: rootProject.file('gradle/persistence-fixture.gradle')

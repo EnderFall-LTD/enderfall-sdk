@@ -269,12 +269,12 @@ subprojects {
                 sign(extensions.getByType<PublishingExtension>().publications)
             }
         }
-        tasks.withType<org.gradle.api.publish.maven.tasks.PublishToMavenRepository>().configureEach {
-            if (repository.name == "centralBundle") {
+        tasks.withType<org.gradle.api.publish.maven.tasks.PublishToMavenRepository>()
+            .matching { it.name.endsWith("ToCentralBundleRepository") }
+            .configureEach {
                 dependsOn(verifyCentralBundleCredentials)
                 dependsOn(cleanCentralBundleRepository)
             }
-        }
     }
 }
 

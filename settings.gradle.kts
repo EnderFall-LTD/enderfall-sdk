@@ -2,9 +2,20 @@ pluginManagement {
     repositories {
         maven("https://maven.fabricmc.net/") {
             name = "Fabric"
+            content {
+                includeGroup("fabric-loom")
+                includeGroupByRegex("net\\.fabricmc(\\..*)?")
+            }
         }
         maven("https://maven.neoforged.net/releases") {
             name = "NeoForged"
+            content {
+                includeGroupByRegex("net\\.neoforged(\\..*)?")
+                includeGroupByRegex("net\\.minecraftforge(\\..*)?")
+                includeGroupByRegex("cpw\\.mods(\\..*)?")
+                includeGroupByRegex("de\\.oceanlabs(\\..*)?")
+                includeGroupByRegex("org\\.spongepowered(\\..*)?")
+            }
         }
         gradlePluginPortal()
         mavenCentral()
@@ -22,9 +33,20 @@ dependencyResolutionManagement {
     repositories {
         maven("https://maven.fabricmc.net/") {
             name = "Fabric"
+            content {
+                includeGroup("fabric-loom")
+                includeGroupByRegex("net\\.fabricmc(\\..*)?")
+            }
         }
         maven("https://maven.neoforged.net/releases") {
             name = "NeoForged"
+            content {
+                includeGroupByRegex("net\\.neoforged(\\..*)?")
+                includeGroupByRegex("net\\.minecraftforge(\\..*)?")
+                includeGroupByRegex("cpw\\.mods(\\..*)?")
+                includeGroupByRegex("de\\.oceanlabs(\\..*)?")
+                includeGroupByRegex("org\\.spongepowered(\\..*)?")
+            }
         }
         gradlePluginPortal()
         mavenCentral()

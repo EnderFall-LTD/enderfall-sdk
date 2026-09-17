@@ -50,6 +50,8 @@ final class BlockEntityPreviewSources {
                             uk.co.enderfall.sdk.runtime.blockentity.PortableMachineStatus.IDLE;
                     private Runnable notifyInventoryCommit;
                     private final java.util.List<Runnable> inventoryListeners = new java.util.ArrayList<>();
+                    private final java.util.Set<java.util.UUID> containerViewers = new java.util.HashSet<>();
+                    private long lastViewerCheck;
                     public void addInventoryListener(Runnable listener) { requireServer(); inventoryListeners.add(Objects.requireNonNull(listener)); }
                     public void removeInventoryListener(Runnable listener) { inventoryListeners.remove(listener); }
                     private void notifyInventoryListeners() {
@@ -75,6 +77,63 @@ final class BlockEntityPreviewSources {
                         requireServer();
                         if (animationViewers > 0 && --animationViewers == 0) definition.menuCloseAnimation().ifPresent(name -> animations.play(name, level.getGameTime()));
                     }
+                    @Override public void startOpen(${CONTAINER_USER_TYPE} user) {
+                        ${CONTAINER_PLAYER_CAST}
+                        if (level == null || level.isClientSide || player.isSpectator() || binding.storageContainer == null) return;
+                        requireServer();
+                        if (containerViewers.add(player.getUUID()) && containerViewers.size() == 1) {
+                            updateContainerOpenState(true);
+                            playContainerSound(true);
+                            menuAnimationOpened();
+                            level.scheduleTick(worldPosition, getBlockState().getBlock(), 20);
+                        }
+                    }
+                    @Override public void stopOpen(${CONTAINER_USER_TYPE} user) {
+                        ${CONTAINER_PLAYER_CAST}
+                        if (level == null || level.isClientSide || binding.storageContainer == null) return;
+                        requireServer();
+                        if (containerViewers.remove(player.getUUID()) && containerViewers.isEmpty()) {
+                            updateContainerOpenState(false);
+                            playContainerSound(false);
+                            menuAnimationClosed();
+                        }
+                    }
+                    private void updateContainerOpenState(boolean open) {
+                        var property = binding.storageContainer.spec().openProperty();
+                        if (property.isEmpty()) return;
+                        BlockState current = getBlockState();
+                        if (!(current.getBlock() instanceof PortableShapeBlock block)) return;
+                        var portable = block.portableState(current);
+                        if (portable.get(property.orElseThrow()) == open) return;
+                        level.setBlock(worldPosition, block.withPortableState(current,
+                                portable.with(property.orElseThrow(), open)), Block.UPDATE_ALL);
+                    }
+                    @SuppressWarnings("deprecation")
+                    private void playContainerSound(boolean opening) {
+                        var sounds = binding.storageContainer.spec().sounds();
+                        if (!sounds.enabled()) return;
+                        var id = opening ? sounds.open() : sounds.close();
+                        var sound = ${SOUND_LOOKUP};
+                        if (sound == null) throw new IllegalStateException("Unknown container sound: " + id);
+                        level.playSound(null, worldPosition, sound,
+                                net.minecraft.sounds.SoundSource.BLOCKS, sounds.volume(), sounds.pitch());
+                    }
+                    private void reconcileContainerViewers() {
+                        if (containerViewers.isEmpty() || level.getGameTime() - lastViewerCheck < 20) return;
+                        lastViewerCheck = level.getGameTime();
+                        containerViewers.removeIf(id -> {
+                            var viewer = level.getServer().getPlayerList().getPlayer(id);
+                            return viewer == null || !viewer.isAlive() || viewer.isSpectator()
+                                    || !(viewer.containerMenu instanceof net.minecraft.world.inventory.ChestMenu menu)
+                                    || menu.getContainer() != StoredBlockEntity.this;
+                        });
+                        if (containerViewers.isEmpty()) {
+                            updateContainerOpenState(false);
+                            playContainerSound(false);
+                            menuAnimationClosed();
+                        }
+                    }
+                    private boolean hasContainerViewers() { return !containerViewers.isEmpty(); }
                     private final Binding binding;
                     private final SimpleContainer inventory;
                     private boolean restoringInventory;
@@ -189,23 +248,27 @@ final class BlockEntityPreviewSources {
                     @Override public void clearContent() { inventory.clearContent(); }
                     @Override public boolean stillValid(Player player) { return inventory.stillValid(player); }
                     @Override public boolean canPlaceItem(int slot, ItemStack stack) {
-                        return binding.ports != null && binding.ports.isInput(slot);
+                        return binding.storagePorts || binding.ports != null && binding.ports.isInput(slot);
                     }
                     @Override public boolean canTakeItem(net.minecraft.world.Container destination, int slot, ItemStack stack) {
-                        return binding.ports != null && binding.ports.isOutput(slot);
+                        return binding.storagePorts || binding.ports != null && binding.ports.isOutput(slot);
                     }
                     private static uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts.Face portFace(net.minecraft.core.Direction face) {
                         return face == null ? null : uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts.Face.valueOf(face.name());
                     }
                     @Override public int[] getSlotsForFace(net.minecraft.core.Direction face) {
-                        if (binding.ports == null || face == null) return new int[0];
+                        if (face == null) return new int[0];
+                        if (binding.storagePorts) return java.util.stream.IntStream.range(0, inventorySize()).toArray();
+                        if (binding.ports == null) return new int[0];
                         return binding.ports.slots(portFace(face));
                     }
                     @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction face) {
-                        return binding.ports != null && binding.ports.canInsert(slot, portFace(face));
+                        return binding.storagePorts && slot >= 0 && slot < inventorySize()
+                                || binding.ports != null && binding.ports.canInsert(slot, portFace(face));
                     }
                     @Override public boolean canTakeItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction face) {
-                        return binding.ports != null && binding.ports.canExtract(slot, portFace(face));
+                        return binding.storagePorts && slot >= 0 && slot < inventorySize()
+                                || binding.ports != null && binding.ports.canExtract(slot, portFace(face));
                     }
                     public BlockEntitySpec definition() { return definition; }
                     public ItemStack stack(int slot) { return inventory.getItem(slot).copy(); }
@@ -477,6 +540,8 @@ final class BlockEntityPreviewSources {
                         private java.util.function.BiConsumer<Player, InteractionEvent> useHandler;
                         private java.util.function.Consumer<StoredBlockEntity> machineTicker;
                         private uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts ports;
+                        private boolean storagePorts;
+                        private uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition storageContainer;
                         private Binding(BlockEntitySpec spec, uk.co.enderfall.sdk.api.registry.BlockSpec blockSpec) {
                             this.spec = spec; this.blockSpec = java.util.Objects.requireNonNull(blockSpec, "blockSpec");
                         }
@@ -489,6 +554,20 @@ final class BlockEntityPreviewSources {
                                 throw new IllegalArgumentException("Machine port binding is duplicate or has mismatched slots");
                             }
                             ports = new uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts(inputs);
+                        }
+                        public void bindStorageContainer(uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition definition) {
+                            Objects.requireNonNull(definition, "definition");
+                            if (storageContainer != null || ports != null || useHandler != null
+                                    || !definition.spec().storage().equals(spec)) {
+                                throw new IllegalArgumentException("Storage container is duplicate, mismatched, or conflicts with another menu");
+                            }
+                            definition.spec().openProperty().ifPresent(property -> {
+                                if (!blockSpec.states().properties().contains(property)) {
+                                    throw new IllegalArgumentException("Container open property is not declared by the block");
+                                }
+                            });
+                            storageContainer = definition;
+                            storagePorts = true;
                         }
                         /** Internal preview processing hook; install once before blocks are created. */
                         public void onMachineTick(java.util.function.Consumer<StoredBlockEntity> ticker) {
@@ -539,6 +618,17 @@ final class BlockEntityPreviewSources {
                             return (tickLevel, pos, tickState, entity) -> {
                                 if (entity instanceof StoredBlockEntity stored && !stored.isRemoved()) stored.serverTick();
                             };
+                        }
+
+                        @Override @SuppressWarnings("deprecation")
+                        public void tick(BlockState state, net.minecraft.server.level.ServerLevel level,
+                                BlockPos pos, net.minecraft.util.RandomSource random) {
+                            super.tick(state, level, pos, random);
+                            if (level.getBlockEntity(pos) instanceof StoredBlockEntity stored
+                                    && stored.binding.storageContainer != null) {
+                                stored.reconcileContainerViewers();
+                                if (stored.hasContainerViewers()) level.scheduleTick(pos, this, 20);
+                            }
                         }
 
                         @Override
@@ -592,6 +682,15 @@ final class BlockEntityPreviewSources {
                 .replace("${STACK_ENCODE}", policy.legacy() ? "stack.save(new CompoundTag())" : "ItemStack.CODEC.encodeStart(registries().createSerializationContext(NbtOps.INSTANCE), stack).getOrThrow()")
                 .replace("${STACK_DECODE}", policy.legacy() ? "ItemStack.of(tag)" : "ItemStack.CODEC.parse(registries().createSerializationContext(NbtOps.INSTANCE), tag).getOrThrow()")
                 .replace("${NBT_ACCOUNTER}", policy.legacy() ? "new NbtAccounter(PortableBlockEntityStorage.MAXIMUM_STACK_BYTES)" : "NbtAccounter.create(PortableBlockEntityStorage.MAXIMUM_STACK_BYTES)")
+                .replace("${SOUND_LOOKUP}", policy.legacy()
+                        ? "BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.tryParse(id.toString()))"
+                        : policy.modernRecipes()
+                                ? "BuiltInRegistries.SOUND_EVENT.getValue(ResourceLocation.parse(id.toString()))"
+                                : "BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.parse(id.toString()))")
+                .replace("${CONTAINER_USER_TYPE}", policy.unobfuscated()
+                        ? "net.minecraft.world.entity.ContainerUser" : "Player")
+                .replace("${CONTAINER_PLAYER_CAST}", policy.unobfuscated()
+                        ? "if (!(user instanceof Player player)) return;" : "Player player = user;")
                 .replace("${BLOCK_USE_SIGNATURE}", policy.legacy()
                         ? "public net.minecraft.world.InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.BlockHitResult hit)"
                         : "protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.phys.BlockHitResult hit)")

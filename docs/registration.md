@@ -119,6 +119,9 @@ Registration.Menus MENUS = Registration.menus("my_mod");
 WorkbenchRef BENCH = MENUS.workbench("workbench", "Workbench", ASSEMBLY,
     p -> {}, craft -> {});
 
+StorageContainerRef CABINET = MENUS.container("cabinet", "Oak Cabinet", CABINET_STORAGE,
+    p -> p.openState(CabinetBlock.OPEN).sounds(ContainerSoundProfile.BARREL));
+
 MenuRef STATUS = MENUS.menu("status", "Status", p -> p.size(220, 140),
     action -> {});
 
@@ -131,7 +134,11 @@ Attach these groups alongside blocks and items. Recipe types are registered befo
 menus; creative tabs are registered last. Recipe JSON/datagen and gameplay callbacks
 remain separate from registration. The SDK supplies the synchronized client screen
 for these portable menus; authors do not register the same screen on both sides.
-Arbitrary native screens and recipe serializers remain outside this facade.
+Storage containers use a declared persistent inventory with 9-54 slots in complete
+rows of nine and Minecraft's standard synchronized storage UI. Shift-click routing
+is native, and all slots currently accept hopper insertion and extraction from every
+face. More selective sided/filter policies and arbitrary native screens remain outside
+this initial facade.
 
 ## Client renderers
 

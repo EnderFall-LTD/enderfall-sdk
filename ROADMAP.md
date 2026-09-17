@@ -7,8 +7,10 @@ checklist. Custom block factories/configuration/server-use hooks, static cuboid
 outline/collision shapes, typed custom state, state-dependent geometry, server-world
 state mutation, opt-in horizontal/six-way facing, custom initial-state placement,
 rotation, mirroring, neighbor-derived state, scheduled transitions and real
-waterlogging are implemented. The connecting-table fixture now needs cross-target
-gameplay acceptance, followed by general storage menus.
+waterlogging are implemented. General 9-54 slot storage containers now have portable
+registration, vanilla synchronization, shift-click, hopper access, viewer tracking,
+open state and sound profiles. Connecting-table and storage fixtures still need
+cross-target gameplay acceptance; loot-table-backed inventories remain next.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

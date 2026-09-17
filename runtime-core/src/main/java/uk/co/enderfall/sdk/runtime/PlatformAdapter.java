@@ -62,6 +62,16 @@ public interface PlatformAdapter {
         throw new UnsupportedOperationException("Portable block-state access is unavailable");
     }
     default boolean supportsTimedWorkbenches() { return false; }
+    default boolean supportsStorageContainers() { return false; }
+
+    default void registerStorageContainer(PortableStorageContainerDefinition definition) {
+        throw new UnsupportedOperationException("Storage containers are unavailable on this adapter");
+    }
+
+    default void openStorageContainer(UUID playerId, PortableStorageContainerDefinition definition,
+            uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
+        throw new UnsupportedOperationException("Storage containers are unavailable on this adapter");
+    }
 
     default void registerPersistentBlock(ResourceId id, BlockSpec spec, ItemSpec itemSpec,
             uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec storage) {

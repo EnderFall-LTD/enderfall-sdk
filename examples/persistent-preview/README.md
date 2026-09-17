@@ -4,6 +4,21 @@ An isolated development fixture of the experimental block-owned inventory. Norma
 demo builds and published runtime contents are unchanged. Use a disposable world:
 save/reload and item-loss/duplication behaviour still need gameplay validation.
 
+## Storage cabinet test
+
+Place **Storage Cabinet** from the preview creative tab and open it. It is a plain
+27-slot persistent inventory, not a recipe workbench. Check ordinary clicks and
+shift-click in both directions, then close and reopen it. The top texture changes
+to the open-barrel texture while at least one player is viewing it and returns when
+the last viewer closes; barrel open/close sounds should follow the same first/last
+viewer boundary.
+
+Feed and extract items with hoppers from the top, bottom and sides. Save and reload
+with partial stacks, break the cabinet and confirm every stack drops exactly once.
+Also test two simultaneous viewers, player death, disconnect and spectator changes.
+Generated source and compilation cover all nine targets, but these are still live
+gameplay acceptance checks rather than claims inferred from a successful build.
+
 ## Connecting table and waterlogging test
 
 Place several **Connecting Waterlogged Table** blocks side by side. Each block's
@@ -192,6 +207,7 @@ and inventory preservation across save/reload in a disposable world.
 
 - `PersistentDemo`: portable entrypoint and creative tab.
 - `PreviewBlocks`: block, block item, and persistent inventory definition.
+- `PreviewContainers`: general storage-menu registration, separate from recipes.
 - `PreviewRecipes`: custom recipe type and persistent menu registration.
 - `src/loader/fabric`: development-only bootstrap selecting the SDK preview platform.
 - `src/main/resources`: explicit 1.21.4 recipe, model, translation, and loot fixtures.

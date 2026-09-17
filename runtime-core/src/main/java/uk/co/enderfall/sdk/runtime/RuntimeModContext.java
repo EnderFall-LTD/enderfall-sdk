@@ -19,6 +19,7 @@ import uk.co.enderfall.sdk.api.registry.ItemRegistrar;
 import uk.co.enderfall.sdk.api.recipe.RecipeRegistrar;
 import uk.co.enderfall.sdk.api.ui.MenuManager;
 import uk.co.enderfall.sdk.api.ui.WorkbenchManager;
+import uk.co.enderfall.sdk.api.ui.StorageContainerManager;
 import uk.co.enderfall.sdk.runtime.config.DefaultConfigManager;
 import uk.co.enderfall.sdk.runtime.network.DefaultNetworkManager;
 
@@ -34,6 +35,7 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     private final DefaultMenuManager menus;
     private final DefaultRecipeRegistrar recipes;
     private final DefaultWorkbenchManager workbenches;
+    private final DefaultStorageContainerManager containers;
     private final DefaultItemRegistrar items;
     private final DefaultBlockRegistrar blocks;
     private final DefaultBlockStateManager blockStates;
@@ -54,6 +56,7 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
         menus = new DefaultMenuManager(modId, target, adapter, gate, logger, events);
         recipes = new DefaultRecipeRegistrar(modId, target, adapter, gate);
         workbenches = new DefaultWorkbenchManager(modId, target, adapter, gate);
+        containers = new DefaultStorageContainerManager(modId, target, adapter, gate);
         items = new DefaultItemRegistrar(modId, target, adapter, gate);
         blocks = new DefaultBlockRegistrar(modId, target, adapter, gate, items);
         blockStates = new DefaultBlockStateManager(adapter);
@@ -157,6 +160,11 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     @Override
     public WorkbenchManager workbenches() {
         return workbenches;
+    }
+
+    @Override
+    public StorageContainerManager containers() {
+        return containers;
     }
 
     @Override

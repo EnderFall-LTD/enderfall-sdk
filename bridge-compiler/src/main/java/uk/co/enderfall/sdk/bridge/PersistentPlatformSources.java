@@ -15,7 +15,10 @@ final class PersistentPlatformSources {
                             persistentBlocks = new LinkedHashMap<>();
                     private final java.util.Set<ResourceId> boundPersistentBlocks = new java.util.HashSet<>();
                     private final Map<ResourceId, ${PREFIX}TimedWorkbenchMenu.Binding> timedWorkbenches = new LinkedHashMap<>();
+                    private final Map<ResourceId, uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition>
+                            storageContainers = new LinkedHashMap<>();
                     @Override public boolean supportsTimedWorkbenches() { return true; }
+                    @Override public boolean supportsStorageContainers() { return true; }
                     private boolean menuGauges;
                     public void enableMenuGauges() { menuGauges = true; }
                     @Override public boolean supportsMenuGauges() { return menuGauges; }
@@ -57,6 +60,77 @@ final class PersistentPlatformSources {
 
                     @Override
                     public boolean supportsPersistentWorkbenches() { return true; }
+
+                    @Override
+                    public void registerStorageContainer(uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition definition) {
+                        ResourceId id = definition.reference().id();
+                        var storage = definition.spec().storage();
+                        ResourceId blockId = storage.block().id();
+                        var owner = persistentBlocks.get(blockId);
+                        if (!id.namespace().equals(modId) || owner == null
+                                || storage != owner.definition() || boundPersistentBlocks.contains(blockId)
+                                || storageContainers.putIfAbsent(id, definition) != null) {
+                            throw new IllegalArgumentException("[" + modId + "] Unknown, mismatched, duplicate, or already bound storage container: " + id);
+                        }
+                        owner.bindStorageContainer(definition);
+                        owner.onUse((player, event) -> {
+                            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                                openStorageAt(serverPlayer, definition, event.blockLocation().orElseThrow());
+                            }
+                            event.handle();
+                        });
+                        boundPersistentBlocks.add(blockId);
+                    }
+
+                    @Override
+                    public void openStorageContainer(java.util.UUID playerId,
+                            uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition definition,
+                            uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
+                        if (storageContainers.get(definition.reference().id()) != definition) {
+                            throw new IllegalArgumentException("[" + modId + "] Unknown storage container: " + definition.reference().id());
+                        }
+                        openStorageAt(requireOnlinePlayer(playerId), definition, location);
+                    }
+
+                    private static void openStorageAt(net.minecraft.server.level.ServerPlayer player,
+                            uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition definition,
+                            uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
+                        var level = player.level();
+                        if (!level.getServer().isSameThread()) {
+                            throw new IllegalStateException("Storage containers must open on the server thread");
+                        }
+                        if (!level.dimension().location().toString().equals(location.dimension().toString())) {
+                            throw new IllegalArgumentException("Storage container is in a different dimension");
+                        }
+                        var pos = new net.minecraft.core.BlockPos(location.x(), location.y(), location.z());
+                        if (!level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
+                            throw new IllegalArgumentException("Storage container chunk is not loaded");
+                        }
+                        if (!(level.getBlockEntity(pos) instanceof
+                                uk.co.enderfall.sdk.runtime.blockentity.nativebridge.StoredBlockEntity owner)
+                                || owner.definition() != definition.spec().storage()
+                                || owner.inventorySize() != definition.spec().rows() * 9
+                                || !owner.stillValid(player)) {
+                            throw new IllegalArgumentException("Storage container owner, schema, or player reach mismatch");
+                        }
+                        player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                                (id, inventory, ignored) -> new net.minecraft.world.inventory.ChestMenu(
+                                        storageMenuType(definition.spec().rows()), id, inventory, owner,
+                                        definition.spec().rows()),
+                                net.minecraft.network.chat.Component.literal(definition.spec().title())));
+                    }
+
+                    private static net.minecraft.world.inventory.MenuType<?> storageMenuType(int rows) {
+                        return switch (rows) {
+                            case 1 -> net.minecraft.world.inventory.MenuType.GENERIC_9x1;
+                            case 2 -> net.minecraft.world.inventory.MenuType.GENERIC_9x2;
+                            case 3 -> net.minecraft.world.inventory.MenuType.GENERIC_9x3;
+                            case 4 -> net.minecraft.world.inventory.MenuType.GENERIC_9x4;
+                            case 5 -> net.minecraft.world.inventory.MenuType.GENERIC_9x5;
+                            case 6 -> net.minecraft.world.inventory.MenuType.GENERIC_9x6;
+                            default -> throw new IllegalArgumentException("Unsupported storage row count: " + rows);
+                        };
+                    }
 
                     @Override
                     public void registerPersistentBlock(ResourceId id, BlockSpec spec, ItemSpec itemSpec,

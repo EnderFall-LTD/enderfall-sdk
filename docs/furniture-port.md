@@ -35,7 +35,7 @@ explicit extension points, never SDK-generated or loader-owned implementation cl
 | Stage | Concrete furniture evidence | SDK work and acceptance |
 | --- | --- | --- |
 | 1. Custom block definitions | `common/blocks/BarrelModBlock.java`, `TableBlock.java` | Factory/configuration, server-use hooks, static cuboid shapes, typed boolean/integer/enum state, state-dependent shapes, server-world state mutation, opt-in horizontal/six-way facing, custom initial-state placement, neighbor-derived state, scheduled transitions and real waterlogging are implemented. The portable connecting-table fixture compiles unchanged on all targets; live connection, bucket, fluid-tick and save/reload acceptance remains. |
-| 2. General containers | `common/blocks/entity/BarrelModBlockEntity.java` | 27-slot storage menu, slot transfer rules, openers tracking, sounds, open block state, loot-table-backed inventory and drops. Existing timed workbench menus are not a substitute. Prove simultaneous viewers, death/disconnect, save/reload and hopper transfer. |
+| 2. General containers | `common/blocks/entity/BarrelModBlockEntity.java` | A 9-54 slot vanilla-synchronized storage API, shift-click routing, all-face hopper access, first/last viewer tracking, sounds and portable open block state are implemented. Loot-table-backed inventory is still missing. Prove simultaneous viewers, death/disconnect, save/reload, drops and hopper transfer in live targets. Existing timed workbench menus are not a substitute. |
 | 3. Items and durable data | `registry/ModComponents.java`, `common/items/WrenchItem.java` | Portable letter author/text data persisted and synchronized, with legacy representation on pre-component targets. Custom use-on-block behavior, tooltips and wrench/hammer state changes. Verify copies, stacks, dropped items and reconnects preserve data. |
 | 4. Recipes and richer screens | `common/menus/WorkstationMenu.java`, `client/screens/WorkstationScreen.java` | Selectable/filterable recipes, custom layouts, selection validation, scroll/input widgets, secure editable text and synchronized results. Current positional recipes and label/button screens only cover part of this. |
 | 5. Specialized furniture behavior | `common/blocks/entity/CounterOvenBlockEntity.java`, `common/blocks/ModBedBlock.java`, `common/entity/SeatEntity.java` | Furnace/fuel semantics, multipart storage/blocks, beds, seat mounting/dismounting and lifecycle. Do not replace these with visually similar inert blocks. |
@@ -59,6 +59,23 @@ custom state from a loader-neutral placement context and derive a replacement st
 when a specific neighbour changes. See [block-state definitions](block-state-definitions.md).
 Scheduled ticks and waterlogging now have generated implementations. The complete
 connecting-table gameplay scenario remains open, so stage 1 is not yet accepted.
+
+## General storage implementation
+
+`Registration.menus(namespace).container(...)` binds an existing persistent block
+inventory to Minecraft's standard 9-wide storage screen. A 27-slot cabinet therefore
+needs only `inventorySlots(27)` plus one menu declaration; the SDK installs the server
+interaction and every target uses vanilla slot synchronization and shift-click rules.
+One through six rows are supported. Optional `openState(...)` drives a declared boolean
+block property from first-viewer/last-viewer transitions, and `ContainerSoundProfile`
+provides built-in chest/barrel profiles or custom sound IDs. Viewer reconciliation
+closes stale visual state after death, disconnect or spectator transitions. Registered
+plain storage exposes every slot to hoppers on every face; configurable sided slot
+policies remain future work.
+
+The persistent preview now includes `PreviewStorageCabinetBlock`, `PreviewContainers`
+and a 27-slot cabinet declared entirely in portable source. All generated targets
+compile, but live multi-viewer, hopper and save/reload acceptance remains separate.
 
 - `PortableBlock` is a loader-neutral definition interface.
 - Registration factories execute once per block ID at initialization preflight.

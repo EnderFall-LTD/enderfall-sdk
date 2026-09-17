@@ -52,8 +52,8 @@ tasks.register("verifyPersistenceFixtures") {
             val reference = mutableMapOf<String, ByteArray>()
             files.forEach { file ->
                 java.util.zip.ZipFile(file.get().asFile).use { zip ->
-                    listOf("PersistentDemo", "PreviewBlocks", "PreviewConnectingTableBlock", "PreviewRecipes",
-                        "PreviewFluids", "PreviewGauge", "PreviewRenderClient").forEach { name ->
+                    listOf("PersistentDemo", "PreviewBlocks", "PreviewConnectingTableBlock", "PreviewStorageCabinetBlock",
+                        "PreviewContainers", "PreviewRecipes", "PreviewFluids", "PreviewGauge", "PreviewRenderClient").forEach { name ->
                         val path = "uk/co/enderfall/sdk/preview/$name.class"
                         val entry = zip.getEntry(path) ?: error("Missing portable class $path in ${file.get()}")
                         val bytes = zip.getInputStream(entry).use { it.readBytes() }

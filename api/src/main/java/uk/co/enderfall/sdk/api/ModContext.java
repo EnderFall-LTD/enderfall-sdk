@@ -17,6 +17,7 @@ import uk.co.enderfall.sdk.api.registry.ItemRegistrar;
 import uk.co.enderfall.sdk.api.recipe.RecipeRegistrar;
 import uk.co.enderfall.sdk.api.ui.MenuManager;
 import uk.co.enderfall.sdk.api.ui.WorkbenchManager;
+import uk.co.enderfall.sdk.api.ui.StorageContainerManager;
 
 /** Services scoped to one consumer mod. */
 public interface ModContext {
@@ -55,6 +56,11 @@ public interface ModContext {
     @Experimental("Container workbenches are being proven across the supported target matrix")
     @CapabilityGated(uk.co.enderfall.sdk.api.platform.Capability.CONTAINER_MENUS)
     WorkbenchManager workbenches();
+
+    /** General block-owned inventories such as chests, cabinets, crates and barrels. */
+    @Experimental("General storage containers are being proven across the supported target matrix")
+    @CapabilityGated(uk.co.enderfall.sdk.api.platform.Capability.STORAGE_CONTAINERS)
+    StorageContainerManager containers();
 
     CommandManager commands();
 

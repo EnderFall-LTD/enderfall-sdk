@@ -19,6 +19,10 @@ public final class PreviewBlocks {
             .copyFrom(WORKBENCH).storage(PreviewBlocks.TIMED_STORAGE));
     public static final BlockRef FLUID_TANK = BLOCKS.block("fluid_tank", p -> p
             .strength(2, 4).storage(PreviewBlocks.TANK_STORAGE));
+    public static final BlockRef STORAGE_CABINET = BLOCKS.block("storage_cabinet",
+            PreviewStorageCabinetBlock::new,
+            p -> p.copyFrom(ResourceId.of("minecraft", "barrel")).strength(2, 4)
+                    .storage(PreviewBlocks.CABINET_STORAGE));
 
     public static final BlockEntitySpec WORKBENCH_STORAGE = Registration.storage(WORKBENCH,
             p -> p.inventorySlots(3).renderSlot(0).renderSlot(1).renderSlot(2));
@@ -27,6 +31,8 @@ public final class PreviewBlocks {
     public static final BlockEntitySpec TANK_STORAGE = Registration.storage(FLUID_TANK,
             p -> p.tank(PreviewFluids.RESERVOIR).renderTank(PreviewFluids.RESERVOIR.name())
                     .serverTicker(PreviewFluids::tick));
+    public static final BlockEntitySpec CABINET_STORAGE = Registration.storage(STORAGE_CABINET,
+            p -> p.inventorySlots(27));
 
     public static void register(ModContext context) { Registration.register(context, BLOCKS); }
 }

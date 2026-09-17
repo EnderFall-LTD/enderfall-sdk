@@ -20,7 +20,8 @@ class BlockEntityPreviewSourcesTest {
         assertTrue(first.contains("implements net.minecraft.world.WorldlyContainer"));
         assertTrue(first.contains("binding.ports.canInsert(slot, portFace(face))"));
         assertTrue(first.contains("binding.ports.canExtract(slot, portFace(face))"));
-        assertTrue(first.contains("if (binding.ports == null || face == null) return new int[0]"));
+        assertTrue(first.contains("if (face == null) return new int[0]"));
+        assertTrue(first.contains("if (binding.storagePorts) return java.util.stream.IntStream.range(0, inventorySize()).toArray()"));
         assertTrue(first.contains("storage.restore(tag.getByteArray(SAVE_KEY))"));
         assertTrue(first.contains("inventory.setItem(slot, storage.stack(slot))"));
         assertTrue(first.contains("notifyInventoryCommit = () -> { super.setChanged(); notifyInventoryListeners(); }"));
@@ -55,6 +56,10 @@ class BlockEntityPreviewSourcesTest {
         assertTrue(first.contains("new BlockLocation(ResourceId.parse(level.dimension().location().toString())"));
         assertTrue(first.contains("pos.getX(), pos.getY(), pos.getZ()"));
         assertTrue(first.contains("player.isSpectator() || binding.useHandler == null"));
+        assertTrue(first.contains("public void startOpen(Player user)"));
+        assertTrue(first.contains("public void stopOpen(Player user)"));
+        assertTrue(first.contains("updateContainerOpenState(true)"));
+        assertTrue(first.contains("viewer.containerMenu instanceof net.minecraft.world.inventory.ChestMenu menu"));
         Path menu = directory.resolve("uk/co/enderfall/sdk/runtime/fabric/v1_21_4/FabricPersistentWorkbenchMenu.java");
         String menuSource = Files.readString(menu);
         String processor = Files.readString(menu.getParent().resolve("FabricTimedWorkbenchProcessor.java"));
@@ -90,6 +95,9 @@ class BlockEntityPreviewSourcesTest {
         String platform = Files.readString(menu.getParent().resolve("FabricPersistentPlatformAdapter.java"));
         assertTrue(platform.contains("final class FabricPersistentPlatformAdapter implements PlatformAdapter"));
         assertTrue(platform.contains("public boolean supportsPersistentWorkbenches() { return true; }"));
+        assertTrue(platform.contains("public boolean supportsStorageContainers() { return true; }"));
+        assertTrue(platform.contains("public void registerStorageContainer("));
+        assertTrue(platform.contains("new net.minecraft.world.inventory.ChestMenu("));
         assertTrue(platform.contains("new BlockItem(block, itemProperties)"));
         assertTrue(platform.contains("FabricPersistentWorkbenchMenu.bindBlock(owner, workbenches.get("));
         assertTrue(platform.contains("FabricPersistentWorkbenchMenu.openAt(requireOnlinePlayer(playerId)"));

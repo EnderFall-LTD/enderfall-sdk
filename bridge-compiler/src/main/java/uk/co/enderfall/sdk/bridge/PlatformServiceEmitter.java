@@ -77,7 +77,7 @@ final class PlatformServiceEmitter {
         source.append("}\n");
         String rendered = renderNames(source.toString(), names);
         if (persistent) rendered = rendered.replace("Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS",
-                "Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS, Capability.BLOCK_STATES, "
+                "Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS, Capability.STORAGE_CONTAINERS, Capability.BLOCK_STATES, "
                         + "Capability.SCHEDULED_BLOCK_TICKS, Capability.WATERLOGGED_BLOCKS");
         if (persistent && BlockEntityNativePolicy.require(target.id()).unobfuscated()) rendered = BlockEntity26Sources.names(rendered);
         String filePrefix = switch (policy) {

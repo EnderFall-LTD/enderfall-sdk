@@ -263,6 +263,32 @@ public final class Registration {
             });
             return new WorkbenchRef(id);
         }
+
+        /**
+         * Registers a block-owned vanilla-synchronized storage screen. The SDK binds the
+         * block interaction and client screen; consumer code performs no second registration.
+         */
+        public uk.co.enderfall.sdk.api.ui.StorageContainerRef container(String path, String title,
+                BlockEntitySpec storage,
+                Consumer<uk.co.enderfall.sdk.api.ui.StorageContainerSpec.Builder> configure) {
+            ResourceId id = id(path);
+            Objects.requireNonNull(storage, "storage");
+            Objects.requireNonNull(configure, "configure");
+            add(new Entry("menu", id, 2) {
+                @Override Runnable prepare(ModContext context, Resolution resolution) {
+                    var builder = uk.co.enderfall.sdk.api.ui.StorageContainerSpec.builder(title, storage);
+                    configure.accept(builder);
+                    var spec = builder.build();
+                    return () -> context.containers().register(id, spec);
+                }
+            });
+            return new uk.co.enderfall.sdk.api.ui.StorageContainerRef(id);
+        }
+
+        public uk.co.enderfall.sdk.api.ui.StorageContainerRef container(String path, String title,
+                BlockEntitySpec storage) {
+            return container(path, title, storage, builder -> { });
+        }
     }
     public static final class Tabs extends Group {
         private Tabs(String namespace) { super(namespace); }

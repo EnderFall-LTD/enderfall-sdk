@@ -85,14 +85,15 @@ or developer Gradle properties:
 |---|---|
 | `MAVEN_CENTRAL_USERNAME` | Username from a Central Portal user token |
 | `MAVEN_CENTRAL_PASSWORD` | Password from the same Central token |
-| `MAVEN_SIGNING_KEY` | ASCII-armored private OpenPGP key |
+| `MAVEN_SIGNING_KEY_BASE64` | Base64-encoded ASCII-armored private OpenPGP key |
 | `MAVEN_SIGNING_PASSWORD` | Private-key passphrase |
 | `GRADLE_PUBLISH_KEY` | Plugin Portal API key |
 | `GRADLE_PUBLISH_SECRET` | Plugin Portal API secret |
 
 Use a dedicated signing key for releases, publish its public key to a public key
 server, keep an encrypted offline recovery copy, and never print the private key or
-tokens in workflow logs.
+tokens in workflow logs. Store the private key as single-line Base64 so GitHub does
+not alter the armored key's line endings; the workflows decode it only in memory.
 
 ## Current external-state check
 

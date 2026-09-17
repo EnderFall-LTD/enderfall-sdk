@@ -58,11 +58,12 @@ class Fabric1201GenerationTest {
     }
 
     @Test
-    void reusesFourSourcesAndOmitsTheTenReplacedOrCombinedBaselineFiles() throws Exception {
+    void reusesFourSourcesTransformsTheScreenAndOmitsNineReplacedOrCombinedFiles() throws Exception {
         Path output = temporaryDirectory.resolve("reuse");
         generate(output);
         List<String> reused = List.of("EnderfallFabricRuntime.java", "FabricCommandBridge.java",
                 "FabricConsumerBootstrap.java", "FabricPlatformInfo.java");
+        List<String> transformed = List.of("FabricPortableMenuScreen.java");
         Path canonical = canonicalRoot().resolve("src/canonical/java");
         int omitted = 0;
         try (var files = Files.walk(canonical)) {
@@ -70,13 +71,16 @@ class Fabric1201GenerationTest {
                 Path emitted = output.resolve("sources").resolve(canonical.relativize(file));
                 if (reused.contains(file.getFileName().toString())) {
                     assertArrayEquals(Files.readAllBytes(file), Files.readAllBytes(emitted));
+                } else if (transformed.contains(file.getFileName().toString())) {
+                    assertTrue(Files.exists(emitted));
+                    assertTrue(Files.mismatch(file, emitted) >= 0L);
                 } else {
                     assertFalse(Files.exists(emitted), file.getFileName().toString());
                     omitted++;
                 }
             }
         }
-        assertEquals(10, omitted);
+        assertEquals(9, omitted);
     }
 
     @Test

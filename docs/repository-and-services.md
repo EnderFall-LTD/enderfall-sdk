@@ -1,12 +1,12 @@
 # Repository and service setup
 
 This page is the one-time bootstrap checklist for the two public repositories and
-the services owned by EnderFall. None of these steps weaken the release gates in
+the services owned by EnderFall LTD. None of these steps weaken the release gates in
 the build.
 
 ## GitHub repositories
 
-Create these public repositories in the `EnderFall` organization:
+Create these public repositories in the `EnderFall-LTD` GitHub organization:
 
 | Repository | Purpose | License |
 |---|---|---|

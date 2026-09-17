@@ -3,7 +3,15 @@ name: build
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "docs-requirements.txt"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "docs-requirements.txt"
   workflow_dispatch:
 
 permissions:

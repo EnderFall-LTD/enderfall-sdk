@@ -58,11 +58,11 @@ class Fabric1201GenerationTest {
     }
 
     @Test
-    void reusesFiveSourcesAndOmitsTheNineReplacedOrCombinedBaselineFiles() throws Exception {
+    void reusesFourSourcesAndOmitsTheTenReplacedOrCombinedBaselineFiles() throws Exception {
         Path output = temporaryDirectory.resolve("reuse");
         generate(output);
         List<String> reused = List.of("EnderfallFabricRuntime.java", "FabricCommandBridge.java",
-                "FabricConsumerBootstrap.java", "FabricPlatformInfo.java", "FabricPortableMenuScreen.java");
+                "FabricConsumerBootstrap.java", "FabricPlatformInfo.java");
         Path canonical = canonicalRoot().resolve("src/canonical/java");
         int omitted = 0;
         try (var files = Files.walk(canonical)) {
@@ -76,7 +76,7 @@ class Fabric1201GenerationTest {
                 }
             }
         }
-        assertEquals(9, omitted);
+        assertEquals(10, omitted);
     }
 
     @Test

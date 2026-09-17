@@ -70,7 +70,7 @@ class NeoForge1211GenerationTest {
     }
 
     @Test
-    void reusesElevenCentralNeoForgeSourcesByteForByte() throws Exception {
+    void reusesTwelveCentralNeoForgeSourcesByteForByte() throws Exception {
         Path canonical = canonicalRuntimeRoot();
         Path output = temporaryDirectory.resolve("reuse");
         generate(canonical, output);
@@ -79,8 +79,7 @@ class NeoForge1211GenerationTest {
         try (var stream = Files.walk(canonical.resolve("src/neoforge/java"))) {
             for (Path canonicalFile : stream.filter(Files::isRegularFile).toList()) {
                 String name = canonicalFile.getFileName().toString();
-                if (name.equals("NeoForgePortableMenuScreen.java")
-                        || name.equals("NeoForgeWorkbenchMenu.java") || name.equals("NeoForgeWorkbenchRecipe.java")) {
+                if (name.equals("NeoForgeWorkbenchMenu.java") || name.equals("NeoForgeWorkbenchRecipe.java")) {
                     continue;
                 }
                 Path relative = canonical.resolve("src/neoforge/java").relativize(canonicalFile);
@@ -89,7 +88,7 @@ class NeoForge1211GenerationTest {
                 reused++;
             }
         }
-        assertEquals(11, reused);
+        assertEquals(12, reused);
     }
 
     @Test

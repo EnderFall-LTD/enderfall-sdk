@@ -46,6 +46,7 @@ final class NeoForgePortableMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, height, 0xB0100D18);
         int left = (width - view.spec().width()) / 2;
         int top = (height - view.spec().height()) / 2;
@@ -66,6 +67,11 @@ final class NeoForgePortableMenuScreen extends Screen {
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
+    // Screen.render invokes this after our foreground. The background was already drawn
+    // first, so do not blur the panel again during widget rendering.
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    }
     @Override
     public void onClose() {
         notifyClosed();

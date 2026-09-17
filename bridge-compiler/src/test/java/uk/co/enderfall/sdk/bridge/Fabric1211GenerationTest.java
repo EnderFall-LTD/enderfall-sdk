@@ -130,14 +130,13 @@ class Fabric1211GenerationTest {
     }
 
     @Test
-    void reusesTenCanonicalSourcesByteForByte() throws Exception {
+    void reusesElevenCanonicalSourcesByteForByte() throws Exception {
         Path canonical = canonicalRuntimeRoot();
         Path output = temporaryDirectory.resolve("reuse");
         generate(canonical, output);
 
         List<String> transformedCanonicalNames = List.of(
-                "FabricPlatformAdapter.java", "FabricPortableMenuScreen.java",
-                "FabricWorkbenchMenu.java", "FabricWorkbenchRecipe.java");
+                "FabricPlatformAdapter.java", "FabricWorkbenchMenu.java", "FabricWorkbenchRecipe.java");
         int reused = 0;
         try (var stream = Files.walk(canonical.resolve("src/canonical/java"))) {
             for (Path canonicalFile : stream.filter(Files::isRegularFile).toList()) {
@@ -150,7 +149,7 @@ class Fabric1211GenerationTest {
                 reused++;
             }
         }
-        assertEquals(10, reused);
+        assertEquals(11, reused);
     }
 
     @Test

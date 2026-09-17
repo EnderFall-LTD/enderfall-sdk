@@ -9,7 +9,7 @@ tomlj = "1.1.1"
 junit = "5.12.2"
 shadow = "9.6.1"
 cyclonedx = "3.4.1"
-japicmp = "0.26.1"
+japicmp = "0.26.2"
 plugin-publish = "2.1.1"
 
 [libraries]

@@ -74,6 +74,17 @@ jobs:
           distribution: temurin
           java-version: "25"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Resolve pinned build plugins
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew help; then
+              exit 0
+            fi
+            test "$attempt" -lt 3 || exit 1
+            echo "Build plugin resolution failed; retrying attempt $((attempt + 1)) of 3" >&2
+            sleep $((attempt * 10))
+          done
       - name: Smoke test ${{ matrix.target }} dedicated server
         run: ./gradlew serverSmoke -Penderfall.smokeTarget=${{ matrix.target }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -108,6 +119,17 @@ jobs:
           distribution: temurin
           java-version: "25"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Resolve pinned build plugins
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew help; then
+              exit 0
+            fi
+            test "$attempt" -lt 3 || exit 1
+            echo "Build plugin resolution failed; retrying attempt $((attempt + 1)) of 3" >&2
+            sleep $((attempt * 10))
+          done
       - name: Smoke test ${{ matrix.target }} client
         run: xvfb-run -a ./gradlew clientSmoke "-Penderfall.smokeTarget=${{ matrix.target }}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -142,6 +164,17 @@ jobs:
           distribution: temurin
           java-version: "25"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Resolve pinned build plugins
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew help; then
+              exit 0
+            fi
+            test "$attempt" -lt 3 || exit 1
+            echo "Build plugin resolution failed; retrying attempt $((attempt + 1)) of 3" >&2
+            sleep $((attempt * 10))
+          done
       - name: Connect ${{ matrix.target }} client and server
         run: xvfb-run -a ./gradlew sameLoaderSmoke "-Penderfall.smokeTarget=${{ matrix.target }}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

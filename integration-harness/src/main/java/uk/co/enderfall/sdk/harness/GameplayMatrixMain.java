@@ -35,7 +35,8 @@ public final class GameplayMatrixMain {
         Path sdkRoot = Path.of(arguments[0]).toAbsolutePath().normalize();
         Path output = Path.of(arguments[1]).toAbsolutePath().normalize();
         Path build = sdkRoot.resolve("build").toRealPath();
-        if (!output.startsWith(build) || output.equals(build)) {
+        Path resolvedOutput = resolveThroughExistingAncestor(output);
+        if (!resolvedOutput.startsWith(build) || resolvedOutput.equals(build)) {
             throw new IllegalArgumentException("Matrix output must be a file inside " + build);
         }
         List<Path> inputs = new ArrayList<>();
@@ -157,11 +158,19 @@ public final class GameplayMatrixMain {
         require(!relative.isAbsolute(), "Log path must be relative to SDK root");
         Path build = sdkRoot.resolve("build").toRealPath();
         Path log = sdkRoot.resolve(relative).normalize();
-        require(log.startsWith(build) && log.toRealPath().startsWith(build), "Log path escapes SDK build directory");
+        require(resolveThroughExistingAncestor(log).startsWith(build), "Log path escapes SDK build directory");
         String text = readBounded(log, MAX_LOG_BYTES);
         require(!containsMarker(text, "ENDERFALL_GAMEPLAY_FAILED " + target), "Log contains a gameplay failure");
         for (String marker : markers) require(containsMarker(text, marker), "Log lacks checkpoint " + marker);
         return sha256(text);
+    }
+
+    private static Path resolveThroughExistingAncestor(Path path) throws IOException {
+        Path absolute = path.toAbsolutePath().normalize();
+        Path ancestor = absolute;
+        while (ancestor != null && !Files.exists(ancestor)) ancestor = ancestor.getParent();
+        require(ancestor != null, "Path has no existing ancestor: " + path);
+        return ancestor.toRealPath().resolve(ancestor.relativize(absolute)).normalize();
     }
 
     private static boolean containsMarker(String text, String marker) {

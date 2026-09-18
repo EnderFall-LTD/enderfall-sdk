@@ -18,10 +18,13 @@ class BlockEntityPreviewSourcesTest {
         assertEquals(first, Files.readString(source));
         assertTrue(first.contains("FabricBlockEntityTypeBuilder.create("));
         assertTrue(first.contains("implements net.minecraft.world.WorldlyContainer"));
-        assertTrue(first.contains("binding.ports.canInsert(slot, portFace(face))"));
-        assertTrue(first.contains("binding.ports.canExtract(slot, portFace(face))"));
+        assertTrue(first.contains("binding.ports.canInsert(slot, machinePortFace(face))"));
+        assertTrue(first.contains("binding.ports.canExtract(slot, machinePortFace(face))"));
         assertTrue(first.contains("if (face == null) return new int[0]"));
-        assertTrue(first.contains("if (binding.storagePorts) return java.util.stream.IntStream.range(0, inventorySize()).toArray()"));
+        assertTrue(first.contains("binding.inventoryPorts.slots(inventoryPortFace(face))"));
+        assertTrue(first.contains("binding.inventoryPorts.canInsert(inventoryPortFace(face), slot)"));
+        assertTrue(first.contains("binding.inventoryPorts.canExtract(inventoryPortFace(face), slot)"));
+        assertTrue(first.contains("InventoryAccessSpec.allFaces(spec.inventorySlots())"));
         assertTrue(first.contains("storage.restore(tag.getByteArray(SAVE_KEY))"));
         assertTrue(first.contains("inventory.setItem(slot, storage.stack(slot))"));
         assertTrue(first.contains("notifyInventoryCommit = () -> { super.setChanged(); notifyInventoryListeners(); }"));

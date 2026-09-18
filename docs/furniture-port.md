@@ -70,8 +70,10 @@ One through six rows are supported. Optional `openState(...)` drives a declared 
 block property from first-viewer/last-viewer transitions, and `ContainerSoundProfile`
 provides built-in chest/barrel profiles or custom sound IDs. Viewer reconciliation
 closes stale visual state after death, disconnect or spectator transitions. Registered
-plain storage exposes every slot to hoppers on every face; configurable sided slot
-policies remain future work.
+plain storage exposes every slot to hoppers on every face by default. A storage schema
+may instead use `inventoryAccess(...)` to assign insert, extract or bidirectional
+access to each face, either for every slot or a bounded slot list. These automation
+rules do not restrict ordinary player menu interaction.
 
 The persistent preview now includes `PreviewStorageCabinetBlock`, `PreviewContainers`
 and a 27-slot cabinet declared entirely in portable source. All generated targets

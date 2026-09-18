@@ -248,27 +248,33 @@ final class BlockEntityPreviewSources {
                     @Override public void clearContent() { inventory.clearContent(); }
                     @Override public boolean stillValid(Player player) { return inventory.stillValid(player); }
                     @Override public boolean canPlaceItem(int slot, ItemStack stack) {
-                        return binding.storagePorts || binding.ports != null && binding.ports.isInput(slot);
+                        return binding.inventoryPorts != null && binding.inventoryPorts.canInsertFromAnyFace(slot)
+                                || binding.ports != null && binding.ports.isInput(slot);
                     }
                     @Override public boolean canTakeItem(net.minecraft.world.Container destination, int slot, ItemStack stack) {
-                        return binding.storagePorts || binding.ports != null && binding.ports.isOutput(slot);
+                        return binding.inventoryPorts != null && binding.inventoryPorts.canExtractFromAnyFace(slot)
+                                || binding.ports != null && binding.ports.isOutput(slot);
                     }
-                    private static uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts.Face portFace(net.minecraft.core.Direction face) {
+                    private static uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts.Face machinePortFace(net.minecraft.core.Direction face) {
                         return face == null ? null : uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts.Face.valueOf(face.name());
+                    }
+                    private static uk.co.enderfall.sdk.api.block.BlockDirection inventoryPortFace(net.minecraft.core.Direction face) {
+                        return face == null ? null : uk.co.enderfall.sdk.api.block.BlockDirection.valueOf(face.name());
                     }
                     @Override public int[] getSlotsForFace(net.minecraft.core.Direction face) {
                         if (face == null) return new int[0];
-                        if (binding.storagePorts) return java.util.stream.IntStream.range(0, inventorySize()).toArray();
-                        if (binding.ports == null) return new int[0];
-                        return binding.ports.slots(portFace(face));
+                        if (binding.inventoryPorts != null) return binding.inventoryPorts.slots(inventoryPortFace(face));
+                        return binding.ports == null ? new int[0] : binding.ports.slots(machinePortFace(face));
                     }
                     @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction face) {
-                        return binding.storagePorts && slot >= 0 && slot < inventorySize()
-                                || binding.ports != null && binding.ports.canInsert(slot, portFace(face));
+                        return binding.inventoryPorts != null && face != null
+                                && binding.inventoryPorts.canInsert(inventoryPortFace(face), slot)
+                                || binding.ports != null && binding.ports.canInsert(slot, machinePortFace(face));
                     }
                     @Override public boolean canTakeItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction face) {
-                        return binding.storagePorts && slot >= 0 && slot < inventorySize()
-                                || binding.ports != null && binding.ports.canExtract(slot, portFace(face));
+                        return binding.inventoryPorts != null && face != null
+                                && binding.inventoryPorts.canExtract(inventoryPortFace(face), slot)
+                                || binding.ports != null && binding.ports.canExtract(slot, machinePortFace(face));
                     }
                     public BlockEntitySpec definition() { return definition; }
                     public ItemStack stack(int slot) { return inventory.getItem(slot).copy(); }
@@ -540,17 +546,19 @@ final class BlockEntityPreviewSources {
                         private java.util.function.BiConsumer<Player, InteractionEvent> useHandler;
                         private java.util.function.Consumer<StoredBlockEntity> machineTicker;
                         private uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts ports;
-                        private boolean storagePorts;
+                        private uk.co.enderfall.sdk.api.blockentity.InventoryAccessSpec inventoryPorts;
                         private uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition storageContainer;
                         private Binding(BlockEntitySpec spec, uk.co.enderfall.sdk.api.registry.BlockSpec blockSpec) {
-                            this.spec = spec; this.blockSpec = java.util.Objects.requireNonNull(blockSpec, "blockSpec");
+                            this.spec = spec;
+                            this.blockSpec = java.util.Objects.requireNonNull(blockSpec, "blockSpec");
+                            this.inventoryPorts = spec.inventoryAccess().orElse(null);
                         }
                         public Block block() { return block; }
                         public BlockEntityType<StoredBlockEntity> type() { return type; }
                         public BlockEntitySpec definition() { return spec; }
                         /** Enable the reviewed positional automation policy only for a timed machine. */
                         public void enableMachinePorts(int inputs) {
-                            if (ports != null || spec.inventorySlots() != inputs + 1) {
+                            if (ports != null || inventoryPorts != null || spec.inventorySlots() != inputs + 1) {
                                 throw new IllegalArgumentException("Machine port binding is duplicate or has mismatched slots");
                             }
                             ports = new uk.co.enderfall.sdk.runtime.blockentity.PortableMachinePorts(inputs);
@@ -567,7 +575,9 @@ final class BlockEntityPreviewSources {
                                 }
                             });
                             storageContainer = definition;
-                            storagePorts = true;
+                            if (inventoryPorts == null) {
+                                inventoryPorts = uk.co.enderfall.sdk.api.blockentity.InventoryAccessSpec.allFaces(spec.inventorySlots());
+                            }
                         }
                         /** Internal preview processing hook; install once before blocks are created. */
                         public void onMachineTick(java.util.function.Consumer<StoredBlockEntity> ticker) {

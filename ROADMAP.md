@@ -9,7 +9,7 @@ state mutation, opt-in horizontal/six-way facing, custom initial-state placement
 rotation, mirroring, neighbor-derived state, scheduled transitions and real
 waterlogging are implemented. General 9-54 slot storage containers now have portable
 registration, vanilla synchronization, shift-click, hopper access, viewer tracking,
-open state and sound profiles. Connecting-table and storage fixtures still need
+open state, sound profiles and configurable per-face slot access. Connecting-table and storage fixtures still need
 cross-target gameplay acceptance; loot-table-backed inventories remain next.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
@@ -136,6 +136,9 @@ maintainers and add-on authors. Full furniture parity is not yet achieved.
   for timed machines: distinct input faces, bottom-only output extraction, no input
   extraction or output insertion. Instant workbenches remain closed to automation.
   Live hopper and save/reload checks remain pending.
+- [x] Add general per-face inventory automation rules with insert, extract and
+  bidirectional modes, optional slot lists, safe all-face container defaults and one
+  portable declaration shared by every generated loader/version runtime.
 
 - [x] Add an opt-in generated-runtime gameplay harness with one native test-driver
   template, server-side inventory/callback assertions, independent evidence gates,

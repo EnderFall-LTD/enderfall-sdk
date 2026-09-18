@@ -136,8 +136,20 @@ remain separate from registration. The SDK supplies the synchronized client scre
 for these portable menus; authors do not register the same screen on both sides.
 Storage containers use a declared persistent inventory with 9-54 slots in complete
 rows of nine and Minecraft's standard synchronized storage UI. Shift-click routing
-is native, and all slots currently accept hopper insertion and extraction from every
-face. More selective sided/filter policies and arbitrary native screens remain outside
+is native. Containers default to insertion and extraction through every face, while
+the storage schema can declare portable per-face rules without affecting player menus:
+
+```java
+BlockEntitySpec CABINET_STORAGE = Registration.storage(CABINET, storage -> storage
+    .inventorySlots(27)
+    .inventoryAccess(access -> access
+        .insert(BlockDirection.UP)
+        .horizontalFaces(InventoryAccessMode.BOTH)
+        .extract(BlockDirection.DOWN)));
+```
+
+The overload taking slot numbers restricts a face to those slots. Undeclared faces
+are closed. Arbitrary item predicates and arbitrary native screens remain outside
 this initial facade.
 
 ## Client renderers

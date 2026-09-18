@@ -2,7 +2,9 @@ package uk.co.enderfall.sdk.preview;
 
 import uk.co.enderfall.sdk.api.ModContext;
 import uk.co.enderfall.sdk.api.ResourceId;
+import uk.co.enderfall.sdk.api.block.BlockDirection;
 import uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec;
+import uk.co.enderfall.sdk.api.blockentity.InventoryAccessMode;
 import uk.co.enderfall.sdk.api.registry.*;
 
 /** All block and block-item declarations live here; no loader code or build() calls. */
@@ -32,7 +34,10 @@ public final class PreviewBlocks {
             p -> p.tank(PreviewFluids.RESERVOIR).renderTank(PreviewFluids.RESERVOIR.name())
                     .serverTicker(PreviewFluids::tick));
     public static final BlockEntitySpec CABINET_STORAGE = Registration.storage(STORAGE_CABINET,
-            p -> p.inventorySlots(27));
+            p -> p.inventorySlots(27).inventoryAccess(access -> access
+                    .insert(BlockDirection.UP)
+                    .horizontalFaces(InventoryAccessMode.BOTH)
+                    .extract(BlockDirection.DOWN)));
 
     public static void register(ModContext context) { Registration.register(context, BLOCKS); }
 }

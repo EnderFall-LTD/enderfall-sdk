@@ -13,8 +13,9 @@ to the open-barrel texture while at least one player is viewing it and returns w
 the last viewer closes; barrel open/close sounds should follow the same first/last
 viewer boundary.
 
-Feed and extract items with hoppers from the top, bottom and sides. Save and reload
-with partial stacks, break the cabinet and confirm every stack drops exactly once.
+Feed items from the top, extract them from the bottom, and verify side hoppers can do
+both. The top must refuse extraction and the bottom must refuse insertion. Save and
+reload with partial stacks, break the cabinet and confirm every stack drops exactly once.
 Also test two simultaneous viewers, player death, disconnect and spectator changes.
 Generated source and compilation cover all nine targets, but these are still live
 gameplay acceptance checks rather than claims inferred from a successful build.

@@ -7,8 +7,8 @@ import java.util.Objects;
 import uk.co.enderfall.sdk.api.annotation.Experimental;
 import uk.co.enderfall.sdk.api.registry.BlockRef;
 
-/** Shared storage definition. Building a spec does not register a native block entity. */
-@Experimental("Block-entity persistence foundation; native registration is not available yet")
+/** Shared persistent block-entity definition used by generated native runtimes. */
+@Experimental("Portable block-entity storage and automation")
 public final class BlockEntitySpec {
     public static final int MAXIMUM_SLOTS = 256;
     public static final int MAXIMUM_FIELDS = 32;
@@ -17,6 +17,7 @@ public final class BlockEntitySpec {
     private final String menuOpenAnimation;
     private final String menuCloseAnimation;
     private final int inventorySlots;
+    private final InventoryAccessSpec inventoryAccess;
     private final java.util.Set<Integer> renderSlots;
     private final java.util.Set<String> renderTanks;
     private final Map<String, BlockEntityInt> fields;
@@ -32,6 +33,8 @@ public final class BlockEntitySpec {
             throw new IllegalArgumentException("Menu animations must be declared");
         }
         inventorySlots = builder.inventorySlots;
+        inventoryAccess = builder.inventoryAccess == null ? null
+                : InventoryAccessSpec.configured(inventorySlots, builder.inventoryAccess);
         for (int slot : builder.renderSlots) {
             if (slot >= inventorySlots) throw new IllegalArgumentException("Render slot is outside the inventory: " + slot);
         }
@@ -51,6 +54,10 @@ public final class BlockEntitySpec {
     public java.util.Optional<String> menuCloseAnimation() { return java.util.Optional.ofNullable(menuCloseAnimation); }
     public Map<String, uk.co.enderfall.sdk.api.fluid.FluidTankSpec> tanks() { return tanks; }
     public int inventorySlots() { return inventorySlots; }
+    /** Sided inventory automation. An absent declaration exposes no hopper ports. */
+    public java.util.Optional<InventoryAccessSpec> inventoryAccess() {
+        return java.util.Optional.ofNullable(inventoryAccess);
+    }
     /** Slots explicitly permitted in nearby clients' visual snapshots. Empty by default.
      * Item data in these slots is public to tracking clients; never expose private inventory here.
      */
@@ -78,6 +85,7 @@ public final class BlockEntitySpec {
             return this;
         }
         private int inventorySlots;
+        private java.util.function.Consumer<InventoryAccessSpec.Builder> inventoryAccess;
         private final java.util.Set<Integer> renderSlots = new java.util.TreeSet<>();
         private final java.util.Set<String> renderTanks = new java.util.TreeSet<>();
 
@@ -124,6 +132,16 @@ public final class BlockEntitySpec {
                 throw new IllegalArgumentException("Inventory slots must be between 0 and " + MAXIMUM_SLOTS);
             }
             inventorySlots = count;
+            return this;
+        }
+
+        /**
+         * Declares sided hopper access without changing what a player may move in an SDK storage menu.
+         * This can appear before or after {@link #inventorySlots(int)}.
+         */
+        public Builder inventoryAccess(java.util.function.Consumer<InventoryAccessSpec.Builder> configure) {
+            if (inventoryAccess != null) throw new IllegalStateException("Inventory access is already configured");
+            inventoryAccess = Objects.requireNonNull(configure, "configure");
             return this;
         }
 

@@ -73,15 +73,19 @@ class PersistenceRuntimeSourcesTest {
                 assertTrue(shapeSource.contains("getInternalIndex(String value)"), target);
                 assertTrue(platformSource.contains("supportsBlockStates() { return true; }"), target);
                 assertTrue(platformSource.contains("supportsHorizontalFacing() { return true; }"), target);
+                assertTrue(platformSource.contains("supportsAxisFacing() { return true; }"), target);
                 assertTrue(shapeSource.contains("if (this instanceof Directional) builder.add(facingProperty())"), target);
+                assertTrue(shapeSource.contains("if (this instanceof AxisOriented) builder.add(BlockStateProperties.AXIS)"), target);
                 assertTrue(shapeSource.contains("context.getHorizontalDirection().getOpposite()"), target);
                 assertTrue(shapeSource.contains("rotation.rotate(state.getValue(facingProperty()))"), target);
                 assertTrue(shapeSource.contains("mirror.mirror(state.getValue(facingProperty()))"), target);
                 assertTrue(shapeSource.contains("context.getNearestLookingDirection().getOpposite()"), target);
                 assertTrue(shapeSource.contains("SixWayPlacement.CLICKED_FACE"), target);
                 assertTrue(shapeSource.contains("context.getClickedFace() : context.getNearestLookingDirection().getOpposite()"), target);
+                assertTrue(shapeSource.contains("context.getClickedFace().getAxis()"), target);
                 assertTrue(shapeSource.contains("convert(shape.rotateX(1)), convert(shape.rotateX(-1))"), target);
-                assertTrue(shapeSource.contains("outline[directionIndex(state)]"), target);
+                assertTrue(shapeSource.contains("convert(shape.rotateX(1).rotateY(1))"), target);
+                assertTrue(shapeSource.contains("outline[orientationIndex(state)]"), target);
                 assertTrue(shapeSource.contains("getShape("), target);
                 assertTrue(shapeSource.contains("Shapes.box(box.minX() / 16.0"), target);
                 String shapedStorageSource = Files.readString(sources.stream().filter(path -> path.getFileName().toString().equals("StoredBlockEntity.java")).findFirst().orElseThrow());
@@ -90,6 +94,7 @@ class PersistenceRuntimeSourcesTest {
                 assertTrue(shapedStorageSource.contains("super(properties, binding.blockSpec)"), target);
                 assertTrue(shapedStorageSource.contains("DirectionalStoredBlock extends StoredBlock implements PortableShapeBlock.Directional"), target);
                 assertTrue(shapedStorageSource.contains("SixWayStoredBlock extends StoredBlock implements PortableShapeBlock.SixWayDirectional"), target);
+                assertTrue(shapedStorageSource.contains("AxisStoredBlock extends StoredBlock implements PortableShapeBlock.AxisOriented"), target);
                 assertTrue(platformSource.contains("supportsBlockPropertyCopy() { return true; }"), target);
                 assertTrue(platformSource.contains("properties = copiedBlockProperties(spec)"), target);
                 assertTrue(platformSource.contains("Missing block property source"), target);

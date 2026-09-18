@@ -5,7 +5,8 @@ persistent blocks and apply their declared defaults. Reference runtimes reject
 custom schemas explicitly. Server-world reads, atomic updates, custom initial
 placement and pure neighbor-derived updates are connected. State-dependent native
 geometry is connected. Existing
-horizontal/six-way facing continues to work alongside custom state properties.
+horizontal/six-way facing and log-style axis placement continue to work alongside
+custom state properties.
 
 Properties and geometry belong with the block definition, not the registry list:
 
@@ -34,8 +35,9 @@ once per combination; collision/render queries only look up cached shapes.
 
 `stateShapes` sets both native collision and selection outlines, taking precedence
 over static shapes. It must reference the exact schema assigned with `states`.
-Geometry is authored facing north and automatically rotated when horizontal or
-six-way facing is enabled. Ordinary and persistent blocks use the same generated
+Geometry is authored facing north for horizontal/six-way blocks, or vertically on
+Y for axis blocks, and automatically rotated for the native orientation. Ordinary
+and persistent blocks use the same generated
 implementation. Material copying intentionally copies neither schema nor geometry.
 This does not yet provide separate dynamic collision/outline definitions. Rendered
 models still come from blockstate assets.

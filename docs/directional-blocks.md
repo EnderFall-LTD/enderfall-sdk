@@ -84,12 +84,13 @@ Native rotation/mirror operations preserve vertical directions as Minecraft defi
 
 Generate model variants with `data.sixWayBlockState(blockId, modelId)`; up uses
 model X rotation 270 and down uses 90. Do not also write a horizontal or plain
-blockstate for that ID. Horizontal and six-way modes are exclusive: the last
-configuration call selects the mode. Property copying does not copy either mode.
+blockstate for that ID. Horizontal, six-way and axis modes are exclusive: the last
+configuration call selects the mode. Property copying does not copy any mode.
 
 The preview includes `enderfall_persistent_preview:orientation_test`, an ordinary
-clicked-face-oriented block with asymmetric geometry for six-orientation testing;
-it is not a barrel or storage container. Existing workbenches retain horizontal facing. Test all six
+view-directed block with asymmetric geometry for six-orientation testing. It uses
+the same placement rule as a barrel or dispenser but is not a storage container.
+Existing workbenches retain horizontal facing. Test all six
 orientations, matching outlines/collision, structure rotations, and save/reload.
 Placing it against the underside of a block starts it in the compact shape, proving
 the portable custom-placement callback; other placements start expanded and use
@@ -97,3 +98,23 @@ continues toggling the same custom state.
 Six-way native bindings compile on all nine generated targets; gameplay verification
 remains pending. A six-way property is only one prerequisite for a full barrel:
 container menus, opening state and sounds remain separate work.
+
+## Log and pillar axes
+
+Use `properties.axisFacing()` for blocks whose orientation is an axis rather than
+a directed face. Placement uses the clicked face's axis exactly like vanilla logs
+and pillars: top/bottom produces `axis=y`, east/west produces `axis=x`, and
+north/south produces `axis=z`. Opposite faces intentionally produce the same state.
+
+Shapes are authored vertically on the Y axis. The SDK precomputes matching X and Z
+rotations for ordinary and persistent blocks. Native structure rotation swaps X/Z
+when appropriate, while mirroring leaves the axis unchanged. Generate the three
+model variants from a vertical model with:
+
+```java
+data.axisBlockState(blockId, modelId);
+```
+
+The preview's `enderfall_persistent_preview:axis_test` is a visibly asymmetric
+post for checking model, outline and collision alignment on all three axes. This is
+the portable option intended for logs, pillars, beams and similar furniture parts.

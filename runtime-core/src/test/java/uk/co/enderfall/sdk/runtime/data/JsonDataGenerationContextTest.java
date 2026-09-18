@@ -60,6 +60,18 @@ class JsonDataGenerationContextTest {
             assertTrue(json.contains("\"facing=" + directions[i] + "\": { \"model\": \"test_mod:block/table\", \"y\": " + i * 90));
         }
     }
+    @Test void axisVariantsMatchVanillaLogRotationsAcrossTargets() {
+        var block = ResourceId.of("test_mod", "post");
+        var model = ResourceId.of("test_mod", "block/post");
+        var old = new JsonDataGenerationContext(new MinecraftVersion("1.20.1"));
+        var recent = new JsonDataGenerationContext(new MinecraftVersion("26.2"));
+        old.axisBlockState(block, model); recent.axisBlockState(block, model);
+        assertEquals(old.resources(), recent.resources());
+        String json = old.resources().get("assets/test_mod/blockstates/post.json");
+        assertTrue(json.contains("\"axis=x\": { \"model\": \"test_mod:block/post\", \"x\": 90, \"y\": 90 }"));
+        assertTrue(json.contains("\"axis=y\": { \"model\": \"test_mod:block/post\" }"));
+        assertTrue(json.contains("\"axis=z\": { \"model\": \"test_mod:block/post\", \"x\": 90 }"));
+    }
     @Test void machineRecipesHaveOneStableFormatAcrossVersions() {
         var id = ResourceId.of("test_mod", "washing");
         var water = ResourceId.of("minecraft", "water");

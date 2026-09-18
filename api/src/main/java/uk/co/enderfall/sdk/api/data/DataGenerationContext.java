@@ -18,6 +18,10 @@ public interface DataGenerationContext {
     default void horizontalBlockState(ResourceId block, ResourceId model) {
         throw new UnsupportedOperationException("Horizontal blockstate data generation unavailable");
     }
+    /** Three variants for a separately authored vertical Y-axis model, e.g. a log or pillar. */
+    default void axisBlockState(ResourceId block, ResourceId model) {
+        throw new UnsupportedOperationException("Axis blockstate data generation unavailable");
+    }
     default void machineRecipe(ResourceId id, uk.co.enderfall.sdk.api.recipe.MachineRecipeSpec recipe) {
         throw new UnsupportedOperationException("Machine data generation unavailable");
     }

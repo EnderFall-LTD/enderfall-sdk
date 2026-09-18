@@ -39,6 +39,9 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
         if (spec.horizontalFacing() && !adapter.supportsHorizontalFacing()) {
             throw new UnsupportedOperationException("[" + modId + "] Horizontal facing is unavailable on " + target);
         }
+        if (spec.axisFacing() && !adapter.supportsAxisFacing()) {
+            throw new UnsupportedOperationException("[" + modId + "] Axis placement is unavailable on " + target);
+        }
         if (spec.scheduledTicks() && !adapter.supportsScheduledBlockTicks()) {
             throw new UnsupportedOperationException("[" + modId + "] Scheduled block ticks are unavailable on " + target);
         }

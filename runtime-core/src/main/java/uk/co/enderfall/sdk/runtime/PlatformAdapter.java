@@ -47,6 +47,7 @@ public interface PlatformAdapter {
     default boolean supportsBlockShapes() { return false; }
     default boolean supportsHorizontalFacing() { return false; }
     default boolean supportsSixWayFacing() { return false; }
+    default boolean supportsAxisFacing() { return false; }
     default boolean supportsBlockStates() { return false; }
     default boolean supportsStateShapes() { return false; }
     default boolean supportsScheduledBlockTicks() { return false; }

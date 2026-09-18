@@ -596,7 +596,8 @@ final class BlockEntityPreviewSources {
                     private static StoredBlock createStoredBlock(BlockBehaviour.Properties properties, Binding binding) {
                         return PortableShapeBlock.construct(binding.blockSpec, () -> {
                             var block = binding.blockSpec.sixWayFacing() ? new SixWayStoredBlock(properties, binding)
-                                    : binding.blockSpec.horizontalFacing() ? new DirectionalStoredBlock(properties, binding) : new StoredBlock(properties, binding);
+                                    : binding.blockSpec.horizontalFacing() ? new DirectionalStoredBlock(properties, binding)
+                                    : binding.blockSpec.axisFacing() ? new AxisStoredBlock(properties, binding) : new StoredBlock(properties, binding);
                             block.initializeFacing();
                             return block;
                         });
@@ -606,6 +607,9 @@ final class BlockEntityPreviewSources {
                     }
                     private static final class SixWayStoredBlock extends StoredBlock implements PortableShapeBlock.SixWayDirectional {
                         private SixWayStoredBlock(BlockBehaviour.Properties properties, Binding binding) { super(properties, binding); }
+                    }
+                    private static final class AxisStoredBlock extends StoredBlock implements PortableShapeBlock.AxisOriented {
+                        private AxisStoredBlock(BlockBehaviour.Properties properties, Binding binding) { super(properties, binding); }
                     }
                     private static class StoredBlock extends PortableShapeBlock implements EntityBlock {
                         private final Binding binding;

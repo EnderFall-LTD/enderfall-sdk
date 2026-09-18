@@ -15,7 +15,12 @@ class BlockShapeTest {
         assertEquals(SixWayPlacement.CLICKED_FACE, attached.sixWayPlacement());
         var horizontal = BlockSpec.builder().sixWayFacing().horizontalFacing().build();
         assertTrue(horizontal.horizontalFacing()); assertFalse(horizontal.sixWayFacing());
+        var axis = BlockSpec.builder().sixWayFacing().axisFacing().build();
+        assertTrue(axis.axisFacing()); assertFalse(axis.sixWayFacing()); assertFalse(axis.horizontalFacing());
+        var backToSix = BlockSpec.builder().axisFacing().sixWayFacing().build();
+        assertTrue(backToSix.sixWayFacing()); assertFalse(backToSix.axisFacing());
         assertFalse(BlockSpec.builder().copyFrom(six).build().sixWayFacing());
+        assertFalse(BlockSpec.builder().copyFrom(axis).build().axisFacing());
         var north = BlockShape.box(2, 3, 0, 6, 8, 2);
         assertEquals(BlockShape.box(2, 14, 3, 6, 16, 8), north.rotateX(1));
         assertEquals(BlockShape.box(2, 0, 8, 6, 2, 13), north.rotateX(-1));

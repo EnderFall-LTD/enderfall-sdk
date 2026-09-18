@@ -8,7 +8,6 @@ import uk.co.enderfall.sdk.api.block.BlockShape;
 import uk.co.enderfall.sdk.api.block.BlockStateDefinition;
 import uk.co.enderfall.sdk.api.block.BlockStateShapes;
 import uk.co.enderfall.sdk.api.block.PortableBlock;
-import uk.co.enderfall.sdk.api.block.SixWayPlacement;
 import uk.co.enderfall.sdk.api.event.InteractionEvent;
 import uk.co.enderfall.sdk.api.registry.Registration;
 
@@ -21,7 +20,7 @@ public final class PreviewOrientationBlock implements PortableBlock {
             ? BlockShape.box(0, 0, 0, 16, 4, 16) : PreviewWorkbenchBlock.SHAPE);
 
     @Override public void configure(Registration.BlockOptions properties) {
-        properties.sixWayFacing(SixWayPlacement.CLICKED_FACE).states(STATES).stateShapes(SHAPES);
+        properties.sixWayFacing().states(STATES).stateShapes(SHAPES);
     }
 
     /** Ceiling placement starts compact, proving portable placement-state selection. */

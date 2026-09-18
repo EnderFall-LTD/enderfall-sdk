@@ -121,16 +121,21 @@ final class BlockShapeSources {
                     /** Marker available even while Block's constructor builds its state definition. */
                     public interface Directional { }
                     public interface SixWayDirectional extends Directional { }
+                    public interface AxisOriented { }
                     private static final class SixWayBlock extends PortableShapeBlock implements SixWayDirectional {
                         private SixWayBlock(BlockBehaviour.Properties properties, BlockSpec spec) { super(properties, spec); }
                     }
                     private static final class DirectionalBlock extends PortableShapeBlock implements Directional {
                         private DirectionalBlock(BlockBehaviour.Properties properties, BlockSpec spec) { super(properties, spec); }
                     }
+                    private static final class AxisBlock extends PortableShapeBlock implements AxisOriented {
+                        private AxisBlock(BlockBehaviour.Properties properties, BlockSpec spec) { super(properties, spec); }
+                    }
                     public static PortableShapeBlock create(BlockBehaviour.Properties properties, BlockSpec spec) {
                         return construct(spec, () -> {
                             var block = spec.sixWayFacing() ? new SixWayBlock(properties, spec)
-                                    : spec.horizontalFacing() ? new DirectionalBlock(properties, spec) : new PortableShapeBlock(properties, spec);
+                                    : spec.horizontalFacing() ? new DirectionalBlock(properties, spec)
+                                    : spec.axisFacing() ? new AxisBlock(properties, spec) : new PortableShapeBlock(properties, spec);
                             block.initializeFacing();
                             return block;
                         });
@@ -152,12 +157,13 @@ final class BlockShapeSources {
                                     encoded.put(property.name(), state.getValue((PortableProperty) stateDefinition.getProperty(property.name())));
                                 }
                                 BlockShape shape = shapes.shape(spec.states().parse(encoded));
-                                shape = switch (directionIndex(state)) {
+                                shape = switch (orientationIndex(state)) {
                                     case 1 -> shape.rotateY(1);
                                     case 2 -> shape.rotateY(2);
                                     case 3 -> shape.rotateY(3);
                                     case 4 -> shape.rotateX(1);
                                     case 5 -> shape.rotateX(-1);
+                                    case 6 -> shape.rotateX(1).rotateY(1);
                                     default -> shape;
                                 };
                                 dynamic.put(state, convert(shape));
@@ -169,6 +175,7 @@ final class BlockShapeSources {
                     public final void initializeFacing() {
                         BlockState state = stateDefinition.any();
                         if (this instanceof Directional) state = state.setValue(facingProperty(), Direction.NORTH);
+                        if (this instanceof AxisOriented) state = state.setValue(BlockStateProperties.AXIS, Direction.Axis.Y);
                         if (specification.waterlogged()) state = state.setValue(BlockStateProperties.WATERLOGGED, false);
                         for (var entry : specification.states().defaultState().serializedValues().entrySet()) {
                             var property = (PortableProperty) stateDefinition.getProperty(entry.getKey());
@@ -202,9 +209,14 @@ final class BlockShapeSources {
                     }
                     private static VoxelShape[] rotations(BlockShape shape) {
                         return new VoxelShape[] { convert(shape), convert(shape.rotateY(1)), convert(shape.rotateY(2)), convert(shape.rotateY(3)),
-                                convert(shape.rotateX(1)), convert(shape.rotateX(-1)) };
+                                convert(shape.rotateX(1)), convert(shape.rotateX(-1)), convert(shape.rotateX(1).rotateY(1)) };
                     }
-                    private static int directionIndex(BlockState state) {
+                    private static int orientationIndex(BlockState state) {
+                        if (state.hasProperty(BlockStateProperties.AXIS)) return switch (state.getValue(BlockStateProperties.AXIS)) {
+                            case X -> 6;
+                            case Z -> 4;
+                            default -> 0;
+                        };
                         if (!state.hasProperty(BlockStateProperties.FACING) && !state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) return 0;
                         return switch (state.getValue(state.hasProperty(BlockStateProperties.FACING) ? BlockStateProperties.FACING : BlockStateProperties.HORIZONTAL_FACING)) {
                             case EAST -> 1;
@@ -218,6 +230,7 @@ final class BlockShapeSources {
                     @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
                         super.createBlockStateDefinition(builder);
                         if (this instanceof Directional) builder.add(facingProperty());
+                        if (this instanceof AxisOriented) builder.add(BlockStateProperties.AXIS);
                         BlockSpec spec = CONSTRUCTION.get();
                         if (spec != null) {
                             if (spec.waterlogged()) builder.add(BlockStateProperties.WATERLOGGED);
@@ -233,6 +246,8 @@ final class BlockShapeSources {
                             placed = defaultBlockState().setValue(facingProperty(), facing);
                         }
                         else if (this instanceof Directional) placed = defaultBlockState().setValue(facingProperty(), context.getHorizontalDirection().getOpposite());
+                        else if (this instanceof AxisOriented) placed = defaultBlockState().setValue(BlockStateProperties.AXIS,
+                                context.getClickedFace().getAxis());
                         else placed = super.getStateForPlacement(context);
                         if (placed != null && specification.waterlogged()) placed = placed.setValue(BlockStateProperties.WATERLOGGED,
                                 context.getLevel().getFluidState(context.getClickedPos()).getType()
@@ -320,13 +335,21 @@ final class BlockShapeSources {
                 // ${WATER_METHODS}
                     @Override @SuppressWarnings("deprecation")
                     public BlockState rotate(BlockState state, Rotation rotation) {
-                        return this instanceof Directional ? state.setValue(facingProperty(),
-                                rotation.rotate(state.getValue(facingProperty()))) : super.rotate(state, rotation);
+                        if (this instanceof Directional) return state.setValue(facingProperty(),
+                                rotation.rotate(state.getValue(facingProperty())));
+                        if (this instanceof AxisOriented) {
+                            Direction.Axis axis = state.getValue(BlockStateProperties.AXIS);
+                            Direction direction = axis == Direction.Axis.X ? Direction.EAST
+                                    : axis == Direction.Axis.Y ? Direction.UP : Direction.SOUTH;
+                            return state.setValue(BlockStateProperties.AXIS, rotation.rotate(direction).getAxis());
+                        }
+                        return super.rotate(state, rotation);
                     }
                     @Override @SuppressWarnings("deprecation")
                     public BlockState mirror(BlockState state, Mirror mirror) {
                         return this instanceof Directional ? state.setValue(facingProperty(),
-                                mirror.mirror(state.getValue(facingProperty()))) : super.mirror(state, mirror);
+                                mirror.mirror(state.getValue(facingProperty())))
+                                : this instanceof AxisOriented ? state : super.mirror(state, mirror);
                     }
                     private static BlockBehaviour.Properties prepare(BlockBehaviour.Properties properties, BlockSpec spec) {
                         if (spec.outlineShape().isPresent() || spec.collisionShape().isPresent() || spec.stateShapes().isPresent()) properties.noOcclusion();
@@ -344,13 +367,13 @@ final class BlockShapeSources {
                     @SuppressWarnings("deprecation") // 1.20.1 marks the required block override hook deprecated.
                     public VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
                         if (stateShapes.containsKey(state)) return stateShapes.get(state);
-                        return outline == null ? super.getShape(state, world, pos, context) : outline[directionIndex(state)];
+                        return outline == null ? super.getShape(state, world, pos, context) : outline[orientationIndex(state)];
                     }
                     @Override
                     @SuppressWarnings("deprecation") // Callers use BlockState; implementations still override this hook.
                     public VoxelShape getCollisionShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
                         if (stateShapes.containsKey(state)) return stateShapes.get(state);
-                        return collision == null ? super.getCollisionShape(state, world, pos, context) : collision[directionIndex(state)];
+                        return collision == null ? super.getCollisionShape(state, world, pos, context) : collision[orientationIndex(state)];
                     }
                 }
                 """.replace("// ${NEIGHBOR_HOOK}", neighborHook.stripTrailing())

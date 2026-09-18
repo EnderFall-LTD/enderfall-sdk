@@ -135,6 +135,17 @@ public final class JsonDataGenerationContext implements DataGenerationContext {
     }
 
     @Override
+    public void axisBlockState(ResourceId block, ResourceId model) {
+        Objects.requireNonNull(block, "block");
+        Objects.requireNonNull(model, "model");
+        put(assetPath(block, "blockstates"), "{\n  \"variants\": {\n"
+                + "    \"axis=x\": { \"model\": " + quote(model.toString()) + ", \"x\": 90, \"y\": 90 },\n"
+                + "    \"axis=y\": { \"model\": " + quote(model.toString()) + " },\n"
+                + "    \"axis=z\": { \"model\": " + quote(model.toString()) + ", \"x\": 90 }\n"
+                + "  }\n}\n");
+    }
+
+    @Override
     public void blockStates(ResourceId block,
             uk.co.enderfall.sdk.api.block.BlockStateDefinition definition,
             java.util.function.Function<uk.co.enderfall.sdk.api.block.PortableBlockState, ResourceId> model) {

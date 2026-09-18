@@ -15,6 +15,7 @@ final class BlockPropertyCopySources {
                     @Override public boolean supportsBlockShapes() { return true; }
                     @Override public boolean supportsHorizontalFacing() { return true; }
                     @Override public boolean supportsSixWayFacing() { return true; }
+                    @Override public boolean supportsAxisFacing() { return true; }
                     @Override public boolean supportsBlockStates() { return true; }
                     @Override public boolean supportsStateShapes() { return true; }
                     @Override public boolean supportsScheduledBlockTicks() { return true; }

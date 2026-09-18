@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "axis=x": { "model": "enderfall_persistent_preview:block/axis_test", "x": 90, "y": 90 },
+    "axis=y": { "model": "enderfall_persistent_preview:block/axis_test" },
+    "axis=z": { "model": "enderfall_persistent_preview:block/axis_test", "x": 90 }
+  }
+}

@@ -41,6 +41,7 @@ class PersistentWorkbenchRegistrationTest {
                         if (method.getName().equals("supportsBlockShapes")) return shapes;
                         if (method.getName().equals("supportsHorizontalFacing")) return shapes;
                         if (method.getName().equals("supportsSixWayFacing")) return shapes;
+                        if (method.getName().equals("supportsAxisFacing")) return shapes;
                         if (method.getName().equals("supportsBlockStates")) return shapes;
                         if (method.getName().equals("supportsScheduledBlockTicks")) return shapes;
                         if (method.getName().equals("supportsWaterloggedBlocks")) return shapes;

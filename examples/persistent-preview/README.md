@@ -36,14 +36,20 @@ remain manual acceptance.
 
 ## Workbench shape test
 
-`enderfall_persistent_preview:orientation_test` is a separate six-way orientation
-test block in the preview creative tab. Place it against the north, south, east,
-west, top and underside faces of other blocks; it must face out from the clicked
-surface every time. Its asymmetric brace, selection outline and collision should
+`enderfall_persistent_preview:orientation_test` is a separate six-way direction
+test block in the preview creative tab. It uses barrel/dispenser placement: its
+front points opposite the player's nearest look direction, including up and down.
+Its asymmetric brace, selection outline and collision should
 rotate together. Right-click it with an empty hand: its portable `compact` property should
 toggle and its selection/collision shape should alternate between the furniture
 shape and a four-pixel-high slab without changing its facing. It has no inventory
 and does not change the working horizontal workbench.
+
+`enderfall_persistent_preview:axis_test` separately proves log/pillar placement.
+Place it on the top or bottom of a block for a vertical Y post, on east/west faces
+for X, and on north/south faces for Z. Opposite faces should match because an axis
+has no positive or negative direction. Its striped model, selection outline and
+collision must all rotate together.
 
 The ordinary persistent workbench now has a tabletop and four legs with matching
 portable collision and outline shapes. Check targeting through its gaps, collision

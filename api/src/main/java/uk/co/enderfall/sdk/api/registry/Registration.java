@@ -182,6 +182,8 @@ public final class Registration {
         public BlockOptions sixWayFacing(uk.co.enderfall.sdk.api.block.SixWayPlacement placement) {
             builder.sixWayFacing(placement); return this;
         }
+        /** Uses vanilla log/pillar placement, selecting X, Y or Z from the clicked face. */
+        public BlockOptions axisFacing() { builder.axisFacing(); return this; }
         public BlockOptions waterlogged() { builder.waterlogged(); return this; }
         public BlockOptions scheduledTicks() { builder.scheduledTicks(); return this; }
         public BlockOptions states(uk.co.enderfall.sdk.api.block.BlockStateDefinition definition) { builder.states(definition); return this; }

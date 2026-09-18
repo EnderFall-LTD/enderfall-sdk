@@ -7,7 +7,8 @@ checklist. Custom block factories/configuration/server-use hooks, static cuboid
 outline/collision shapes, typed custom state, state-dependent geometry, server-world
 state mutation, opt-in horizontal/six-way facing, custom initial-state placement,
 rotation, mirroring, neighbor-derived state, scheduled transitions and real
-waterlogging are implemented. General 9-54 slot storage containers now have portable
+waterlogging, barrel/dispenser six-way direction and log/pillar axis placement are
+implemented. General 9-54 slot storage containers now have portable
 registration, vanilla synchronization, shift-click, hopper access, viewer tracking,
 open state, sound profiles and configurable per-face slot access. Connecting-table and storage fixtures still need
 cross-target gameplay acceptance; loot-table-backed inventories remain next.

@@ -14,10 +14,12 @@ public final class BlockSpec {
     public java.util.Optional<uk.co.enderfall.sdk.api.block.BlockStateShapes> stateShapes() { return java.util.Optional.ofNullable(stateShapes); }
     private final boolean horizontalFacing;
     private final boolean sixWayFacing;
+    private final boolean axisFacing;
     private final uk.co.enderfall.sdk.api.block.SixWayPlacement sixWayPlacement;
     private final boolean waterlogged;
     private final boolean scheduledTicks;
     public boolean sixWayFacing() { return sixWayFacing; }
+    public boolean axisFacing() { return axisFacing; }
     public uk.co.enderfall.sdk.api.block.SixWayPlacement sixWayPlacement() { return sixWayPlacement; }
     public boolean horizontalFacing() { return horizontalFacing; }
     public boolean waterlogged() { return waterlogged; }
@@ -44,16 +46,19 @@ public final class BlockSpec {
         stateShapes = builder.stateShapes;
         if (stateShapes != null && stateShapes.definition() != states)
             throw new IllegalArgumentException("State shapes must use the block's state definition");
-        int facingStates = builder.sixWayFacing ? 6 : builder.horizontalFacing ? 4 : 1;
+        int facingStates = builder.sixWayFacing ? 6 : builder.horizontalFacing ? 4 : builder.axisFacing ? 3 : 1;
         int nativeStates = facingStates * (builder.waterlogged ? 2 : 1);
         if (states.stateCount() * nativeStates > uk.co.enderfall.sdk.api.block.BlockStateDefinition.MAX_STATES)
             throw new IllegalArgumentException("Combined native and custom state count exceeds limit");
         if (facingStates > 1 && states.properties().stream().anyMatch(property -> property.name().equals("facing")))
             throw new IllegalArgumentException("Custom facing property conflicts with built-in facing");
+        if (builder.axisFacing && states.properties().stream().anyMatch(property -> property.name().equals("axis")))
+            throw new IllegalArgumentException("Custom axis property conflicts with built-in axis");
         if (builder.waterlogged && states.properties().stream().anyMatch(property -> property.name().equals("waterlogged")))
             throw new IllegalArgumentException("Custom waterlogged property conflicts with built-in waterlogging");
         horizontalFacing = builder.horizontalFacing;
         sixWayFacing = builder.sixWayFacing;
+        axisFacing = builder.axisFacing;
         sixWayPlacement = builder.sixWayPlacement;
         waterlogged = builder.waterlogged;
         scheduledTicks = builder.scheduledTicks;
@@ -121,12 +126,13 @@ public final class BlockSpec {
         }
         private boolean horizontalFacing;
         private boolean sixWayFacing;
+        private boolean axisFacing;
         private uk.co.enderfall.sdk.api.block.SixWayPlacement sixWayPlacement =
                 uk.co.enderfall.sdk.api.block.SixWayPlacement.VIEW_DIRECTION;
         private boolean waterlogged;
         private boolean scheduledTicks;
         /** Adds north/east/south/west facing, player-facing placement and rotated custom shapes. */
-        public Builder horizontalFacing() { horizontalFacing = true; sixWayFacing = false; return this; }
+        public Builder horizontalFacing() { horizontalFacing = true; sixWayFacing = false; axisFacing = false; return this; }
         /** Six-direction facing with placement opposite the player's nearest look direction. */
         public Builder sixWayFacing() {
             return sixWayFacing(uk.co.enderfall.sdk.api.block.SixWayPlacement.VIEW_DIRECTION);
@@ -135,7 +141,18 @@ public final class BlockSpec {
         public Builder sixWayFacing(uk.co.enderfall.sdk.api.block.SixWayPlacement placement) {
             sixWayFacing = true;
             horizontalFacing = false;
+            axisFacing = false;
             sixWayPlacement = Objects.requireNonNull(placement, "placement");
+            return this;
+        }
+        /**
+         * Adds vanilla log/pillar axis placement. The clicked face selects X, Y or Z;
+         * opposite faces intentionally share the same axis.
+         */
+        public Builder axisFacing() {
+            axisFacing = true;
+            horizontalFacing = false;
+            sixWayFacing = false;
             return this;
         }
         /** Enables vanilla water placement, bucket interaction, fluid state and fluid ticking. */

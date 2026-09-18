@@ -21,6 +21,8 @@ class BlockStateDefinitionTest {
         assertSame(schema, uk.co.enderfall.sdk.api.registry.BlockSpec.builder().states(schema).copyFrom(spec).build().states());
         var conflict = BlockStateDefinition.builder().property(BlockProperty.bool("facing"), false).build();
         assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder().states(conflict).horizontalFacing().build());
+        var axisConflict = BlockStateDefinition.builder().property(BlockProperty.bool("axis"), false).build();
+        assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder().states(axisConflict).axisFacing().build());
         var large = BlockStateDefinition.builder().property(BlockProperty.integer("a", 0, 255), 0)
                 .property(BlockProperty.integer("b", 0, 3), 0).build();
         assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder().states(large).sixWayFacing().build());

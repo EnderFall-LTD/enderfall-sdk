@@ -39,6 +39,8 @@ public final class BlockSpec {
     private final int luminance;
     private final boolean requiresTool;
     private final SoundPreset sound;
+    private final java.util.Map<uk.co.enderfall.sdk.api.block.BlockToolRef,
+            java.util.List<uk.co.enderfall.sdk.api.block.BlockProperty<?>>> toolProperties;
 
     private BlockSpec(Builder builder) {
         behavior = builder.behavior;
@@ -73,6 +75,15 @@ public final class BlockSpec {
         luminance = builder.luminance;
         requiresTool = builder.requiresTool;
         sound = builder.sound;
+        var declaredTools = new java.util.LinkedHashMap<uk.co.enderfall.sdk.api.block.BlockToolRef,
+                java.util.List<uk.co.enderfall.sdk.api.block.BlockProperty<?>>>();
+        builder.toolProperties.forEach((tool, properties) -> {
+            if (properties.stream().anyMatch(property -> !states.properties().contains(property))) {
+                throw new IllegalArgumentException("Tool properties must belong to the block state definition: " + tool.id());
+            }
+            declaredTools.put(tool, java.util.List.copyOf(properties));
+        });
+        toolProperties = java.util.Collections.unmodifiableMap(declaredTools);
     }
 
     public static Builder builder() {
@@ -108,6 +119,11 @@ public final class BlockSpec {
 
     public SoundPreset sound() {
         return sound;
+    }
+
+    public java.util.List<uk.co.enderfall.sdk.api.block.BlockProperty<?>> toolProperties(
+            uk.co.enderfall.sdk.api.block.BlockToolRef tool) {
+        return toolProperties.getOrDefault(Objects.requireNonNull(tool, "tool"), java.util.List.of());
     }
 
     public static final class Builder {
@@ -199,6 +215,29 @@ public final class BlockSpec {
         private int luminance;
         private boolean requiresTool;
         private SoundPreset sound = SoundPreset.STONE;
+        private final java.util.Map<uk.co.enderfall.sdk.api.block.BlockToolRef,
+                java.util.List<uk.co.enderfall.sdk.api.block.BlockProperty<?>>> toolProperties = new java.util.LinkedHashMap<>();
+
+        public Builder toolProperties(uk.co.enderfall.sdk.api.block.BlockToolRef tool,
+                uk.co.enderfall.sdk.api.block.BlockProperty<?>... editableProperties) {
+            Objects.requireNonNull(tool, "tool");
+            Objects.requireNonNull(editableProperties, "editableProperties");
+            if (editableProperties.length < 1 || editableProperties.length > 64) {
+                throw new IllegalArgumentException("A block tool requires 1..64 editable properties");
+            }
+            var properties = java.util.List.copyOf(java.util.Arrays.asList(editableProperties.clone()));
+            var unique = java.util.Collections.newSetFromMap(
+                    new java.util.IdentityHashMap<uk.co.enderfall.sdk.api.block.BlockProperty<?>, Boolean>());
+            for (var property : properties) {
+                if (!unique.add(property)) {
+                    throw new IllegalArgumentException("Block tool properties must be distinct");
+                }
+            }
+            if (toolProperties.putIfAbsent(tool, properties) != null) {
+                throw new IllegalArgumentException("Duplicate block tool policy: " + tool.id());
+            }
+            return this;
+        }
 
         public Builder strength(float hardnessValue, float resistanceValue) {
             if (!Float.isFinite(hardnessValue) || !Float.isFinite(resistanceValue) || hardnessValue < 0 || resistanceValue < 0) {

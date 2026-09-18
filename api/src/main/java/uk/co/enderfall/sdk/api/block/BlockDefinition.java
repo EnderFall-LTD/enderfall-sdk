@@ -25,6 +25,9 @@ public final class BlockDefinition {
     public BlockDefinition shape(BlockShape shape) { properties.shape(shape); return this; }
     public BlockDefinition outlineShape(BlockShape shape) { properties.outlineShape(shape); return this; }
     public BlockDefinition collisionShape(BlockShape shape) { properties.collisionShape(shape); return this; }
+    public BlockDefinition toolProperties(BlockToolRef tool, BlockProperty<?>... editableProperties) {
+        properties.toolProperties(tool, editableProperties); return this;
+    }
     /** Storage ownership is assigned to this registration; existing storage semantics create its block item. */
     public BlockDefinition storage(Consumer<BlockEntitySpec.Builder> configure) { properties.storage(configure); return this; }
     public BlockDefinition storage(BlockEntitySpec storage) { properties.storage(storage); return this; }

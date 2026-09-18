@@ -21,7 +21,9 @@ identical source on all nine targets. Logical carried-inventory/off-hand address
 server-thread, expected-item-checked typed reads and updates now cover the letter data
 path without exposing native stack or slot classes. Reusable bounded editable-text screens
 now provide server-validated Save/Sign/Cancel sessions without consumer packets or native
-widgets. Declared tool property policies and live copy/drop/reconnect acceptance remain open.
+widgets. Portable block-property tool policies now provide per-block allowlists,
+per-stack selection and atomic typed value cycling. Rich post-change world/inventory
+callbacks and live copy/drop/reconnect acceptance remain open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

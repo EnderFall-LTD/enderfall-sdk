@@ -32,6 +32,11 @@ damaging the tool. An iron ingot repairs it in an anvil on every target, exercis
 same portable `repairItem` declaration through both legacy and component-era Minecraft
 repair systems.
 
+The six-way orientation block declares its editable `compact` property for the preview
+configuration-tool policy. Use the tool normally to cycle the selected value; crouch-use
+selects the next declared property and reports its name. The selection is stored on that
+individual tool stack, so two tools and two players may retain different selections.
+
 The `Portable Letter Test` proves a Furnection-style secure editor update. Put it in a
 carried inventory slot and run `/enderfall_letter_edit <slot>`, where the hotbar is 0-8,
 the main inventory is 9-35, and `-1` means off-hand. Enter multiple lines and choose

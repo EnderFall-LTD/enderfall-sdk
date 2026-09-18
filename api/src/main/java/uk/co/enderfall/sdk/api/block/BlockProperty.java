@@ -55,6 +55,12 @@ public final class BlockProperty<T> {
         if (index < 0) throw new IllegalArgumentException("Invalid encoded value for " + name);
         return values.get(index);
     }
+    /** Returns the next declared value, wrapping from the final value to the first. */
+    public T next(T value) {
+        int index = values.indexOf(Objects.requireNonNull(value, "value"));
+        if (index < 0) throw new IllegalArgumentException("Invalid value for " + name);
+        return values.get((index + 1) % values.size());
+    }
     private static String token(String value) {
         if (!Objects.requireNonNull(value, "name").matches("[a-z0-9_]+")) {
             throw new IllegalArgumentException("Expected lowercase block-state token: " + value);

@@ -16,6 +16,7 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
     private final RegistrationGate gate;
     private final DefaultItemRegistrar items;
     private final Map<ResourceId, BlockRef> blocks = new LinkedHashMap<>();
+    private final Map<ResourceId, BlockSpec> specs = new LinkedHashMap<>();
 
     DefaultBlockRegistrar(String modId, String target, PlatformAdapter adapter, RegistrationGate gate,
                           DefaultItemRegistrar items) {
@@ -87,6 +88,7 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
         if (blocks.putIfAbsent(id, reference) != null) {
             throw new IllegalStateException("[" + modId + "] Duplicate block ID " + id + " on " + target);
         }
+        specs.put(id, spec);
         adapter.registerBlock(id, spec, blockItemSpec);
         return reference;
     }
@@ -113,7 +115,12 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
         items.reserve(id);
         BlockRef reference = new BlockRef(id);
         blocks.put(id, reference);
+        specs.put(id, blockSpec);
         adapter.registerPersistentBlock(id, blockSpec, itemSpec, storage);
         return reference;
+    }
+
+    java.util.Optional<BlockSpec> spec(ResourceId id) {
+        return java.util.Optional.ofNullable(specs.get(Objects.requireNonNull(id, "id")));
     }
 }

@@ -31,7 +31,8 @@ public final class PreviewOrientationBlock implements PortableBlock {
             state -> state.get(COMPACT) ? COMPACT_SHAPE : EXTENDED_SHAPE);
 
     @Override public void configure(Registration.BlockOptions properties) {
-        properties.sixWayFacing().states(STATES).stateShapes(SHAPES);
+        properties.sixWayFacing().states(STATES).stateShapes(SHAPES)
+                .toolProperties(PreviewToolItem.CONFIGURATION_TOOL, COMPACT);
     }
 
     /** Ceiling placement starts compact, proving portable placement-state selection. */

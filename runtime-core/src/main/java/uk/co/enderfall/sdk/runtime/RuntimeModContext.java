@@ -59,7 +59,7 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
         containers = new DefaultStorageContainerManager(modId, target, adapter, gate);
         items = new DefaultItemRegistrar(modId, target, adapter, gate);
         blocks = new DefaultBlockRegistrar(modId, target, adapter, gate, items);
-        blockStates = new DefaultBlockStateManager(adapter);
+        blockStates = new DefaultBlockStateManager(adapter, blocks);
         creativeTabs = new DefaultCreativeTabRegistrar(modId, target, adapter, gate);
         commands = new DefaultCommandManager(modId, target, adapter, gate);
         configs = new DefaultConfigManager(modId, target, adapter, gate, logger);

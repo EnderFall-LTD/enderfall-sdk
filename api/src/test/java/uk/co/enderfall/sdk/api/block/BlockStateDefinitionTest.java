@@ -125,4 +125,24 @@ class BlockStateDefinitionTest {
         assertThrows(UnsupportedOperationException.class, () -> mode.values().clear());
         assertThrows(IllegalArgumentException.class, () -> BlockStateDefinition.builder().property(BlockProperty.integer("level", 0, 3), 4));
     }
+
+    @Test void toolPoliciesUseDeclaredPropertiesAndDeterministicCycles() {
+        var open = BlockProperty.bool("open");
+        var level = BlockProperty.integer("level", 0, 2);
+        var schema = BlockStateDefinition.builder().property(open, false).property(level, 0).build();
+        var wrench = BlockToolRef.of("test_mod", "wrench");
+        var spec = uk.co.enderfall.sdk.api.registry.BlockSpec.builder().states(schema)
+                .toolProperties(wrench, open, level).build();
+
+        assertEquals(java.util.List.of(open, level), spec.toolProperties(wrench));
+        assertEquals(1, schema.defaultState().cycle(level).get(level));
+        assertEquals(0, schema.defaultState().with(level, 2).cycle(level).get(level));
+        assertThrows(UnsupportedOperationException.class, () -> spec.toolProperties(wrench).clear());
+        assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder()
+                .states(schema).toolProperties(wrench, BlockProperty.bool("other")).build());
+        assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder()
+                .states(schema).toolProperties(wrench, open, open));
+        assertThrows(IllegalArgumentException.class, () -> uk.co.enderfall.sdk.api.registry.BlockSpec.builder()
+                .states(schema).toolProperties(wrench, open).toolProperties(wrench, level));
+    }
 }

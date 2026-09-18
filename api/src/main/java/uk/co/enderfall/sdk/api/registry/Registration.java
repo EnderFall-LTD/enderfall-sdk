@@ -215,6 +215,10 @@ public final class Registration {
         public BlockOptions shape(uk.co.enderfall.sdk.api.block.BlockShape value) { builder.shape(value); return this; }
         public BlockOptions outlineShape(uk.co.enderfall.sdk.api.block.BlockShape value) { builder.outlineShape(value); return this; }
         public BlockOptions collisionShape(uk.co.enderfall.sdk.api.block.BlockShape value) { builder.collisionShape(value); return this; }
+        public BlockOptions toolProperties(uk.co.enderfall.sdk.api.block.BlockToolRef tool,
+                uk.co.enderfall.sdk.api.block.BlockProperty<?>... editableProperties) {
+            builder.toolProperties(tool, editableProperties); return this;
+        }
         public BlockOptions friction(float value) { builder.friction(value); return this; }
         public BlockOptions jumpFactor(float value) { builder.jumpFactor(value); return this; }
         public BlockOptions luminance(int value) { builder.luminance(value); return this; }

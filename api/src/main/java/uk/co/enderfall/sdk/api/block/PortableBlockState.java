@@ -29,6 +29,10 @@ public final class PortableBlockState {
         updated.put(property, value);
         return new PortableBlockState(definition, updated);
     }
+    /** Cycles one declared property in its deterministic declaration order. */
+    public <T> PortableBlockState cycle(BlockProperty<T> property) {
+        return with(property, property.next(get(property)));
+    }
     public Map<String, String> serializedValues() {
         var result = new LinkedHashMap<String, String>();
         for (BlockProperty<?> property : values.keySet()) encode(result, property);

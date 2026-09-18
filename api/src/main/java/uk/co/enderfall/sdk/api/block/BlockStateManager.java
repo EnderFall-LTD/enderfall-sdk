@@ -27,4 +27,22 @@ public interface BlockStateManager {
     default <T> boolean set(BlockRef block, BlockLocation location, BlockProperty<T> property, T value) {
         return update(block, location, state -> state.with(property, value));
     }
+
+    /**
+     * Selects the next property exposed by this block for the named tool without changing
+     * world state. Empty means the chunk/block is unavailable or the tool is unsupported.
+     */
+    default Optional<BlockToolResult> selectNextToolProperty(BlockRef block, BlockLocation location,
+            BlockToolRef tool, int currentSelection) {
+        return Optional.empty();
+    }
+
+    /**
+     * Atomically cycles the selected declared property. Empty means the chunk/block is
+     * unavailable or the tool is unsupported. Selection indices are normalized safely.
+     */
+    default Optional<BlockToolResult> cycleToolProperty(BlockRef block, BlockLocation location,
+            BlockToolRef tool, int selection) {
+        return Optional.empty();
+    }
 }

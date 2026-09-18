@@ -62,6 +62,22 @@ location, held item, main/off-hand identity and crouching state through the inte
 event. It runs before the target portable block callback; leaving the event untouched
 allows block and native fallback behavior to continue.
 
+Minecraft predicts interactions on the client before the authoritative server callback.
+When a portable item is known to handle a particular target, declare that lightweight
+decision separately so the client does not send a second vanilla item-use action:
+
+```java
+@Override
+public InteractionPrediction predictUseOnBlock(InteractionEvent event) {
+    return event.target().equals(CONFIGURABLE_BLOCK.id())
+            ? InteractionPrediction.HANDLE : InteractionPrediction.PASS;
+}
+```
+
+Prediction receives only the portable event and must not change game state. `HANDLE`
+suppresses vanilla fallback, `CANCEL` rejects the predicted action, and `PASS` preserves
+normal block/item/other-mod behavior. The SDK still runs `onUseOnBlock` only on the server.
+
 `itemStack()` is a safe view of the real held stack. It exposes count, stack limit,
 damage, maximum and remaining durability, plus server-only `damage`, `repair`, and
 `consume` operations. Negative mutations are rejected, repairs clamp at zero damage,

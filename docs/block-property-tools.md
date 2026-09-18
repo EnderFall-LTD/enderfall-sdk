@@ -61,3 +61,24 @@ only reference properties in the block's own state definition.
 Keep selection in item data rather than an item-class field. A portable item definition
 is created once per registered item, so a field would be shared by every player and
 every stack. The persistent preview's `Portable Tool Test` demonstrates the safe pattern.
+
+## Transactional changes
+
+For edits that need permission checks, inventory costs, locks, sounds or neighbouring
+world changes, use the callback overload. The policy sees immutable current and proposed
+typed states only after the SDK has verified the loaded block. Returning `false` rejects
+the change. The final callback runs only after the world update succeeds:
+
+```java
+context.blockStates().cycleToolProperty(block, location, WRENCH, selected,
+        change -> context.players().tryConsume(playerId,
+                InventoryCost.of(IRON_NUGGET, 1)),
+        result -> context.players().actionBar(playerId,
+                result.propertyName() + ": " + result.value()));
+```
+
+Creative-mode exemptions belong in the policy (using the interaction event), keeping
+the state manager independent of a particular player or item. A policy exception leaves
+the block unchanged. A committed-callback exception is reported after the state change;
+committed callbacks therefore should perform effects, notifications and secondary world
+updates rather than checks that could reject the original edit.

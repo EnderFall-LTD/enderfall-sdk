@@ -30,9 +30,29 @@ public interface PortableItem {
     default void onUse(ModContext context, InteractionEvent event) { }
 
     /**
+     * Lightweight client prediction for {@link #onUse(ModContext, InteractionEvent)}.
+     * It must be deterministic from the event alone and must not mutate game state.
+     * Return {@link InteractionPrediction#HANDLE} when the server callback is expected
+     * to handle the direct use, preventing duplicate vanilla actions.
+     */
+    default InteractionPrediction predictUse(InteractionEvent event) {
+        return InteractionPrediction.PASS;
+    }
+
+    /**
      * Server-side callback when this item is used on a block. Native hooks supply the
      * held item, hand, crouching state and exact block location. Handle or cancel the
      * event explicitly; otherwise the block callback and native fallback may continue.
      */
     default void onUseOnBlock(ModContext context, InteractionEvent event) { }
+
+    /**
+     * Lightweight client prediction for {@link #onUseOnBlock(ModContext, InteractionEvent)}.
+     * Tools that authoritatively handle a known block should return
+     * {@link InteractionPrediction#HANDLE}; conditional tools can inspect the target,
+     * hand and crouching state without invoking server-only services.
+     */
+    default InteractionPrediction predictUseOnBlock(InteractionEvent event) {
+        return InteractionPrediction.PASS;
+    }
 }

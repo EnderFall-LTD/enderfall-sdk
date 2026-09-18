@@ -5,7 +5,7 @@
 Use [the furniture-port milestone](docs/furniture-port.md) as the concrete feature
 checklist. Custom block factories/configuration/server-use hooks, static cuboid
 outline/collision shapes, typed custom state, state-dependent geometry, server-world
-state mutation, opt-in horizontal/six-way facing, custom initial-state placement,
+state mutation, transactional property-tool validation/commit callbacks, opt-in horizontal/six-way facing, custom initial-state placement,
 rotation, mirroring, neighbor-derived state, scheduled transitions and real
 waterlogging, barrel/dispenser six-way direction and log/pillar axis placement are
 implemented. General 9-54 slot storage containers now have portable
@@ -22,8 +22,8 @@ server-thread, expected-item-checked typed reads and updates now cover the lette
 path without exposing native stack or slot classes. Reusable bounded editable-text screens
 now provide server-validated Save/Sign/Cancel sessions without consumer packets or native
 widgets. Portable block-property tool policies now provide per-block allowlists,
-per-stack selection and atomic typed value cycling. Rich post-change world/inventory
-callbacks and live copy/drop/reconnect acceptance remain open.
+per-stack selection, atomic typed value cycling, pre-commit validation/resource claims,
+and committed-change callbacks. Live copy/drop/reconnect acceptance remains open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

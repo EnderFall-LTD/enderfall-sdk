@@ -1,6 +1,8 @@
 package uk.co.enderfall.sdk.api.block;
 
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import uk.co.enderfall.sdk.api.annotation.CapabilityGated;
 import uk.co.enderfall.sdk.api.annotation.Experimental;
@@ -43,6 +45,23 @@ public interface BlockStateManager {
      */
     default Optional<BlockToolResult> cycleToolProperty(BlockRef block, BlockLocation location,
             BlockToolRef tool, int selection) {
+        return Optional.empty();
+    }
+
+    /**
+     * Atomically cycles a declared property with validation and committed-change callbacks.
+     * The policy runs on the server thread after the expected loaded block and current state
+     * have been verified but before mutation. Returning false leaves the world unchanged.
+     * This is the appropriate place for an all-or-nothing permission or resource claim.
+     *
+     * <p>The committed callback runs exactly once after a successful world mutation and
+     * never runs for unavailable, rejected or unchanged edits. Exceptions from the policy
+     * leave block state unchanged; exceptions from the committed callback propagate after
+     * the state has already changed.</p>
+     */
+    default Optional<BlockToolResult> cycleToolProperty(BlockRef block, BlockLocation location,
+            BlockToolRef tool, int selection, Predicate<BlockToolChange> policy,
+            Consumer<BlockToolResult> committed) {
         return Optional.empty();
     }
 }

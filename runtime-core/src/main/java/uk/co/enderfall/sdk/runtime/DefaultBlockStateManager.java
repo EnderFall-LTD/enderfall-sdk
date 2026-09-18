@@ -40,7 +40,16 @@ final class DefaultBlockStateManager implements BlockStateManager {
 
     @Override public Optional<BlockToolResult> cycleToolProperty(BlockRef block, BlockLocation location,
             BlockToolRef tool, int selectedProperty) {
+        return cycleToolProperty(block, location, tool, selectedProperty, ignored -> true, ignored -> { });
+    }
+
+    @Override public Optional<BlockToolResult> cycleToolProperty(BlockRef block, BlockLocation location,
+            BlockToolRef tool, int selectedProperty,
+            java.util.function.Predicate<uk.co.enderfall.sdk.api.block.BlockToolChange> policy,
+            java.util.function.Consumer<BlockToolResult> committed) {
         Objects.requireNonNull(location, "location");
+        Objects.requireNonNull(policy, "policy");
+        Objects.requireNonNull(committed, "committed");
         var properties = toolProperties(block, tool);
         if (properties.isEmpty()) return Optional.empty();
         int selection = Math.floorMod(selectedProperty, properties.size());
@@ -48,10 +57,16 @@ final class DefaultBlockStateManager implements BlockStateManager {
         var result = new AtomicReference<BlockToolResult>();
         boolean changed = update(block, location, state -> {
             PortableBlockState replacement = cycle(state, property);
-            result.set(result(tool, selection, properties, state, replacement, true));
+            var proposed = change(tool, selection, properties, property, state, replacement);
+            if (!policy.test(proposed)) return state;
+            result.set(result(proposed));
             return replacement;
         });
-        return changed ? Optional.ofNullable(result.get()) : Optional.empty();
+        if (!changed) return Optional.empty();
+        var applied = result.get();
+        if (applied == null) return Optional.empty();
+        committed.accept(applied);
+        return Optional.of(applied);
     }
 
     private java.util.List<BlockProperty<?>> toolProperties(BlockRef block, BlockToolRef tool) {
@@ -67,6 +82,19 @@ final class DefaultBlockStateManager implements BlockStateManager {
         BlockProperty<?> property = properties.get(selection);
         return new BlockToolResult(tool, selection, properties.size(), property.name(),
                 serialize(previous, property), serialize(replacement, property), changed);
+    }
+
+    private static uk.co.enderfall.sdk.api.block.BlockToolChange change(BlockToolRef tool, int selection,
+            java.util.List<BlockProperty<?>> properties, BlockProperty<?> property,
+            PortableBlockState previous, PortableBlockState replacement) {
+        return new uk.co.enderfall.sdk.api.block.BlockToolChange(tool, selection, properties.size(),
+                property.name(), serialize(previous, property), serialize(replacement, property),
+                previous, replacement);
+    }
+
+    private static BlockToolResult result(uk.co.enderfall.sdk.api.block.BlockToolChange change) {
+        return new BlockToolResult(change.tool(), change.selectionIndex(), change.propertyCount(),
+                change.propertyName(), change.previousValue(), change.value(), true);
     }
 
     private static <T> PortableBlockState cycle(PortableBlockState state, BlockProperty<T> property) {

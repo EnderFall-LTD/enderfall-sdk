@@ -156,6 +156,56 @@ class RegistrationTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void portableItemClientPredictionSuppressesFallbackWithoutRunningServerCallback() throws Exception {
+        var callbackCalls = new java.util.concurrent.atomic.AtomicInteger();
+        var predictionCalls = new java.util.concurrent.atomic.AtomicInteger();
+        var listener = new java.util.concurrent.atomic.AtomicReference<uk.co.enderfall.sdk.api.event.EventListener<uk.co.enderfall.sdk.api.event.InteractionEvent>>();
+        var bus = (uk.co.enderfall.sdk.api.event.EventBus) Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[] { uk.co.enderfall.sdk.api.event.EventBus.class },
+                (proxy, method, args) -> {
+                    listener.set((uk.co.enderfall.sdk.api.event.EventListener<uk.co.enderfall.sdk.api.event.InteractionEvent>) args[args.length - 1]);
+                    return null;
+                });
+        var itemRegistrar = (ItemRegistrar) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] { ItemRegistrar.class }, (proxy, method, args) -> new ItemRef((ResourceId) args[0]));
+        var context = (ModContext) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { ModContext.class },
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "modId" -> "test";
+                    case "items" -> itemRegistrar;
+                    case "events" -> bus;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        var items = Registration.items("test");
+        ItemRef tool = items.item("tool", () -> new uk.co.enderfall.sdk.api.item.PortableItem() {
+            @Override public void configure(ItemSpec.Builder properties) { }
+            @Override public uk.co.enderfall.sdk.api.item.InteractionPrediction predictUseOnBlock(
+                    uk.co.enderfall.sdk.api.event.InteractionEvent event) {
+                predictionCalls.incrementAndGet();
+                return uk.co.enderfall.sdk.api.item.InteractionPrediction.HANDLE;
+            }
+            @Override public void onUseOnBlock(ModContext ignored,
+                    uk.co.enderfall.sdk.api.event.InteractionEvent event) {
+                callbackCalls.incrementAndGet();
+            }
+        }, properties -> { });
+        Registration.register(context, items);
+
+        var clientUse = new uk.co.enderfall.sdk.api.event.InteractionEvent(
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_BLOCK,
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Side.CLIENT, UUID.randomUUID(),
+                ResourceId.of("test", "machine"),
+                new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                        ResourceId.of("minecraft", "overworld"), 1, 2, 3),
+                tool.id(), uk.co.enderfall.sdk.api.event.InteractionEvent.Hand.MAIN_HAND, true);
+        listener.get().handle(clientUse);
+
+        assertEquals(1, predictionCalls.get());
+        assertEquals(0, callbackCalls.get());
+        assertTrue(clientUse.handled());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void customBlockFactoryConfiguresOnceAndReceivesOnlyUnhandledServerUses() throws Exception {
         var calls = new ArrayList<String>();
         var specs = new HashMap<ResourceId, BlockSpec>();

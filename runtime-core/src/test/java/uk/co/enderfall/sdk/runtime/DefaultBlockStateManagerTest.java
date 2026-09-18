@@ -84,5 +84,27 @@ class DefaultBlockStateManagerTest {
         assertEquals(1, state.get().get(level));
         assertTrue(manager.cycleToolProperty(block, location,
                 BlockToolRef.of("test_mod", "hammer"), 0).isEmpty());
+
+        var callbacks = new java.util.ArrayList<String>();
+        var rejected = manager.cycleToolProperty(block, location, wrench, 0, proposal -> {
+            callbacks.add("reject:" + proposal.propertyName() + ":" + proposal.previousValue()
+                    + "->" + proposal.value());
+            assertEquals(state.get(), proposal.previousState());
+            assertNotEquals(proposal.previousState(), proposal.proposedState());
+            return false;
+        }, appliedResult -> callbacks.add("unexpected"));
+        assertTrue(rejected.isEmpty());
+        assertFalse(state.get().get(open));
+        assertEquals(java.util.List.of("reject:open:false->true"), callbacks);
+
+        callbacks.clear();
+        var applied = manager.cycleToolProperty(block, location, wrench, 0,
+                proposal -> {
+                    callbacks.add("allow:" + proposal.propertyName());
+                    return true;
+                }, result -> callbacks.add("committed:" + result.value())).orElseThrow();
+        assertTrue(state.get().get(open));
+        assertEquals("true", applied.value());
+        assertEquals(java.util.List.of("allow:open", "committed:true"), callbacks);
     }
 }

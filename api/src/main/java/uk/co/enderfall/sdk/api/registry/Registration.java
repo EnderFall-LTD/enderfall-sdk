@@ -117,8 +117,18 @@ public final class Registration {
             // their registration groups are attached in separate register(...) calls.
             context.events().subscribe(uk.co.enderfall.sdk.api.event.SdkEvents.INTERACTION,
                     uk.co.enderfall.sdk.api.event.EventPriority.EARLY, event -> {
-                if (event.side() != uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER
-                        || event.cancelled() || event.handled()) return;
+                if (event.cancelled() || event.handled()) return;
+                if (event.side() == uk.co.enderfall.sdk.api.event.InteractionEvent.Side.CLIENT) {
+                    var item = event.kind() == uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM
+                            ? registeredItems.get(event.target())
+                            : event.heldItem().map(registeredItems::get).orElse(null);
+                    if (item == null) return;
+                    var prediction = event.kind() == uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM
+                            ? item.predictUse(event) : item.predictUseOnBlock(event);
+                    if (prediction == uk.co.enderfall.sdk.api.item.InteractionPrediction.HANDLE) event.handle();
+                    else if (prediction == uk.co.enderfall.sdk.api.item.InteractionPrediction.CANCEL) event.cancel();
+                    return;
+                }
                 if (event.kind() == uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM) {
                     var item = registeredItems.get(event.target());
                     if (item != null) item.onUse(context, event);

@@ -25,6 +25,7 @@ final class PortableItemSources {
                 import uk.co.enderfall.sdk.api.item.TooltipVisibility;
                 import uk.co.enderfall.sdk.api.item.ItemDataKey;
                 import uk.co.enderfall.sdk.api.item.MutableItemData;
+                import uk.co.enderfall.sdk.api.item.MutableItemStack;
                 import uk.co.enderfall.sdk.api.registry.ItemSpec;
 
                 public final class PortableSdkItem extends Item {
@@ -41,6 +42,12 @@ final class PortableItemSources {
                             return null;
                         }
                         return new NativeData(stack, item.spec, writable);
+                    }
+
+                    /** Returns a safe view of an SDK-owned stack, including server mutations. */
+                    public static MutableItemStack stack(ItemStack stack, boolean writable) {
+                        if (!(stack.getItem() instanceof PortableSdkItem item)) return null;
+                        return new NativeStack(stack, item.spec, writable);
                     }
 
                 %s
@@ -62,6 +69,62 @@ final class PortableItemSources {
                             case SHIFT_UP -> !shiftDown;
                             case ADVANCED -> advanced;
                         };
+                    }
+
+                    private static final class NativeStack implements MutableItemStack {
+                        private final ItemStack stack;
+                        private final ItemSpec spec;
+                        private final boolean writable;
+
+                        private NativeStack(ItemStack stack, ItemSpec spec, boolean writable) {
+                            this.stack = stack;
+                            this.spec = spec;
+                            this.writable = writable;
+                        }
+
+                        @Override public int count() { return stack.getCount(); }
+
+                        @Override public int maxStackSize() { return spec.maxStackSize(); }
+
+                        @Override public boolean damageable() { return spec.durability() > 0; }
+
+                        @Override public int damage() { return damageable() ? stack.getDamageValue() : 0; }
+
+                        @Override public int maxDamage() { return spec.durability(); }
+
+                        @Override public boolean damage(int amount) {
+                            requireWritable();
+                            if (amount < 0) throw new IllegalArgumentException("Damage amount cannot be negative");
+                            if (amount == 0 || !damageable() || stack.isEmpty()) return false;
+                            long next = (long) stack.getDamageValue() + amount;
+                            if (next >= spec.durability()) {
+                                stack.shrink(1);
+                                return true;
+                            }
+                            stack.setDamageValue((int) next);
+                            return false;
+                        }
+
+                        @Override public int repair(int amount) {
+                            requireWritable();
+                            if (amount < 0) throw new IllegalArgumentException("Repair amount cannot be negative");
+                            if (amount == 0 || !damageable() || stack.isEmpty()) return 0;
+                            int repaired = Math.min(amount, stack.getDamageValue());
+                            stack.setDamageValue(stack.getDamageValue() - repaired);
+                            return repaired;
+                        }
+
+                        @Override public int consume(int amount) {
+                            requireWritable();
+                            if (amount < 0) throw new IllegalArgumentException("Consume amount cannot be negative");
+                            int consumed = Math.min(amount, stack.getCount());
+                            stack.shrink(consumed);
+                            return consumed;
+                        }
+
+                        private void requireWritable() {
+                            if (!writable) throw new IllegalStateException("Item stacks can only be changed on the server");
+                        }
                     }
 
                     private static final class NativeData implements MutableItemData {

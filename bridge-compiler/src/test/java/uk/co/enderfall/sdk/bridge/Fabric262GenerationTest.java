@@ -31,11 +31,11 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
                     "b8e1694418bf577c8c71c1a8654d62f7cbfa7dc22ec40d55b6b2e67b2140404d"),
             Map.entry(PACKAGE_PATH + "Fabric26CommandBridge.java",
-                    "3c22c12786498c42b4403b259cff5e8d84dac8ef9614c20b47b5826f31fa3d24"),
+                    "60e8dca1cd62b5d47fd20bab7a00d36d1829e7dab7a23dda010b6e26b9f1f529"),
             Map.entry(PACKAGE_PATH + "FabricConsumerBootstrap.java",
                     "c3414e23f0805220fbeb7cde9baef4a96b564dab43dd050c7c0773d82722b0b5"),
             Map.entry(PACKAGE_PATH + "Fabric26PlatformAdapter.java",
-                    "6ab761489be4a26215672b22faa873814926d2deaac09be715d9963f453746f3"),
+                    "67807c27ffe2b3838dd289ed6a28a4e1e1d51593c1b26d21e878b3176e871448"),
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "Fabric26PortableMenuScreen.java",
@@ -55,7 +55,7 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "Fabric26WorkbenchScreen.java",
                     "712c4f399295243e6a3548465a21488670d591407b0887e4a97f7783be90211f"),
             Map.entry("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
-                    "c87faf5fc08ba4576c7edc8d948729c0fcf194d58c34951ca1051e78ff06ddee"));
+                    "759e5c25bfe5fc60442cde7e57a6367da067e270808f3f77066b287f6b2258fb"));
     private static final String EXPECTED_PACK_METADATA = """
             {
               "pack": {
@@ -79,7 +79,7 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("d10588f963fd97fdb2ca646931d7ae8d85c590a0155456378ec6c49c37294873",
+        assertEquals("fd9aeb8a54f0c773b1b29618c10b4176793c33ede6a5c7e8d88b21ae31c45516",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));

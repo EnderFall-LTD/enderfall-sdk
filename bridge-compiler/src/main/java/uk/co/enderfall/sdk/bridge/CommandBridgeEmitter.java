@@ -26,9 +26,7 @@ final class CommandBridgeEmitter {
         if (!fabric) nativeImports += legacy
                 ? "import net.minecraftforge.common.MinecraftForge;\nimport net.minecraftforge.event.RegisterCommandsEvent;\n"
                 : "import net.neoforged.neoforge.common.NeoForge;\nimport net.neoforged.neoforge.event.RegisterCommandsEvent;\n";
-        String loop = fabric && !modernPermissions
-                ? "            for (int index = 0; index < spec.arguments().size(); index++) {\n                CommandArgument<?> portableArgument = spec.arguments().get(index);"
-                : "            for (CommandArgument<?> portableArgument : spec.arguments()) {";
+        String loop = "            for (CommandArgument<?> portableArgument : spec.arguments()) {";
         String content = COMMAND.formatted(packageSuffix, prefix,
                 fabric ? "import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;\n" : "",
                 nativeImports,
@@ -108,7 +106,9 @@ final class CommandBridgeEmitter {
             import com.mojang.brigadier.builder.LiteralArgumentBuilder;
             import com.mojang.brigadier.builder.RequiredArgumentBuilder;
             import com.mojang.brigadier.context.CommandContext;
+            import java.util.ArrayList;
             import java.util.LinkedHashMap;
+            import java.util.List;
             import java.util.Map;
             import java.util.Optional;
             import java.util.UUID;
@@ -128,7 +128,7 @@ final class CommandBridgeEmitter {
                     %5$s
                         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal(spec.name())
                                 .requires(source -> %6$s);
-                        ArgumentBuilder<CommandSourceStack, ?> current = root;
+                        List<RequiredArgumentBuilder<CommandSourceStack, ?>> nativeArguments = new ArrayList<>();
             %7$s
                             RequiredArgumentBuilder<CommandSourceStack, ?> child = Commands.argument(
                                     portableArgument.name(), argumentType(portableArgument));
@@ -144,12 +144,22 @@ final class CommandBridgeEmitter {
                                 }
                             });
                             if (portableArgument.optional()) {
-                                current.executes(command -> execute(spec, command));
+                                ArgumentBuilder<CommandSourceStack, ?> previous = nativeArguments.isEmpty()
+                                        ? root : nativeArguments.get(nativeArguments.size() - 1);
+                                previous.executes(command -> execute(spec, command));
                             }
-                            current.then(child);
-                            current = child;
+                            nativeArguments.add(child);
                         }
-                        current.executes(command -> execute(spec, command));
+                        if (nativeArguments.isEmpty()) {
+                            root.executes(command -> execute(spec, command));
+                        } else {
+                            nativeArguments.get(nativeArguments.size() - 1)
+                                    .executes(command -> execute(spec, command));
+                            for (int index = nativeArguments.size() - 2; index >= 0; index--) {
+                                nativeArguments.get(index).then(nativeArguments.get(index + 1));
+                            }
+                            root.then(nativeArguments.get(0));
+                        }
                         %8$s.register(root);
                     });
                 }

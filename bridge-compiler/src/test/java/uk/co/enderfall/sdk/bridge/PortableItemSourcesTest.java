@@ -12,6 +12,8 @@ class PortableItemSourcesTest {
         assertTrue(source.contains("Screen.hasShiftDown()"));
         assertTrue(source.contains("case SHIFT_DOWN -> shiftDown"));
         assertTrue(source.contains("stack.getOrCreateTagElement(\"enderfall_sdk\")"));
+        assertTrue(source.contains("implements MutableItemStack"));
+        assertTrue(source.contains("stack.setDamageValue"));
     }
 
     @Test
@@ -21,6 +23,7 @@ class PortableItemSourcesTest {
         assertTrue(source.contains("java.util.List<Component> lines"));
         assertTrue(source.contains("DataComponents.CUSTOM_DATA"));
         assertTrue(source.contains("CustomData.update"));
+        assertTrue(source.contains("Item stacks can only be changed on the server"));
     }
 
     @Test

@@ -14,7 +14,9 @@ public final class InteractionEvent {
     private final ResourceId heldItem;
     private final Hand hand;
     private final boolean sneaking;
+    private final boolean creativeMode;
     private final uk.co.enderfall.sdk.api.item.MutableItemData itemData;
+    private final uk.co.enderfall.sdk.api.item.MutableItemStack itemStack;
     private boolean handled;
     private boolean cancelled;
 
@@ -30,7 +32,7 @@ public final class InteractionEvent {
     public InteractionEvent(Kind kind, Side side, UUID playerId, ResourceId target,
             uk.co.enderfall.sdk.api.blockentity.BlockLocation blockLocation) {
         this(kind, side, playerId, target, blockLocation,
-                kind == Kind.USE_ITEM ? target : null, null, false, null);
+                kind == Kind.USE_ITEM ? target : null, null, false, false, null, null);
     }
 
     /** Complete native interaction context. Older event producers may omit item/hand details. */
@@ -45,6 +47,16 @@ public final class InteractionEvent {
             uk.co.enderfall.sdk.api.blockentity.BlockLocation blockLocation,
             ResourceId heldItem, Hand hand, boolean sneaking,
             uk.co.enderfall.sdk.api.item.MutableItemData itemData) {
+        this(kind, side, playerId, target, blockLocation, heldItem, hand, sneaking,
+                false, itemData, null);
+    }
+
+    /** Complete native interaction context, including game mode and held-stack access. */
+    public InteractionEvent(Kind kind, Side side, UUID playerId, ResourceId target,
+            uk.co.enderfall.sdk.api.blockentity.BlockLocation blockLocation,
+            ResourceId heldItem, Hand hand, boolean sneaking, boolean creativeMode,
+            uk.co.enderfall.sdk.api.item.MutableItemData itemData,
+            uk.co.enderfall.sdk.api.item.MutableItemStack itemStack) {
         this.kind = Objects.requireNonNull(kind, "kind");
         this.side = Objects.requireNonNull(side, "side");
         this.playerId = Objects.requireNonNull(playerId, "playerId");
@@ -59,7 +71,9 @@ public final class InteractionEvent {
         this.heldItem = heldItem;
         this.hand = hand;
         this.sneaking = sneaking;
+        this.creativeMode = creativeMode;
         this.itemData = itemData;
+        this.itemStack = itemStack;
     }
 
     /** Exact dimension and hit-block coordinates when supplied by the native hook. Never inferred. */
@@ -74,6 +88,17 @@ public final class InteractionEvent {
     public java.util.Optional<Hand> hand() { return java.util.Optional.ofNullable(hand); }
 
     public boolean sneaking() { return sneaking; }
+
+    /** Whether the interacting player currently has creative instant-build abilities. */
+    public boolean creativeMode() { return creativeMode; }
+
+    /**
+     * The actual held stack when supplied by a native hook. It is readable on either side,
+     * but mutation is accepted only by server-side views.
+     */
+    public java.util.Optional<uk.co.enderfall.sdk.api.item.MutableItemStack> itemStack() {
+        return java.util.Optional.ofNullable(itemStack);
+    }
 
     /**
      * Typed data on the actual held stack. Present only for SDK items with declared keys.

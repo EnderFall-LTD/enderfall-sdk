@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1214GenerationTest {
     private static final String TARGET = "1.21.4-neoforge";
     private static final String EXPECTED_DIGEST =
-            "149b04a9f6da56acc242869fb021afd8902d1370847bf1db1319c12145ddcfec";
+            "4cd00b6e84ad5dafbf396cd3deb34ae93197985b78958c2840993714bd95f684";
     private static final String PACKAGE_PATH =
             "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final Map<String, String> EXPECTED_SOURCE_HASHES = Map.ofEntries(
@@ -26,11 +26,11 @@ class NeoForge1214GenerationTest {
             Map.entry("NeoForgeClientHooks.java",
                     "3c4866fa320b31ba6962c758cd5890c27be1644c690c8fc718f413eb8ebdac5e"),
             Map.entry("NeoForgeCommandBridge.java",
-                    "814e75b21763a8814ab300c1afed2ed94fef1eecace7de828f8a3b5dbd042c97"),
+                    "431001d9a2d64e5e5877cffd707cfe159c6ceea229356edd2d412f6c4c78941a"),
             Map.entry("NeoForgeConsumerBootstrap.java",
                     "abf5473d5e2f3aed9f9472db8836e1bcac34e941784186c2f8c09ab291217b2a"),
             Map.entry("NeoForgePlatformAdapter.java",
-                    "c67acc3e90770dd9b0d79bb46ab73ea629f55a9a6ef3d8586bb7997276551978"),
+                    "03301de205a39605e0a1a2efb5e8d026afbd962f74b4e2ec1d9e6e55fba75534"),
             Map.entry("NeoForgePlatformInfo.java",
                     "c565e0680ae053907f90d47df550ee817015f825fc9906bd2acd26b253b1c695"),
             Map.entry("NeoForgePortableMenuScreen.java",
@@ -69,7 +69,7 @@ class NeoForge1214GenerationTest {
             assertEquals(source.getValue(), sha256(Files.readAllBytes(
                     output.resolve("sources").resolve(PACKAGE_PATH).resolve(source.getKey()))));
         }
-        assertEquals("24714146b6aabdc67a21a48890c8f2e5b3b94b261a3c00113e9afbe3074ccf73",
+        assertEquals("35392bfbab0efa45b6cc27ccd69ece5a0037c5a09001e37e4421a1e3461fd095",
                 sha256(Files.readAllBytes(output.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java"))));
 
         Path modsToml = output.resolve("resources/META-INF/neoforge.mods.toml");

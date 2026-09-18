@@ -47,7 +47,13 @@ class CommandBridgeEmitterTest {
                     "StringArgumentType.greedyString()", "IntegerArgumentType.integer()", "BoolArgumentType.bool()", "EntityArgument.player()",
                     "portableArgument.optional()", "spec.suggestions().suggest", "CompletableFuture.failedFuture(exception)",
                     "spec.executor().execute", "Missing required command argument", "Component.translatable(translationKey, arguments)",
-                    "Optional.of(player.getUUID())", "Map.copyOf(values)"}) assertTrue(source.contains(expression), expression);
+                    "Optional.of(player.getUUID())", "Map.copyOf(values)",
+                    "nativeArguments.get(nativeArguments.size() - 1)", "root.then(nativeArguments.get(0))"})
+                assertTrue(source.contains(expression), expression);
+            int leafExecutor = source.lastIndexOf("nativeArguments.get(nativeArguments.size() - 1)");
+            int rootAttachment = source.indexOf("root.then(nativeArguments.get(0));");
+            assertTrue(leafExecutor >= 0 && leafExecutor < rootAttachment, id);
+            assertFalse(source.contains("current.then(child)"), id);
         }
     }
 

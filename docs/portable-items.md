@@ -20,11 +20,16 @@ public final class WrenchItem implements PortableItem {
     }
 
     @Override
-    public void onUse(ModContext context, InteractionEvent event) {
+    public void onUseOnBlock(ModContext context, InteractionEvent event) {
         MutableItemData data = event.itemData().orElseThrow();
         int uses = data.getOrDefault(USES, 0) + 1;
         data.set(USES, uses);
-        context.players().actionBar(event.playerId(), "Wrench uses: " + uses);
+        MutableItemStack stack = event.itemStack().orElseThrow();
+        if (!event.creativeMode()) {
+            stack.damage(1);
+        }
+        context.players().actionBar(event.playerId(),
+                "Wrench uses: " + uses + ", durability: " + stack.remainingDurability());
         event.handle();
     }
 }
@@ -55,6 +60,14 @@ supported targets. `onUseOnBlock` receives the exact block
 location, held item, main/off-hand identity and crouching state through the interaction
 event. It runs before the target portable block callback; leaving the event untouched
 allows block and native fallback behavior to continue.
+
+`itemStack()` is a safe view of the real held stack. It exposes count, stack limit,
+damage, maximum and remaining durability, plus server-only `damage`, `repair`, and
+`consume` operations. Negative mutations are rejected, repairs clamp at zero damage,
+consumption clamps at the current count, and durability damage reports whether the item
+broke. `creativeMode()` lets a definition follow vanilla-style no-cost creative use.
+These deterministic operations do not roll Unbreaking automatically; call them only
+after the portable action has actually succeeded.
 
 Tooltip lines can be literal or translated, coloured, and shown always, while Shift is
 held, while Shift is not held, or only with advanced tooltips. The short builder methods

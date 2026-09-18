@@ -30,7 +30,7 @@ class Fabric1201GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("e43ae2c90d32eef783c715920eb4aac845b577c5d94a7b7f6e7600910ea4989a", first.sha256());
+        assertEquals("3e6d68c1171791e62bc229ef53debd7dce1538b7f59369cc5dea5f1cc4a8acfc", first.sha256());
         assertEquals(14, first.files().size());
         try (var files = Files.walk(firstOutput)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
@@ -42,9 +42,9 @@ class Fabric1201GenerationTest {
         // Independent working-reference hashes lock the legacy transport and recipe/menu ABI.
         assertEquals("a789915467224dc9f1a3776e432b66d5f2b0b8bf411e926c312bfdb9d84a1504",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201ClientHooks.java")));
-        assertEquals("919a34ac07e7f1944233f7d8f5850346831bda4c280d7552b6df3205130c8c2b",
+        assertEquals("ca37d9a2af4507057b3c0ea16d56c8f9b130821e0e56f470aa9ea1d594774067",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201PlatformAdapter.java")));
-        assertEquals("b734369f8d38a3ec4ddb160cf5eb053b320375e7981cf1bd102d31fae55bd212",
+        assertEquals("bb745b20a292593398b2c279162bef389b24f61927f54bf69790892c17fab7d8",
                 sha256(firstOutput.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java")));
         assertEquals("64bc53b937943f8aff0e92d54d3f45e42153e2115749cd2e57d331a2b0b184a4",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201WorkbenchMenu.java")));
@@ -63,9 +63,9 @@ class Fabric1201GenerationTest {
     void reusesFourSourcesTransformsTheScreenAndOmitsNineReplacedOrCombinedFiles() throws Exception {
         Path output = temporaryDirectory.resolve("reuse");
         generate(output);
-        List<String> reused = List.of("EnderfallFabricRuntime.java", "FabricCommandBridge.java",
+        List<String> reused = List.of("EnderfallFabricRuntime.java",
                 "FabricConsumerBootstrap.java", "FabricPlatformInfo.java");
-        List<String> transformed = List.of("FabricPortableMenuScreen.java");
+        List<String> transformed = List.of("FabricCommandBridge.java", "FabricPortableMenuScreen.java");
         Path canonical = canonicalRoot().resolve("src/canonical/java");
         int omitted = 0;
         try (var files = Files.walk(canonical)) {

@@ -33,7 +33,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "EnderfallFabricRuntime.java",
                     "d373ffde76a07543b99d7da37e9ec3ab7da7d8d862eac426b23ebd0785cdb94e"),
             Map.entry(PACKAGE_PATH + "Fabric1211PlatformAdapter.java",
-                    "bad4ce2c327ed64a5ed856a5fb0d8a4c680b95a3334d4aa44e44318116587440"),
+                    "fcec3d0bf35d7c3c5cf7d70cafb801e36a9aefc30394ef403479073d75a72081"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchMenu.java",
                     "7a62b13e6482016d15e1b58655c8536fb3ac855021d3cf6190afef6c7a08f91a"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchRecipe.java",
@@ -41,7 +41,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
                     "b8e1694418bf577c8c71c1a8654d62f7cbfa7dc22ec40d55b6b2e67b2140404d"),
             Map.entry(PACKAGE_PATH + "FabricCommandBridge.java",
-                    "079eee2af3cf9f61b2578ff626556a6cfb32a0dfbdf28ba15d31e69e583322f4"),
+                    "828fa4a90c70d851b48fc55725924bd7534a3df763556a30e9f1d9acbb8c29fc"),
             Map.entry(PACKAGE_PATH + "FabricConsumerBootstrap.java",
                     "c3414e23f0805220fbeb7cde9baef4a96b564dab43dd050c7c0773d82722b0b5"),
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
@@ -59,7 +59,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricWorkbenchScreen.java",
                     "e2cb7ae4e2e71911f268f7625887b304ce62e90276e4212195ab4bfec007d980"),
             Map.entry("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
-                    "24714146b6aabdc67a21a48890c8f2e5b3b94b261a3c00113e9afbe3074ccf73"));
+                    "35392bfbab0efa45b6cc27ccd69ece5a0037c5a09001e37e4421a1e3461fd095"));
     private static final String EXPECTED_FABRIC_MOD_JSON = """
             {
               "schemaVersion": 1,
@@ -106,7 +106,7 @@ class Fabric1211GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("2b3e834a42e9963c9abd8e470f7b3373159b76bc62c13f1f2fd616da715cc217",
+        assertEquals("78b8a6c007ec2cc6145e409a22d3a8b28230f2431688cfb27ac94b26f515bc7b",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
@@ -137,7 +137,7 @@ class Fabric1211GenerationTest {
         Path output = temporaryDirectory.resolve("reuse");
         generate(canonical, output);
 
-        List<String> transformedCanonicalNames = List.of("FabricClientHooks.java",
+        List<String> transformedCanonicalNames = List.of("FabricClientHooks.java", "FabricCommandBridge.java",
                 "FabricPlatformAdapter.java", "FabricPortableMenuScreen.java",
                 "FabricWorkbenchMenu.java", "FabricWorkbenchRecipe.java");
         int reused = 0;
@@ -152,7 +152,7 @@ class Fabric1211GenerationTest {
                 reused++;
             }
         }
-        assertEquals(9, reused);
+        assertEquals(8, reused);
     }
 
     @Test
@@ -197,7 +197,7 @@ class Fabric1211GenerationTest {
         Path menu = canonical.resolve("src/canonical/java").resolve(CANONICAL_MENU);
         Files.writeString(menu, "// Feature declaration only; no Java template required.\n");
         writeManifest(canonical);
-        assertEquals("2b3e834a42e9963c9abd8e470f7b3373159b76bc62c13f1f2fd616da715cc217",
+        assertEquals("78b8a6c007ec2cc6145e409a22d3a8b28230f2431688cfb27ac94b26f515bc7b",
                 generate(canonical, temporaryDirectory.resolve("independent-output")).sha256());
     }
 

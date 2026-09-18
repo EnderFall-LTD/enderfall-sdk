@@ -37,8 +37,15 @@ public final class PreviewToolItem implements PortableItem {
                     state -> state.with(PreviewOrientationBlock.COMPACT,
                             !state.get(PreviewOrientationBlock.COMPACT)))) {
                 String hand = event.hand().map(value -> value.name().toLowerCase()).orElse("unknown hand");
-                context.players().actionBar(event.playerId(), "Portable use-on-block #" + incrementUses(event)
-                        + " via " + hand
+                var stack = event.itemStack().orElseThrow(() ->
+                        new IllegalStateException("Portable tool did not receive its held stack"));
+                int uses = incrementUses(event);
+                boolean broke = !event.creativeMode() && stack.damage(1);
+                String durability = event.creativeMode() ? "creative durability"
+                        : broke ? "tool broke"
+                        : stack.remainingDurability() + "/" + stack.maxDamage() + " durability";
+                context.players().actionBar(event.playerId(), "Portable use-on-block #" + uses
+                        + " via " + hand + " - " + durability
                         + (event.sneaking() ? " while crouching" : ""));
                 event.handle();
             }

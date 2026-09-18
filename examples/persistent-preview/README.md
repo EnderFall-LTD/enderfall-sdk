@@ -26,7 +26,9 @@ once. Its Java class implements `PortableItem`, configures durability/rarity its
 is compiled unchanged for every target. Use it on the six-way direction test to toggle
 that block's compact state; the message must report the actual hand and whether the
 player was crouching. Its use count is durable per-stack data and its translated details
-appear while Shift is held.
+appear while Shift is held. Each successful compact-state toggle costs one durability in
+survival and reports the remaining value; creative mode performs the same action without
+damaging the tool.
 
 The `Portable Letter Test` proves a Furnection-style secure editor update. Put it in a
 carried inventory slot and run `/enderfall_letter_edit <slot>`, where the hotbar is 0-8,
@@ -37,6 +39,8 @@ expected-item check must reject the save instead of changing the replacement sta
 Right-click the letter to display its stored author and text. Save/rejoin and repeat to
 exercise native NBT on 1.20.1 and custom-data components on newer targets. The older
 `/enderfall_letter <slot> <text>` command remains as a low-level data-path diagnostic.
+The command bridge constructs its complete native argument tree before attaching it, so
+the final integer argument is an executable node rather than autocomplete-only metadata.
 
 The cabinet also opts into vanilla-compatible lazy loot tables. In a disposable
 world, place an unopened populated test cabinet with:

@@ -25,9 +25,9 @@ class LegacyFmlGenerationTest {
     private static final Map<String, String> REFERENCE_JAVA_HASHES = Map.ofEntries(
             Map.entry("EnderfallForgeRuntime.java", "a4208d6dc644248b14f0cd1ee2102dba7c924217933d49e294641c3b04f66a31"),
             Map.entry("LegacyForgeClientHooks.java", "a1cad5ad80302e67129dcf29b519f08ab9b7cc45d364982958e035a5ee2859a9"),
-            Map.entry("LegacyForgeCommandBridge.java", "59047a9a3912a6de7318acd234dbf7745387b0e7e544f9a638a0845fe215162b"),
+            Map.entry("LegacyForgeCommandBridge.java", "a2c0a1b471efc62005537185fbc486bd3623e63e9db415dd2e67ae69d975f6a4"),
             Map.entry("LegacyForgeConsumerBootstrap.java", "c558ac1712ba96c4d54e0f78a425d3c1a135089a8f8797621e0292002c32431b"),
-            Map.entry("LegacyForgePlatformAdapter.java", "6469833f00a3326690aa2ae711711e5ae74f6a8a3e6fdbf3ed365a1978949e7f"),
+            Map.entry("LegacyForgePlatformAdapter.java", "74b126e4fc5de1e44177daa9aa159cca9137fdd9f0d334ee504d3a89984afe96"),
             Map.entry("LegacyForgePlatformInfo.java", "47718fe428c4c2782cd519424933cbac9ea85e98cf1bdc47d48e772db7024f42"),
             Map.entry("LegacyForgePortableMenuScreen.java", "db4d491987db9e4eeefb3b571f11e3ff5544c8c065545f6f909fb314d5d14ea0"),
             Map.entry("LegacyForgeRecipeBinding.java", "6d53b08752ab48ca26e051c6bf8681f85c3ce87aefeebd3833535bdc301db66d"),
@@ -47,15 +47,15 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "39f7fbd58a457fd0595754192bee9d00bf33cddb9f63f3bf34094f5e2c788b25"
-                    : "f93f1cd00a1a43c9ddbf5edfd328fa6ba3e95edb87e74b59e7db1840c23ef33b", result.sha256());
+                    ? "fc5e8871b82ddbfc030f9b1b854bdc0fb14d2935a3b3837f7f21d9c826eaadb1"
+                    : "53b866441ac94fd6e2a03839e5e958a3e30764649eee79d32647ddb8fef6662c", result.sha256());
             assertEquals(16, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());
             Map<String, String> expected = new TreeMap<>();
             REFERENCE_JAVA_HASHES.forEach((name, hash) -> expected.put(PACKAGE_PATH + name, hash));
             expected.put("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
-                    "b734369f8d38a3ec4ddb160cf5eb053b320375e7981cf1bd102d31fae55bd212");
+                    "bb745b20a292593398b2c279162bef389b24f61927f54bf69790892c17fab7d8");
             assertEquals(expected, hashes(first.resolve("sources")));
             assertFalse(Files.exists(first.resolve("sources/uk/co/enderfall/sdk/runtime/neoforge")));
             assertFalse(Files.exists(first.resolve("resources/META-INF/neoforge.mods.toml")));

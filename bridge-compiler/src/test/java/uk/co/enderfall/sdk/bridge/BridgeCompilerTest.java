@@ -87,7 +87,7 @@ class BridgeCompilerTest {
                 new GeneratedFile(OutputKind.SOURCE,
                         "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/EnderfallFabricRuntime.java", 487),
                 new GeneratedFile(OutputKind.SOURCE,
-                        "uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java", 6652)), first.files());
+                        "uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java", 9236)), first.files());
         assertTreesEqual(
                 temporaryDirectory.resolve("first-output/sources"),
                 temporaryDirectory.resolve("second-output/sources"));

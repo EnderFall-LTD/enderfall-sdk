@@ -59,7 +59,9 @@ class PortableMenuScreenEmitterTest {
         for (String id : TargetCatalog.standard().targetIds()) {
             String source = text(id);
             assertTrue(source.contains("buttonBindings.clear();"));
-            assertTrue(source.contains("ignored -> actionSender.accept(definition.action())"));
+            assertTrue(source.contains("ignored -> actionSender.accept(submission(definition.action()))"));
+            assertTrue(source.contains("for (MenuTextInput definition : view.spec().textInputs())"));
+            assertTrue(source.contains("return new PortableMenuSubmission(action, values);"));
             assertTrue(source.contains(".bounds(left + definition.x(), top + definition.y(), definition.width(), definition.height())"));
             assertTrue(source.contains("view = new PortableMenuView(view.sessionId(), view.menu(), view.spec(), state);"));
             assertTrue(source.contains("binding.button().setMessage(Component.literal(state.resolve(binding.definition().text())));"));

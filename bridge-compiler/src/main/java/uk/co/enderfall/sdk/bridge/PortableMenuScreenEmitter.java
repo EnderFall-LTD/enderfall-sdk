@@ -36,6 +36,11 @@ final class PortableMenuScreenEmitter {
         Rendering rendering = target.menuAbi() == MenuAbi.V26_2 ? Rendering.EXTRACTED : Rendering.IMMEDIATE;
         boolean backgroundInsideRender = target.menuAbi() == MenuAbi.V1_21_1
                 || target.menuAbi() == MenuAbi.V1_21_4;
+        String multilineCreation = rendering == Rendering.EXTRACTED
+                ? "return MultiLineEditBox.builder().setX(x).setY(y).setPlaceholder(placeholder)\n"
+                        + "                .build(font, definition.width(), definition.height(), placeholder);"
+                : "return new MultiLineEditBox(font, x, y, definition.width(), definition.height(),\n"
+                        + "                placeholder, placeholder);";
         String canonicalPrefix = fabric ? "Fabric" : "NeoForge";
         String root = "uk/co/enderfall/sdk/runtime/" + (fabric ? "fabric" : "neoforge") + "/v1_21_4/";
         String canonical = root + canonicalPrefix + "PortableMenuScreen.java";
@@ -47,7 +52,7 @@ final class PortableMenuScreenEmitter {
                 prefix + "PortableMenuScreen", rendering.graphics, rendering.description, rendering.method,
                 rendering.centeredText, rendering.text, rendering.gui, rendering.screen, gauges ? GAUGES : "",
                 backgroundInsideRender ? "super.renderBackground(graphics, mouseX, mouseY, partialTick);\n        " : "",
-                backgroundInsideRender ? BACKGROUND_OVERRIDE : "");
+                backgroundInsideRender ? BACKGROUND_OVERRIDE : "", multilineCreation);
         return List.of(new RuntimeSource(canonical, outputRoot + filename, content.getBytes(StandardCharsets.UTF_8)));
     }
 
@@ -76,42 +81,81 @@ final class PortableMenuScreenEmitter {
             package %1$s;
             
             import java.util.ArrayList;
+            import java.util.LinkedHashMap;
             import java.util.List;
+            import java.util.Map;
+            import java.util.Set;
             import java.util.function.Consumer;
             import net.minecraft.client.Minecraft;
             import net.minecraft.client.gui.%3$s;
             import net.minecraft.client.gui.components.Button;
+            import net.minecraft.client.gui.components.EditBox;
+            import net.minecraft.client.gui.components.MultiLineEditBox;
             import net.minecraft.client.gui.screens.Screen;
             import net.minecraft.network.chat.Component;
             import uk.co.enderfall.sdk.api.ui.MenuButton;
             import uk.co.enderfall.sdk.api.ui.MenuLabel;
             import uk.co.enderfall.sdk.api.ui.MenuState;
+            import uk.co.enderfall.sdk.api.ui.MenuTextInput;
+            import uk.co.enderfall.sdk.runtime.PortableMenuSubmission;
             import uk.co.enderfall.sdk.runtime.PortableMenuView;
             
             /** %4$s renderer for the portable synchronized menu contract. */
             final class %2$s extends Screen {
                 private PortableMenuView view;
-                private final Consumer<String> actionSender;
+                private final Consumer<PortableMenuSubmission> actionSender;
                 private final Runnable closeSender;
                 private final List<ButtonBinding> buttonBindings = new ArrayList<>();
+                private final List<TextInputBinding> textInputBindings = new ArrayList<>();
+                private final Map<String, String> drafts = new LinkedHashMap<>();
+                private final Set<String> dirtyInputs = new java.util.LinkedHashSet<>();
+                private boolean synchronizingInputs;
                 private boolean remoteClose;
                 private boolean closeNotified;
             
-                %2$s(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
+                %2$s(PortableMenuView view, Consumer<PortableMenuSubmission> actionSender,
+                        Runnable closeSender) {
                     super(Component.literal(view.state().resolve(view.spec().title())));
                     this.view = view;
                     this.actionSender = actionSender;
                     this.closeSender = closeSender;
+                    for (MenuTextInput input : view.spec().textInputs()) {
+                        drafts.put(input.key(), view.state().value(input.key()));
+                    }
                 }
             
                 @Override
                 protected void init() {
                     buttonBindings.clear();
+                    textInputBindings.clear();
                     int left = (width - view.spec().width()) / 2;
                     int top = (height - view.spec().height()) / 2;
+                    for (MenuTextInput definition : view.spec().textInputs()) {
+                        String initial = drafts.getOrDefault(definition.key(), "");
+                        if (definition.multiline()) {
+                            MultiLineEditBox input = createMultiline(definition,
+                                    left + definition.x(), top + definition.y());
+                            input.setCharacterLimit(definition.maximumCharacters() * 2);
+                            input.setValue(initial);
+                            input.setValueListener(value -> changed(definition, value, input::setValue));
+                            addRenderableWidget(input);
+                            textInputBindings.add(new TextInputBinding(definition,
+                                    input::setValue));
+                        } else {
+                            EditBox input = new EditBox(font, left + definition.x(), top + definition.y(),
+                                    definition.width(), definition.height(), Component.literal(definition.key()));
+                            input.setMaxLength(definition.maximumCharacters() * 2);
+                            input.setHint(Component.literal(view.state().resolve(definition.placeholder())));
+                            input.setValue(initial);
+                            input.setResponder(value -> changed(definition, value, input::setValue));
+                            addRenderableWidget(input);
+                            textInputBindings.add(new TextInputBinding(definition,
+                                    input::setValue));
+                        }
+                    }
                     for (MenuButton definition : view.spec().buttons()) {
                         Button button = Button.builder(Component.literal(view.state().resolve(definition.text())),
-                                        ignored -> actionSender.accept(definition.action()))
+                                        ignored -> actionSender.accept(submission(definition.action())))
                                 .bounds(left + definition.x(), top + definition.y(), definition.width(), definition.height())
                                 .build();
                         addRenderableWidget(button);
@@ -167,6 +211,19 @@ final class PortableMenuScreenEmitter {
                     for (ButtonBinding binding : buttonBindings) {
                         binding.button().setMessage(Component.literal(state.resolve(binding.definition().text())));
                     }
+                    for (TextInputBinding binding : textInputBindings) {
+                        String key = binding.definition().key();
+                        if (!dirtyInputs.contains(key)) {
+                            String value = state.value(key);
+                            drafts.put(key, value);
+                            synchronizingInputs = true;
+                            try {
+                                binding.writer().accept(value);
+                            } finally {
+                                synchronizingInputs = false;
+                            }
+                        }
+                    }
                 }
             
                 void closeFromServer() {
@@ -181,7 +238,8 @@ final class PortableMenuScreenEmitter {
                     }
                 }
             
-                static void show(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
+                static void show(PortableMenuView view, Consumer<PortableMenuSubmission> actionSender,
+                                 Runnable closeSender) {
                     Minecraft client = Minecraft.getInstance();
                     client.execute(() -> client.%8$ssetScreen(new %2$s(view, actionSender, closeSender)));
                 }
@@ -203,8 +261,40 @@ final class PortableMenuScreenEmitter {
                         }
                     });
                 }
+
+                private void changed(MenuTextInput definition, String value, Consumer<String> restore) {
+                    if (synchronizingInputs) return;
+                    try {
+                        drafts.put(definition.key(), definition.validate(value));
+                        dirtyInputs.add(definition.key());
+                    } catch (IllegalArgumentException invalid) {
+                        synchronizingInputs = true;
+                        try {
+                            restore.accept(drafts.getOrDefault(definition.key(), ""));
+                        } finally {
+                            synchronizingInputs = false;
+                        }
+                    }
+                }
+
+                private PortableMenuSubmission submission(String action) {
+                    Map<String, String> values = new LinkedHashMap<>();
+                    for (TextInputBinding binding : textInputBindings) {
+                        String key = binding.definition().key();
+                        values.put(key, drafts.getOrDefault(key, ""));
+                    }
+                    return new PortableMenuSubmission(action, values);
+                }
+
+                private MultiLineEditBox createMultiline(MenuTextInput definition, int x, int y) {
+                    Component placeholder = Component.literal(view.state().resolve(definition.placeholder()));
+                    %13$s
+                }
             
                 private record ButtonBinding(MenuButton definition, Button button) {
+                }
+
+                private record TextInputBinding(MenuTextInput definition, Consumer<String> writer) {
                 }
             }
             """;

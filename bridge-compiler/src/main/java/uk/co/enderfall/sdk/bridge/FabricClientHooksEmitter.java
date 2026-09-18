@@ -47,6 +47,7 @@ final class FabricClientHooksEmitter {
             import uk.co.enderfall.sdk.runtime.PayloadReceiver;
             import uk.co.enderfall.sdk.runtime.RuntimeModContext;
             import uk.co.enderfall.sdk.runtime.PortableMenuView;
+            import uk.co.enderfall.sdk.runtime.PortableMenuSubmission;
             import uk.co.enderfall.sdk.api.ui.MenuState;
             
             """;
@@ -69,6 +70,7 @@ final class FabricClientHooksEmitter {
             import uk.co.enderfall.sdk.runtime.IntegrationTestControl;
             import uk.co.enderfall.sdk.runtime.PayloadReceiver;
             import uk.co.enderfall.sdk.runtime.PortableMenuView;
+            import uk.co.enderfall.sdk.runtime.PortableMenuSubmission;
             import uk.co.enderfall.sdk.runtime.RuntimeModContext;
             import uk.co.enderfall.sdk.api.ui.MenuState;
             
@@ -149,7 +151,8 @@ final class FabricClientHooksEmitter {
                     MenuScreens.register(menuType, %3$sWorkbenchScreen::new);
                 }
             
-                static void showMenu(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
+                static void showMenu(PortableMenuView view, Consumer<PortableMenuSubmission> actionSender,
+                                     Runnable closeSender) {
                     FabricPortableMenuScreen.show(view, actionSender, closeSender);
                 }
             

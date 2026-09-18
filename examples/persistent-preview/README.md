@@ -29,12 +29,14 @@ player was crouching. Its use count is durable per-stack data and its translated
 appear while Shift is held.
 
 The `Portable Letter Test` proves a Furnection-style secure editor update. Put it in a
-carried inventory slot and run `/enderfall_letter <slot> <text>`, where the hotbar is
-0-8, the main inventory is 9-35, and `-1` means off-hand. The command signs the real
-stack, reads the author/text back through the public API, and reports both values. Move
-or replace the letter before an update and the expected-item check must reject it. Then
-right-click the letter to display its stored author and text. Save/rejoin and repeat to
-exercise native NBT on 1.20.1 and custom-data components on newer targets.
+carried inventory slot and run `/enderfall_letter_edit <slot>`, where the hotbar is 0-8,
+the main inventory is 9-35, and `-1` means off-hand. Enter multiple lines and choose
+**Save** to retain its current author, **Sign** to save with your name, or **Cancel** to
+discard the draft. Move or replace the letter while the editor is open: the server's
+expected-item check must reject the save instead of changing the replacement stack.
+Right-click the letter to display its stored author and text. Save/rejoin and repeat to
+exercise native NBT on 1.20.1 and custom-data components on newer targets. The older
+`/enderfall_letter <slot> <text>` command remains as a low-level data-path diagnostic.
 
 The cabinet also opts into vanilla-compatible lazy loot tables. In a disposable
 world, place an unopened populated test cabinet with:

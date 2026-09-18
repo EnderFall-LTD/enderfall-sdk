@@ -3,9 +3,11 @@ package uk.co.enderfall.sdk.runtime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -25,6 +27,7 @@ import uk.co.enderfall.sdk.api.ui.MenuButton;
 import uk.co.enderfall.sdk.api.ui.MenuRef;
 import uk.co.enderfall.sdk.api.ui.MenuSpec;
 import uk.co.enderfall.sdk.api.ui.MenuState;
+import uk.co.enderfall.sdk.api.ui.MenuTextInput;
 
 class DefaultMenuManagerTest {
     @Test void tankBindingRequiresOwnedBlockAndNativeSupport() {
@@ -152,10 +155,13 @@ class DefaultMenuManagerTest {
         DefaultMenuManager server = manager(serverAdapter);
         DefaultMenuManager client = manager(clientAdapter);
         MenuSpec spec = MenuSpec.builder("Test {state}")
+                .textInput(MenuTextInput.multiline("letter.text", "Write...", 20, 30, 140, 24, 64, 2))
                 .button(MenuButton.of("confirm", "Confirm", 20, 60, 80))
                 .build();
-        MenuRef serverRef = server.register("test", spec, action -> action.update(
-                MenuState.builder().value("state", "confirmed").build()));
+        MenuRef serverRef = server.register("test", spec, action -> action.update(MenuState.builder()
+                .value("state", "confirmed")
+                .value("received", action.input("letter.text"))
+                .build()));
         client.register("test", spec, ignored -> { });
 
         server.open(PLAYER, serverRef, MenuState.builder().value("state", "ready").build());
@@ -164,11 +170,44 @@ class DefaultMenuManagerTest {
         assertEquals("ready", clientAdapter.shown.state().value("state"));
         assertTrue(server.isOpen(PLAYER, serverRef));
 
-        clientAdapter.actionSender.accept("confirm");
+        clientAdapter.actionSender.accept(new PortableMenuSubmission(
+                "confirm", Map.of("letter.text", "Hello, world!")));
 
         assertEquals("confirmed", clientAdapter.updated.value("state"));
+        assertEquals("Hello, world!", clientAdapter.updated.value("received"));
         clientAdapter.closeSender.run();
         assertFalse(server.isOpen(PLAYER, serverRef));
+    }
+
+    @Test
+    void rejectsMissingUnknownAndOversizedSubmittedInputsBeforeTheHandler() {
+        LinkedAdapter serverAdapter = new LinkedAdapter(Environment.DEDICATED_SERVER);
+        LinkedAdapter clientAdapter = new LinkedAdapter(Environment.CLIENT);
+        serverAdapter.peer = clientAdapter;
+        clientAdapter.peer = serverAdapter;
+        DefaultMenuManager server = manager(serverAdapter);
+        DefaultMenuManager client = manager(clientAdapter);
+        MenuSpec spec = MenuSpec.builder("Editor")
+                .textInput(MenuTextInput.singleLine("name", "Name", 10, 30, 100, 2))
+                .button(MenuButton.of("save", "Save", 10, 60, 60))
+                .build();
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        MenuRef ref = server.register("editor", spec, ignored -> calls.incrementAndGet());
+        client.register("editor", spec, ignored -> { });
+        assertThrows(IllegalArgumentException.class, () -> server.open(PLAYER, ref,
+                MenuState.builder().value("name", "too long").build()));
+        server.open(PLAYER, ref, MenuState.empty());
+
+        assertThrows(AssertionError.class, () -> clientAdapter.actionSender.accept(
+                new PortableMenuSubmission("save", Map.of())));
+        assertThrows(AssertionError.class, () -> clientAdapter.actionSender.accept(
+                new PortableMenuSubmission("save", Map.of("other", "ok"))));
+        assertThrows(AssertionError.class, () -> clientAdapter.actionSender.accept(
+                new PortableMenuSubmission("save", Map.of("name", "\ud83d\ude00\ud83d\ude00\ud83d\ude00"))));
+        assertEquals(0, calls.get());
+
+        clientAdapter.actionSender.accept(new PortableMenuSubmission("save", Map.of("name", "ok")));
+        assertEquals(1, calls.get());
     }
 
     private static DefaultMenuManager manager(LinkedAdapter adapter) {
@@ -183,7 +222,7 @@ class DefaultMenuManagerTest {
         private PayloadReceiver receiver;
         private PortableMenuView shown;
         private MenuState updated;
-        private Consumer<String> actionSender;
+        private Consumer<PortableMenuSubmission> actionSender;
         private Runnable closeSender;
 
         private LinkedAdapter(Environment environment) {
@@ -209,7 +248,8 @@ class DefaultMenuManagerTest {
                     reason -> { throw new AssertionError(reason); });
         }
         @Override public void sendToAll(ResourceId id, byte[] payload) { }
-        @Override public void showMenu(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
+        @Override public void showMenuWithInputs(PortableMenuView view,
+                Consumer<PortableMenuSubmission> actionSender, Runnable closeSender) {
             shown = view;
             this.actionSender = actionSender;
             this.closeSender = closeSender;

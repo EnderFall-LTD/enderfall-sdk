@@ -86,6 +86,28 @@ actual slot item and expected registered item before exposing its declared keys.
 stale packet therefore returns `false` rather than writing to whatever item replaced
 the editor's original stack. `itemData(...)` provides the matching typed read path.
 
-This completes the core author/text storage path needed by a letter screen. A reusable
-editable-text screen/session API and live copy/drop/reconnect acceptance are separate
-remaining work.
+Portable menus can now own the editable screen as well. Declare bounded fields directly
+in the menu layout; no client entrypoint, packet class, native widget, or loader-specific
+screen registration is needed:
+
+```java
+MenuRef editor = context.menus().register("letter_editor",
+        MenuSpec.builder("Letter")
+                .size(230, 190)
+                .textInput(MenuTextInput.multiline(
+                        "letter.text", "Write...", 15, 35, 200, 100, 288, 16))
+                .button(MenuButton.of("save", "Save", 15, 150, 60))
+                .build(), action -> {
+                    context.players().updateItemData(action.playerId(), slotFrom(action.state()),
+                            LETTER, data -> data.set(LETTER_TEXT, action.input("letter.text")));
+                    action.close();
+                });
+```
+
+Drafts remain on the client until a declared action is pressed. The runtime sends every
+declared field together, then validates the active session, action, exact field set,
+Unicode code-point limit, UTF-8 byte limit, single/multiline policy and line count before
+calling consumer code. Slot identity still belongs in server-owned `MenuState`; never
+accept it from an editable field. The persistent preview's `/enderfall_letter_edit`
+command demonstrates Save, Sign, Cancel, reopening existing text and stale-slot rejection.
+Live copy/drop/reconnect acceptance remains a manual gameplay check.

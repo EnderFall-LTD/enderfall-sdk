@@ -18,7 +18,7 @@ its loader adapters have runtime evidence.
 | Networking | Typed codecs, negotiation, size limits, directions, main-thread handlers | Server/client pulse and acknowledgement |
 | Events | Lifecycle, server/client tick, player join/leave, sided item/block interaction, successful handling and cancellation | Lifecycle, cooldown timing, join guidance, and server-authoritative abilities |
 | Player gameplay | Player snapshots, atomic inventory costs, item rewards and overflow, chat/action-bar feedback, healing, experience | Crystal absorption, workbench infusion ritual, core activation, rod ability, and development kit |
-| Synchronized screens | Portable state-templated labels/buttons plus the experimental inventory-backed workbench surface | The workbench uses real input, output, player-inventory, and hotbar slots |
+| Synchronized screens | Portable state-templated labels/buttons, bounded single/multiline text inputs, and the experimental inventory-backed workbench surface | The workbench uses real slots; the persistent preview has a secure Save/Sign/Cancel letter editor |
 
 The showcase is in `examples/demo-mod`. All of its Java under `src/main` and `src/client`
 is portable and contains no Minecraft, Fabric, Forge, or NeoForge imports.
@@ -51,7 +51,7 @@ This focused matrix is not full foundation-feature or visual acceptance.
 | Area | Current status | Why it is not presented as working |
 | --- | --- | --- |
 | Fluids | No stable API or adapter | Requires source/flowing registrations, fluid block and bucket coordination, render handlers, tags, and version-specific behaviour |
-| Custom item/block behaviour | Server-side use/use-on-block callbacks, exact hit position, hand, crouching context, block-state mutation, declared persistent held-stack data, and expected-item-checked carried-slot/off-hand reads and updates | Stack durability/effects and reusable item-editor screen sessions still need portable contracts |
+| Custom item/block behaviour | Server-side use/use-on-block callbacks, exact hit position, hand, crouching context, block-state mutation, declared persistent held-stack data, expected-item-checked carried-slot/off-hand reads and updates, and reusable item-editor screen sessions | Stack durability/effects still need broader portable contracts and live acceptance |
 | Block entities and persistent state | No stable API or adapter | Serialization, ticking, update packets, inventory ownership, placement/removal lifecycle, and data migration must be specified together |
 
 ## Proposed developer-facing contracts

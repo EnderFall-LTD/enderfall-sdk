@@ -24,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1211GenerationTest {
     private static final String TARGET = "1.21.1-neoforge";
     private static final String EXPECTED_DIGEST =
-            "8f5d7f99cc765d231e237c08d7688fcd7c88b23d2581a2417011aafbad512920";
+            "0b49123747998570cd40448f9d436ad209cd1d0a12d97866a0784700eb4abcee";
     private static final String PACKAGE_PATH = "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final String CANONICAL_MENU = PACKAGE_PATH + "NeoForgeWorkbenchMenu.java";
     private static final String MENU_DESCRIPTION =
@@ -85,13 +85,16 @@ class NeoForge1211GenerationTest {
                 if (name.equals("NeoForgePlatformAdapter.java")) {
                     continue; // Generated interaction context has intentionally moved beyond the reference adapter.
                 }
+                if (name.equals("NeoForgeClientHooks.java") || name.equals("NeoForgePortableMenuScreen.java")) {
+                    continue; // Generated synchronized text-input plumbing replaces the reviewed references.
+                }
                 Path relative = canonical.resolve("src/neoforge/java").relativize(canonicalFile);
                 assertArrayEquals(Files.readAllBytes(canonicalFile),
                         Files.readAllBytes(output.resolve("sources").resolve(relative)));
                 reused++;
             }
         }
-        assertEquals(11, reused);
+        assertEquals(9, reused);
     }
 
     @Test

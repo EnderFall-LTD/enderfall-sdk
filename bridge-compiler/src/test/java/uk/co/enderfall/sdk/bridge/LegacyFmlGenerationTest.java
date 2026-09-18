@@ -24,12 +24,12 @@ class LegacyFmlGenerationTest {
     // Independently hashed working 1.20.1 reference sources, shared by both loaders.
     private static final Map<String, String> REFERENCE_JAVA_HASHES = Map.ofEntries(
             Map.entry("EnderfallForgeRuntime.java", "a4208d6dc644248b14f0cd1ee2102dba7c924217933d49e294641c3b04f66a31"),
-            Map.entry("LegacyForgeClientHooks.java", "42b3ca7c790207d28a6aa8629e999e4fe0bda66bd8cd3035173de450fe24bef6"),
+            Map.entry("LegacyForgeClientHooks.java", "a1cad5ad80302e67129dcf29b519f08ab9b7cc45d364982958e035a5ee2859a9"),
             Map.entry("LegacyForgeCommandBridge.java", "59047a9a3912a6de7318acd234dbf7745387b0e7e544f9a638a0845fe215162b"),
             Map.entry("LegacyForgeConsumerBootstrap.java", "c558ac1712ba96c4d54e0f78a425d3c1a135089a8f8797621e0292002c32431b"),
-            Map.entry("LegacyForgePlatformAdapter.java", "d834445dd7936143aedddee15796d8eb5309241eeb212eabebe62dfbb3d120c5"),
+            Map.entry("LegacyForgePlatformAdapter.java", "6469833f00a3326690aa2ae711711e5ae74f6a8a3e6fdbf3ed365a1978949e7f"),
             Map.entry("LegacyForgePlatformInfo.java", "47718fe428c4c2782cd519424933cbac9ea85e98cf1bdc47d48e772db7024f42"),
-            Map.entry("LegacyForgePortableMenuScreen.java", "a6a1cfca2851f1fc4ae35814afc591dac17fe88f8454ffd18b096be8ac7cbda1"),
+            Map.entry("LegacyForgePortableMenuScreen.java", "db4d491987db9e4eeefb3b571f11e3ff5544c8c065545f6f909fb314d5d14ea0"),
             Map.entry("LegacyForgeRecipeBinding.java", "6d53b08752ab48ca26e051c6bf8681f85c3ce87aefeebd3833535bdc301db66d"),
             Map.entry("LegacyForgeWorkbenchBinding.java", "9c3fbbf1af8524c2e84dab2ed3f68bbc221932ebbdb013dca58431c5b2d6ab87"),
             Map.entry("LegacyForgeWorkbenchMenu.java", "aeece40188f2a2ab8d02a6d68dc3b6f9b6940649aad33d220d5291180e51e4b7"),
@@ -47,8 +47,8 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "3761e20049f58fe098e752a3b043f483e59a871ff946eaab22824f871707e84d"
-                    : "72c32f7302cb330ad8909e2b1e5fc31672384e2361eccc92d4103625c4ffb7e5", result.sha256());
+                    ? "39f7fbd58a457fd0595754192bee9d00bf33cddb9f63f3bf34094f5e2c788b25"
+                    : "f93f1cd00a1a43c9ddbf5edfd328fa6ba3e95edb87e74b59e7db1840c23ef33b", result.sha256());
             assertEquals(16, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());

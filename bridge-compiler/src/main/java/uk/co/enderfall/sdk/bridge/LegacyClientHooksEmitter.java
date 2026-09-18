@@ -53,6 +53,7 @@ final class LegacyClientHooksEmitter {
             import uk.co.enderfall.sdk.api.event.SdkEvents;
             import uk.co.enderfall.sdk.runtime.IntegrationTestControl;
             import uk.co.enderfall.sdk.runtime.PortableMenuView;
+            import uk.co.enderfall.sdk.runtime.PortableMenuSubmission;
             import uk.co.enderfall.sdk.runtime.RuntimeModContext;
             import uk.co.enderfall.sdk.api.ui.MenuState;
             
@@ -107,7 +108,8 @@ final class LegacyClientHooksEmitter {
                     channel.sendToServer(payload);
                 }
             
-                static void showMenu(PortableMenuView view, Consumer<String> actionSender, Runnable closeSender) {
+                static void showMenu(PortableMenuView view, Consumer<PortableMenuSubmission> actionSender,
+                                     Runnable closeSender) {
                     LegacyForgePortableMenuScreen.show(view, actionSender, closeSender);
                 }
             

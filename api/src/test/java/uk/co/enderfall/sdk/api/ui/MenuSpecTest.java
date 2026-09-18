@@ -12,11 +12,14 @@ class MenuSpecTest {
         MenuSpec spec = MenuSpec.builder("Workbench {mode}")
                 .size(220, 140)
                 .label(MenuLabel.text("Charge: {charge}", 12, 30))
+                .textInput(MenuTextInput.singleLine("name", "Name", 12, 50, 120, 40))
                 .button(MenuButton.of("craft", "Craft", 20, 90, 80))
                 .build();
 
         assertEquals(220, spec.width());
         assertEquals(1, spec.labels().size());
+        assertEquals(1, spec.textInputs().size());
+        assertTrue(spec.textInput("name").isPresent());
         assertTrue(spec.supportsAction("craft"));
     }
 
@@ -30,6 +33,15 @@ class MenuSpecTest {
     }
 
     @Test
+    void rejectsDuplicateTextInputKeys() {
+        MenuSpec.Builder builder = MenuSpec.builder("Menu")
+                .textInput(MenuTextInput.singleLine("name", "Name", 10, 20, 80, 20));
+
+        assertThrows(IllegalArgumentException.class, () -> builder.textInput(
+                MenuTextInput.singleLine("name", "Again", 10, 45, 80, 20)));
+    }
+
+    @Test
     void rejectsControlsOutsideThePanel() {
         assertThrows(IllegalArgumentException.class, () -> MenuSpec.builder("Menu")
                 .size(120, 80)
@@ -38,6 +50,10 @@ class MenuSpecTest {
         assertThrows(IllegalArgumentException.class, () -> MenuSpec.builder("Menu")
                 .size(120, 80)
                 .button(MenuButton.of("outside", "Outside", 50, 60, 80))
+                .build());
+        assertThrows(IllegalArgumentException.class, () -> MenuSpec.builder("Menu")
+                .size(120, 80)
+                .textInput(MenuTextInput.singleLine("outside", "Outside", 50, 65, 80, 20))
                 .build());
     }
 }

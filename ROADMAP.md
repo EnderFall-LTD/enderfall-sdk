@@ -19,8 +19,9 @@ declarative translated/literal tooltips with colour, Shift and advanced visibili
 typed held-stack data backed by legacy NBT or component-era custom data now compile from
 identical source on all nine targets. Logical carried-inventory/off-hand addressing and
 server-thread, expected-item-checked typed reads and updates now cover the letter data
-path without exposing native stack or slot classes. A reusable editable-text screen,
-declared tool property policies, and live copy/drop/reconnect acceptance remain open.
+path without exposing native stack or slot classes. Reusable bounded editable-text screens
+now provide server-validated Save/Sign/Cancel sessions without consumer packets or native
+widgets. Declared tool property policies and live copy/drop/reconnect acceptance remain open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

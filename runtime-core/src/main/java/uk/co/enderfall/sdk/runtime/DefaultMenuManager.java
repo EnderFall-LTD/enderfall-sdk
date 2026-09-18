@@ -29,13 +29,13 @@ import uk.co.enderfall.sdk.runtime.network.ByteArrayPacketWriter;
 /** Runtime-owned synchronized menu registration, session validation, and wire protocol. */
 public final class DefaultMenuManager implements MenuManager {
     static final int PACKET_LIMIT = 16_384;
-    private static final int PROTOCOL_VERSION = 1;
+    private static final int PROTOCOL_VERSION = 2;
     private static final int OPEN = 1;
     private static final int UPDATE = 2;
     private static final int CLOSE = 3;
     private static final int ACTION = 4;
     private static final int CLIENT_CLOSED = 5;
-    private static final int MAXIMUM_STATE_VALUE_BYTES = 2_048;
+    private static final int MAXIMUM_STATE_VALUE_BYTES = 4_096;
 
     private final String modId;
     private final String target;
@@ -102,6 +102,7 @@ public final class DefaultMenuManager implements MenuManager {
         Objects.requireNonNull(playerId, "playerId");
         Registration registration = requireRegistration(menu);
         Objects.requireNonNull(initialState, "initialState");
+        validateInputState(registration.spec(), initialState);
         long sessionId = nextPositiveSession();
         byte[] payload = encodeOpen(sessionId, menu, initialState);
         serverSessions.put(playerId, new ServerSession(sessionId, registration, initialState, null));
@@ -131,6 +132,7 @@ public final class DefaultMenuManager implements MenuManager {
         }
         Optional<MenuState> initial = Objects.requireNonNull(source.snapshot(), "snapshot");
         if (initial.isEmpty()) return;
+        validateInputState(registration.spec(), initial.get());
         long id = nextPositiveSession();
         byte[] payload = encodeOpen(id, menu, initial.get());
         serverSessions.put(playerId, new ServerSession(id, registration, initial.get(),
@@ -149,7 +151,9 @@ public final class DefaultMenuManager implements MenuManager {
                     if (serverSessions.remove(player, session)) {
                         adapter.sendToPlayer(player, payloadId, encodeSession(CLOSE, session.id()));
                     }
-                } else if (!snapshot.get().values().equals(session.state().values())) {
+                } else {
+                    validateInputState(session.registration().spec(), snapshot.get());
+                    if (snapshot.get().values().equals(session.state().values())) return;
                     byte[] payload = encodeState(UPDATE, session.id(), snapshot.get());
                     if (serverSessions.replace(player, session, session.withState(snapshot.get()))) {
                         adapter.sendToPlayer(player, payloadId, payload);
@@ -174,6 +178,8 @@ public final class DefaultMenuManager implements MenuManager {
     public void update(UUID playerId, MenuState state) {
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(state, "state");
+        ServerSession existing = serverSessions.get(playerId);
+        if (existing != null) validateInputState(existing.registration().spec(), state);
         ServerSession session = serverSessions.computeIfPresent(playerId,
                 (ignored, current) -> current.withState(state));
         if (session == null) {
@@ -236,7 +242,8 @@ public final class DefaultMenuManager implements MenuManager {
             MenuState state = readState(reader);
             clientSession = sessionId;
             PortableMenuView view = new PortableMenuView(sessionId, menu, registration.spec(), state);
-            adapter.showMenu(view, action -> sendAction(sessionId, action), () -> sendClosed(sessionId));
+            adapter.showMenuWithInputs(view, submission -> sendAction(sessionId, submission),
+                    () -> sendClosed(sessionId));
             if ("true".equalsIgnoreCase(System.getenv("ENDERFALL_CONNECTION_SMOKE"))) {
                 logger.info("ENDERFALL_MENU_CLIENT_OPEN {} {}", target, menu.id());
             }
@@ -272,13 +279,21 @@ public final class DefaultMenuManager implements MenuManager {
         if (!session.registration().spec().supportsAction(action)) {
             throw new PacketDecodingException("Unknown menu action " + action);
         }
-        session.registration().handler().handle(new ActionContext(playerId, session, action));
+        Map<String, String> inputs = readInputs(reader, session.registration().spec());
+        session.registration().handler().handle(new ActionContext(playerId, session, action, inputs));
     }
 
-    private void sendAction(long sessionId, String action) {
+    private void sendAction(long sessionId, PortableMenuSubmission submission) {
         ByteArrayPacketWriter writer = header(ACTION);
         writer.writeLong(sessionId);
-        writer.writeString(action, 64);
+        writer.writeString(submission.action(), 64);
+        var entries = new ArrayList<>(submission.inputs().entrySet());
+        entries.sort(Comparator.comparing(Map.Entry::getKey));
+        writer.writeVarInt(entries.size());
+        for (Map.Entry<String, String> entry : entries) {
+            writer.writeString(entry.getKey(), 64);
+            writer.writeString(entry.getValue(), 4_096);
+        }
         adapter.sendToServer(payloadId, writer.toByteArray());
     }
 
@@ -339,6 +354,33 @@ public final class DefaultMenuManager implements MenuManager {
         return state.build();
     }
 
+    private static Map<String, String> readInputs(ByteArrayPacketReader reader, MenuSpec spec) {
+        int size = reader.readVarInt();
+        if (size != spec.textInputs().size()) {
+            throw new PacketDecodingException("Menu input count does not match the active screen");
+        }
+        Map<String, String> inputs = new LinkedHashMap<>();
+        for (int index = 0; index < size; index++) {
+            String key = reader.readString(64);
+            var definition = spec.textInput(key).orElseThrow(() ->
+                    new PacketDecodingException("Unknown menu input " + key));
+            String value = definition.validate(reader.readString(definition.maximumUtf8Bytes()));
+            if (inputs.putIfAbsent(key, value) != null) {
+                throw new PacketDecodingException("Duplicate menu input " + key);
+            }
+        }
+        if (inputs.size() != spec.textInputs().size()) {
+            throw new PacketDecodingException("Menu input set does not match the active screen");
+        }
+        return Map.copyOf(inputs);
+    }
+
+    private static void validateInputState(MenuSpec spec, MenuState state) {
+        for (var input : spec.textInputs()) {
+            input.validate(state.value(input.key()));
+        }
+    }
+
     private synchronized Registration requireRegistration(MenuRef menu) {
         Objects.requireNonNull(menu, "menu");
         Registration registration = registrations.get(menu.id());
@@ -379,20 +421,24 @@ public final class DefaultMenuManager implements MenuManager {
         private final long sessionId;
         private final Registration registration;
         private final String action;
+        private final Map<String, String> inputs;
         private MenuState state;
         private boolean closed;
 
-        private ActionContext(UUID playerId, ServerSession session, String action) {
+        private ActionContext(UUID playerId, ServerSession session, String action,
+                Map<String, String> inputs) {
             this.playerId = playerId;
             sessionId = session.id();
             registration = session.registration();
             state = session.state();
             this.action = action;
+            this.inputs = Map.copyOf(inputs);
         }
 
         @Override public UUID playerId() { return playerId; }
         @Override public MenuRef menu() { return registration.ref(); }
         @Override public String action() { return action; }
+        @Override public Map<String, String> inputs() { return inputs; }
         @Override public MenuState state() { return state; }
 
         @Override
@@ -401,6 +447,7 @@ public final class DefaultMenuManager implements MenuManager {
                 throw new IllegalStateException("Menu action already closed its session");
             }
             Objects.requireNonNull(replacement, "state");
+            validateInputState(registration.spec(), replacement);
             ServerSession current = serverSessions.get(playerId);
             if (current == null || current.id() != sessionId) {
                 throw new IllegalStateException("Menu session is no longer active");

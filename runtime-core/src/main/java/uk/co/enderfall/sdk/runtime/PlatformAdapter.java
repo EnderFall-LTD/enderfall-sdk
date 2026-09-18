@@ -166,6 +166,12 @@ public interface PlatformAdapter {
         throw new UnsupportedOperationException("Synchronized screens are unavailable on this adapter");
     }
 
+    default void showMenuWithInputs(PortableMenuView view,
+                                    java.util.function.Consumer<PortableMenuSubmission> actionSender,
+                                    Runnable closeSender) {
+        throw new UnsupportedOperationException("Synchronized text-input screens are unavailable on this adapter");
+    }
+
     default void updateMenu(long sessionId, MenuState state) {
         throw new UnsupportedOperationException("Synchronized screens are unavailable on this adapter");
     }

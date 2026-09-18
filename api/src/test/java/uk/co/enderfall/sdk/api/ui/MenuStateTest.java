@@ -17,6 +17,6 @@ class MenuStateTest {
     void rejectsInvalidKeysAndUnboundedValues() {
         assertThrows(IllegalArgumentException.class, () -> MenuState.builder().value("Bad Key", "value"));
         assertThrows(IllegalArgumentException.class,
-                () -> MenuState.builder().value("message", "x".repeat(513)));
+                () -> MenuState.builder().value("message", "x".repeat(1_025)));
     }
 }

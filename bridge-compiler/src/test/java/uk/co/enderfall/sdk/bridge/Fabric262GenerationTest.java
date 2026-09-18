@@ -29,17 +29,17 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "EnderfallFabricRuntime.java",
                     "d373ffde76a07543b99d7da37e9ec3ab7da7d8d862eac426b23ebd0785cdb94e"),
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
-                    "218ff26aff5f46d374720b3468a4ae5e181e1ba1517629ca3507ebf813e8787d"),
+                    "b8e1694418bf577c8c71c1a8654d62f7cbfa7dc22ec40d55b6b2e67b2140404d"),
             Map.entry(PACKAGE_PATH + "Fabric26CommandBridge.java",
                     "3c22c12786498c42b4403b259cff5e8d84dac8ef9614c20b47b5826f31fa3d24"),
             Map.entry(PACKAGE_PATH + "FabricConsumerBootstrap.java",
                     "c3414e23f0805220fbeb7cde9baef4a96b564dab43dd050c7c0773d82722b0b5"),
             Map.entry(PACKAGE_PATH + "Fabric26PlatformAdapter.java",
-                    "f22db138d6c5aaa36addcc88ed45f721b58962482ccc34b36d851049927398ad"),
+                    "6ab761489be4a26215672b22faa873814926d2deaac09be715d9963f453746f3"),
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "Fabric26PortableMenuScreen.java",
-                    "7dc4d085b22e9f51fc860715859932e9bb836332e7734f96219f4caa1d0091f3"),
+                    "97530526b1bbd82577e486b2579c3063199977b7466f86f03b20c7674d469ae1"),
             Map.entry(PACKAGE_PATH + "FabricRawPayload.java",
                     "45ed5bdacd32817664eb106aef40305c8846e791575131ced6be68b5458173a6"),
             Map.entry(PACKAGE_PATH + "FabricRecipeBinding.java",
@@ -79,7 +79,7 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("448b84d26fe5920e79c60ff2011b961b16ec65ecf0483a5cfde3ad77a5cbdf7d",
+        assertEquals("d10588f963fd97fdb2ca646931d7ae8d85c590a0155456378ec6c49c37294873",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
@@ -94,7 +94,7 @@ class Fabric262GenerationTest {
     }
 
     @Test
-    void reusesEightCanonicalSourcesAndReplacesSixNativeShells() throws Exception {
+    void reusesSevenCanonicalSourcesAndReplacesGeneratedNativeShells() throws Exception {
         Path canonical = canonicalRuntimeRoot();
         Path output = temporaryDirectory.resolve("reuse");
         generate(canonical, output);
@@ -112,6 +112,12 @@ class Fabric262GenerationTest {
             for (Path canonicalFile : stream.filter(Files::isRegularFile).toList()) {
                 String name = canonicalFile.getFileName().toString();
                 Path relative = canonicalJava.relativize(canonicalFile);
+                if (name.equals("FabricClientHooks.java")) {
+                    assertTrue(Files.isRegularFile(output.resolve("sources").resolve(relative)));
+                    assertFalse(java.util.Arrays.equals(Files.readAllBytes(canonicalFile),
+                            Files.readAllBytes(output.resolve("sources").resolve(relative))));
+                    continue;
+                }
                 if (replacements.containsKey(name)) {
                     assertFalse(Files.exists(output.resolve("sources").resolve(relative)));
                     assertTrue(Files.isRegularFile(output.resolve("sources").resolve(PACKAGE_PATH)
@@ -123,7 +129,7 @@ class Fabric262GenerationTest {
                 reused++;
             }
         }
-        assertEquals(8, reused);
+        assertEquals(7, reused);
     }
 
     @Test

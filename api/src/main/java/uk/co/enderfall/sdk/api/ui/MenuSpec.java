@@ -16,6 +16,7 @@ public final class MenuSpec {
     private final List<MenuLabel> labels;
     private final List<MenuButton> buttons;
     private final List<MenuGauge> gauges;
+    private final List<MenuTextInput> textInputs;
 
     private MenuSpec(Builder builder) {
         title = builder.title;
@@ -25,6 +26,7 @@ public final class MenuSpec {
         labels = Collections.unmodifiableList(new ArrayList<>(builder.labels));
         buttons = Collections.unmodifiableList(new ArrayList<>(builder.buttons));
         gauges = List.copyOf(builder.gauges);
+        textInputs = List.copyOf(builder.textInputs);
     }
 
     public static Builder builder(String title) {
@@ -57,6 +59,13 @@ public final class MenuSpec {
 
     public List<MenuGauge> gauges() { return gauges; }
 
+    public List<MenuTextInput> textInputs() { return textInputs; }
+
+    public java.util.Optional<MenuTextInput> textInput(String key) {
+        Objects.requireNonNull(key, "key");
+        return textInputs.stream().filter(input -> input.key().equals(key)).findFirst();
+    }
+
     public boolean supportsAction(String action) {
         return buttons.stream().anyMatch(button -> button.action().equals(action));
     }
@@ -70,11 +79,25 @@ public final class MenuSpec {
         private final List<MenuButton> buttons = new ArrayList<>();
         private final Set<String> actions = new LinkedHashSet<>();
         private final List<MenuGauge> gauges = new ArrayList<>();
+        private final List<MenuTextInput> textInputs = new ArrayList<>();
+        private final Set<String> inputKeys = new LinkedHashSet<>();
 
         public Builder gauge(MenuGauge gauge) {
             Objects.requireNonNull(gauge, "gauge");
             if (gauges.size() >= 8) throw new IllegalArgumentException("A menu supports at most eight gauges");
             gauges.add(gauge);
+            return this;
+        }
+
+        public Builder textInput(MenuTextInput input) {
+            Objects.requireNonNull(input, "input");
+            if (textInputs.size() >= 8) {
+                throw new IllegalArgumentException("A menu supports at most eight text inputs");
+            }
+            if (!inputKeys.add(input.key())) {
+                throw new IllegalArgumentException("Duplicate menu text-input key: " + input.key());
+            }
+            textInputs.add(input);
             return this;
         }
 
@@ -135,6 +158,13 @@ public final class MenuSpec {
                         || button.x() + button.width() > width
                         || button.y() + button.height() > height) {
                     throw new IllegalArgumentException("Menu button is outside the panel: " + button.action());
+                }
+            }
+            for (MenuTextInput input : textInputs) {
+                if (input.x() < 0 || input.y() < 0
+                        || input.x() + input.width() > width
+                        || input.y() + input.height() > height) {
+                    throw new IllegalArgumentException("Menu text input is outside the panel: " + input.key());
                 }
             }
             return new MenuSpec(this);

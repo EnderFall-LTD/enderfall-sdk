@@ -1,5 +1,6 @@
 package uk.co.enderfall.sdk.api.ui;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -86,8 +87,10 @@ public final class MenuState {
                 throw new IllegalArgumentException("Invalid menu state key: " + key);
             }
             String text = value.toString();
-            if (text.length() > 512) {
-                throw new IllegalArgumentException("Menu state value exceeds 512 characters: " + key);
+            if (text.codePointCount(0, text.length()) > 1_024
+                    || text.getBytes(StandardCharsets.UTF_8).length > 4_096) {
+                throw new IllegalArgumentException(
+                        "Menu state value exceeds 1024 characters or 4096 UTF-8 bytes: " + key);
             }
             if (!values.containsKey(key) && values.size() >= MAXIMUM_ENTRIES) {
                 throw new IllegalArgumentException("Menu state exceeds " + MAXIMUM_ENTRIES + " entries");

@@ -154,8 +154,9 @@ final class PlatformGameplaySources {
                     """;
             case SHOW_MENU -> """
                         @Override
-                        public void showMenu(uk.co.enderfall.sdk.runtime.PortableMenuView view,
-                                             java.util.function.Consumer<String> actionSender, Runnable closeSender) {
+                        public void showMenuWithInputs(uk.co.enderfall.sdk.runtime.PortableMenuView view,
+                                java.util.function.Consumer<uk.co.enderfall.sdk.runtime.PortableMenuSubmission> actionSender,
+                                Runnable closeSender) {
                             ${ClientHooks}.showMenu(view, actionSender, closeSender);
                         }
                     

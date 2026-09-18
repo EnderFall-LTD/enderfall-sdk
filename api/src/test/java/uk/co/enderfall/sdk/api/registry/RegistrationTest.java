@@ -7,6 +7,71 @@ import org.junit.jupiter.api.Test;
 import uk.co.enderfall.sdk.api.*;
 
 class RegistrationTest {
+    private record InteractionListener(
+            uk.co.enderfall.sdk.api.event.EventPriority priority,
+            uk.co.enderfall.sdk.api.event.EventListener<uk.co.enderfall.sdk.api.event.InteractionEvent> listener) { }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void separatelyAttachedPortableItemRunsBeforeClickedBlock() throws Exception {
+        var listeners = new ArrayList<InteractionListener>();
+        var bus = (uk.co.enderfall.sdk.api.event.EventBus) Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[] { uk.co.enderfall.sdk.api.event.EventBus.class },
+                (proxy, method, args) -> {
+                    listeners.add(new InteractionListener(
+                            (uk.co.enderfall.sdk.api.event.EventPriority) args[1],
+                            (uk.co.enderfall.sdk.api.event.EventListener<uk.co.enderfall.sdk.api.event.InteractionEvent>) args[2]));
+                    return null;
+                });
+        var blockRegistrar = (BlockRegistrar) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] { BlockRegistrar.class }, (proxy, method, args) -> new BlockRef((ResourceId) args[0]));
+        var itemRegistrar = (ItemRegistrar) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] { ItemRegistrar.class }, (proxy, method, args) -> new ItemRef((ResourceId) args[0]));
+        var context = (ModContext) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] { ModContext.class }, (proxy, method, args) -> switch (method.getName()) {
+                    case "modId" -> "test";
+                    case "blocks" -> blockRegistrar;
+                    case "items" -> itemRegistrar;
+                    case "events" -> bus;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        var blockUses = new java.util.concurrent.atomic.AtomicInteger();
+        var itemUses = new java.util.concurrent.atomic.AtomicInteger();
+        var blocks = Registration.blocks("test");
+        BlockRef block = blocks.block("six_way", () -> new uk.co.enderfall.sdk.api.block.PortableBlock() {
+            @Override public void configure(Registration.BlockOptions options) { }
+            @Override public void onUse(ModContext ignored, uk.co.enderfall.sdk.api.event.InteractionEvent event) {
+                blockUses.incrementAndGet();
+                event.handle();
+            }
+        }, options -> { });
+        var items = Registration.items("test");
+        ItemRef tool = items.item("tool", () -> new uk.co.enderfall.sdk.api.item.PortableItem() {
+            @Override public void configure(ItemSpec.Builder options) { }
+            @Override public void onUseOnBlock(ModContext ignored,
+                    uk.co.enderfall.sdk.api.event.InteractionEvent event) {
+                itemUses.incrementAndGet();
+                event.handle();
+            }
+        }, options -> { });
+
+        Registration.register(context, blocks);
+        Registration.register(context, items);
+        assertEquals(2, listeners.size());
+        listeners.sort(Comparator.comparing(InteractionListener::priority));
+        var event = new uk.co.enderfall.sdk.api.event.InteractionEvent(
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_BLOCK,
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER, UUID.randomUUID(), block.id(),
+                new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                        ResourceId.of("minecraft", "overworld"), 1, 2, 3),
+                tool.id(), uk.co.enderfall.sdk.api.event.InteractionEvent.Hand.MAIN_HAND, false);
+        for (InteractionListener listener : listeners) listener.listener().handle(event);
+
+        assertEquals(1, itemUses.get());
+        assertEquals(0, blockUses.get());
+        assertTrue(event.handled());
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void customItemFactoryConfiguresOnceAndReceivesOnlyUnhandledServerUses() throws Exception {

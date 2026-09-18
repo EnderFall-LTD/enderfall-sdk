@@ -13,6 +13,8 @@ import uk.co.enderfall.sdk.api.registry.Registration;
 
 /** Ordinary block proving six-way facing plus real server-world state mutation. */
 public final class PreviewOrientationBlock implements PortableBlock {
+    private static final uk.co.enderfall.sdk.api.ResourceId AIR =
+            uk.co.enderfall.sdk.api.ResourceId.of("minecraft", "air");
     public static final BlockProperty<Boolean> COMPACT = BlockProperty.bool("compact");
     public static final BlockStateDefinition STATES = BlockStateDefinition.builder()
             .property(COMPACT, false).build();
@@ -38,6 +40,9 @@ public final class PreviewOrientationBlock implements PortableBlock {
     }
 
     @Override public void onUse(ModContext context, InteractionEvent event) {
+        // Empty-hand use demonstrates PortableBlock behavior. A held tool gets the
+        // earlier PortableItem callback; held block items retain normal placement.
+        if (event.heldItem().filter(item -> !item.equals(AIR)).isPresent()) return;
         event.blockLocation().ifPresent(location -> {
             if (context.blockStates().update(PreviewBlocks.ORIENTATION_TEST, location,
                     state -> state.with(COMPACT, !state.get(COMPACT)))) event.handle();

@@ -111,10 +111,12 @@ public final class Registration {
                 itemBehaviors.put(item.key.id, item.behavior);
             }
         }
-        if (!behaviors.isEmpty() || !itemBehaviors.isEmpty()) {
-            Map<ResourceId, uk.co.enderfall.sdk.api.block.PortableBlock> registeredBlocks = Map.copyOf(behaviors);
+        if (!itemBehaviors.isEmpty()) {
             Map<ResourceId, uk.co.enderfall.sdk.api.item.PortableItem> registeredItems = Map.copyOf(itemBehaviors);
-            context.events().subscribe(uk.co.enderfall.sdk.api.event.SdkEvents.INTERACTION, event -> {
+            // Held-item behavior must be resolved before clicked-block behavior, even when
+            // their registration groups are attached in separate register(...) calls.
+            context.events().subscribe(uk.co.enderfall.sdk.api.event.SdkEvents.INTERACTION,
+                    uk.co.enderfall.sdk.api.event.EventPriority.EARLY, event -> {
                 if (event.side() != uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER
                         || event.cancelled() || event.handled()) return;
                 if (event.kind() == uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM) {
@@ -124,7 +126,15 @@ public final class Registration {
                 }
                 var item = event.heldItem().map(registeredItems::get).orElse(null);
                 if (item != null) item.onUseOnBlock(context, event);
-                if (event.cancelled() || event.handled()) return;
+            });
+        }
+        if (!behaviors.isEmpty()) {
+            Map<ResourceId, uk.co.enderfall.sdk.api.block.PortableBlock> registeredBlocks = Map.copyOf(behaviors);
+            context.events().subscribe(uk.co.enderfall.sdk.api.event.SdkEvents.INTERACTION,
+                    uk.co.enderfall.sdk.api.event.EventPriority.NORMAL, event -> {
+                if (event.side() != uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER
+                        || event.kind() != uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_BLOCK
+                        || event.cancelled() || event.handled()) return;
                 var block = registeredBlocks.get(event.target());
                 if (block != null) block.onUse(context, event);
             });

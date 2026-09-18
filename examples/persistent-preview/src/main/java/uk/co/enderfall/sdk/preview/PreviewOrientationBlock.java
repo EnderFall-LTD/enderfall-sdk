@@ -42,7 +42,9 @@ public final class PreviewOrientationBlock implements PortableBlock {
     @Override public void onUse(ModContext context, InteractionEvent event) {
         // Empty-hand use demonstrates PortableBlock behavior. A held tool gets the
         // earlier PortableItem callback; held block items retain normal placement.
-        if (event.heldItem().filter(item -> !item.equals(AIR)).isPresent()) return;
+        // Ignore the synthetic empty off-hand pass after a handled main-hand use.
+        if (event.heldItem().filter(item -> !item.equals(AIR)).isPresent()
+                || event.hand().filter(hand -> hand != InteractionEvent.Hand.MAIN_HAND).isPresent()) return;
         event.blockLocation().ifPresent(location -> {
             if (context.blockStates().update(PreviewBlocks.ORIENTATION_TEST, location,
                     state -> state.with(COMPACT, !state.get(COMPACT)))) event.handle();

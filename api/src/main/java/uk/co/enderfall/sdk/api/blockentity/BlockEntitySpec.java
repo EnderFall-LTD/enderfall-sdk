@@ -17,6 +17,7 @@ public final class BlockEntitySpec {
     private final String menuOpenAnimation;
     private final String menuCloseAnimation;
     private final int inventorySlots;
+    private final boolean lootTableInventory;
     private final InventoryAccessSpec inventoryAccess;
     private final java.util.Set<Integer> renderSlots;
     private final java.util.Set<String> renderTanks;
@@ -33,6 +34,10 @@ public final class BlockEntitySpec {
             throw new IllegalArgumentException("Menu animations must be declared");
         }
         inventorySlots = builder.inventorySlots;
+        lootTableInventory = builder.lootTableInventory;
+        if (lootTableInventory && inventorySlots == 0) {
+            throw new IllegalArgumentException("Loot-table storage requires at least one inventory slot");
+        }
         inventoryAccess = builder.inventoryAccess == null ? null
                 : InventoryAccessSpec.configured(inventorySlots, builder.inventoryAccess);
         for (int slot : builder.renderSlots) {
@@ -54,6 +59,8 @@ public final class BlockEntitySpec {
     public java.util.Optional<String> menuCloseAnimation() { return java.util.Optional.ofNullable(menuCloseAnimation); }
     public Map<String, uk.co.enderfall.sdk.api.fluid.FluidTankSpec> tanks() { return tanks; }
     public int inventorySlots() { return inventorySlots; }
+    /** Whether native structure loot tables may populate this inventory lazily on first access. */
+    public boolean lootTableInventory() { return lootTableInventory; }
     /** Sided inventory automation. An absent declaration exposes no hopper ports. */
     public java.util.Optional<InventoryAccessSpec> inventoryAccess() {
         return java.util.Optional.ofNullable(inventoryAccess);
@@ -85,6 +92,7 @@ public final class BlockEntitySpec {
             return this;
         }
         private int inventorySlots;
+        private boolean lootTableInventory;
         private java.util.function.Consumer<InventoryAccessSpec.Builder> inventoryAccess;
         private final java.util.Set<Integer> renderSlots = new java.util.TreeSet<>();
         private final java.util.Set<String> renderTanks = new java.util.TreeSet<>();
@@ -132,6 +140,15 @@ public final class BlockEntitySpec {
                 throw new IllegalArgumentException("Inventory slots must be between 0 and " + MAXIMUM_SLOTS);
             }
             inventorySlots = count;
+            return this;
+        }
+
+        /**
+         * Enables vanilla chest/barrel loot-table NBT and first-access generation.
+         * This does not select a table; structures, commands or world generation assign it.
+         */
+        public Builder lootTableInventory() {
+            lootTableInventory = true;
             return this;
         }
 

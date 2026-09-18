@@ -33,6 +33,9 @@ class PersistenceFixtureMainTest {
             assertEquals(policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/items/axis_test.json")), target);
             assertTrue(Files.exists(output.resolve("resources/data/enderfall_persistent_preview/"
                     + (policy.legacy() ? "loot_tables" : "loot_table") + "/blocks/axis_test.json")), target);
+            assertTrue(Files.exists(output.resolve("resources/data/enderfall_persistent_preview/"
+                    + (policy.legacy() ? "loot_tables" : "loot_table")
+                    + "/chests/storage_cabinet_test.json")), target);
             String metadata = Files.readString(output.resolve("resources/" + (policy.fabric() ? "fabric.mod.json"
                     : policy.legacy() ? "META-INF/mods.toml" : "META-INF/neoforge.mods.toml")));
             assertTrue(metadata.contains("enderfall_sdk"), target);

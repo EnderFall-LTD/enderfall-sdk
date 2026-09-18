@@ -16,8 +16,17 @@ public final class PreviewOrientationBlock implements PortableBlock {
     public static final BlockProperty<Boolean> COMPACT = BlockProperty.bool("compact");
     public static final BlockStateDefinition STATES = BlockStateDefinition.builder()
             .property(COMPACT, false).build();
-    public static final BlockStateShapes SHAPES = BlockStateShapes.create(STATES, state -> state.get(COMPACT)
-            ? BlockShape.box(0, 0, 0, 16, 4, 16) : PreviewWorkbenchBlock.SHAPE);
+    /** Both shapes are authored pointing north, matching the six-way model contract. */
+    public static final BlockShape EXTENDED_SHAPE = BlockShape.union(
+            BlockShape.box(3, 3, 0, 13, 13, 16),
+            BlockShape.box(2, 2, 0, 14, 14, 2),
+            BlockShape.box(2, 2, 14, 14, 14, 16));
+    public static final BlockShape COMPACT_SHAPE = BlockShape.union(
+            BlockShape.box(3, 3, 0, 13, 13, 8),
+            BlockShape.box(2, 2, 0, 14, 14, 2),
+            BlockShape.box(2, 2, 6, 14, 14, 8));
+    public static final BlockStateShapes SHAPES = BlockStateShapes.create(STATES,
+            state -> state.get(COMPACT) ? COMPACT_SHAPE : EXTENDED_SHAPE);
 
     @Override public void configure(Registration.BlockOptions properties) {
         properties.sixWayFacing().states(STATES).stateShapes(SHAPES);

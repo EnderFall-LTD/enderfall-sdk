@@ -97,6 +97,25 @@ BlockEntitySpec machine = BlockEntitySpec.builder(workbenchBlock)
 Specifications are immutable. Duplicate names, undeclared fields, and invalid values
 fail instead of silently creating mismatched state.
 
+### Lazy structure loot
+
+Storage blocks that can be populated by structures, world generation or commands may
+opt into vanilla-compatible lazy loot-table data:
+
+```java
+BlockEntitySpec cabinet = BlockEntitySpec.builder(cabinetBlock)
+        .inventorySlots(27)
+        .lootTableInventory()
+        .build();
+```
+
+The declaration enables native `LootTable` and `LootTableSeed` persistence; it does
+not assign a table to every placed cabinet. A pending table is retained across world
+saves and populated exactly once when a player opens it, a hopper inspects it, or the
+block is removed and its contents must drop. Normal player-placed cabinets remain
+empty. Missing or invalid loot-table IDs follow the target Minecraft version's vanilla
+handling. The preview contains a deterministic one-diamond table for live validation.
+
 ### Portable registration and opening contract
 
 The experimental entry points are now implemented in the API and shared routing layer:

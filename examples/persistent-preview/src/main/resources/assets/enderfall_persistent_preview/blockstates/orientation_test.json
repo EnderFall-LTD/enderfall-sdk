@@ -1,1 +1,16 @@
-{"variants":{"facing=north,compact=false":{"model":"enderfall_persistent_preview:block/orientation_test","y":0,"uvlock":true},"facing=north,compact=true":{"model":"enderfall_persistent_preview:block/orientation_test","y":0,"uvlock":true},"facing=east,compact=false":{"model":"enderfall_persistent_preview:block/orientation_test","y":90,"uvlock":true},"facing=east,compact=true":{"model":"enderfall_persistent_preview:block/orientation_test","y":90,"uvlock":true},"facing=south,compact=false":{"model":"enderfall_persistent_preview:block/orientation_test","y":180,"uvlock":true},"facing=south,compact=true":{"model":"enderfall_persistent_preview:block/orientation_test","y":180,"uvlock":true},"facing=west,compact=false":{"model":"enderfall_persistent_preview:block/orientation_test","y":270,"uvlock":true},"facing=west,compact=true":{"model":"enderfall_persistent_preview:block/orientation_test","y":270,"uvlock":true},"facing=up,compact=false":{"model":"enderfall_persistent_preview:block/orientation_test","y":0,"x":270,"uvlock":true},"facing=up,compact=true":{"model":"enderfall_persistent_preview:block/orientation_test","y":0,"x":270,"uvlock":true},"facing=down,compact=false":{"model":"enderfall_persistent_preview:block/orientation_test","y":0,"x":90,"uvlock":true},"facing=down,compact=true":{"model":"enderfall_persistent_preview:block/orientation_test","y":0,"x":90,"uvlock":true}}}
+{
+  "variants": {
+    "facing=north,compact=false": { "model": "enderfall_persistent_preview:block/orientation_test", "y": 0, "uvlock": true },
+    "facing=north,compact=true": { "model": "enderfall_persistent_preview:block/orientation_test_compact", "y": 0, "uvlock": true },
+    "facing=east,compact=false": { "model": "enderfall_persistent_preview:block/orientation_test", "y": 90, "uvlock": true },
+    "facing=east,compact=true": { "model": "enderfall_persistent_preview:block/orientation_test_compact", "y": 90, "uvlock": true },
+    "facing=south,compact=false": { "model": "enderfall_persistent_preview:block/orientation_test", "y": 180, "uvlock": true },
+    "facing=south,compact=true": { "model": "enderfall_persistent_preview:block/orientation_test_compact", "y": 180, "uvlock": true },
+    "facing=west,compact=false": { "model": "enderfall_persistent_preview:block/orientation_test", "y": 270, "uvlock": true },
+    "facing=west,compact=true": { "model": "enderfall_persistent_preview:block/orientation_test_compact", "y": 270, "uvlock": true },
+    "facing=up,compact=false": { "model": "enderfall_persistent_preview:block/orientation_test", "y": 0, "x": 270, "uvlock": true },
+    "facing=up,compact=true": { "model": "enderfall_persistent_preview:block/orientation_test_compact", "y": 0, "x": 270, "uvlock": true },
+    "facing=down,compact=false": { "model": "enderfall_persistent_preview:block/orientation_test", "y": 0, "x": 90, "uvlock": true },
+    "facing=down,compact=true": { "model": "enderfall_persistent_preview:block/orientation_test_compact", "y": 0, "x": 90, "uvlock": true }
+  }
+}

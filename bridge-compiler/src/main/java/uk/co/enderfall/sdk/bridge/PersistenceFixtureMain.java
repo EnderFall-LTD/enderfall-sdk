@@ -66,6 +66,18 @@ public final class PersistenceFixtureMain {
                 }
             }
         }
+        Path containerLoot = fixture.resolve("src/main/resources/data/" + ID + "/loot_table/chests");
+        if (Files.isDirectory(containerLoot)) {
+            try (var files = Files.walk(containerLoot)) {
+                for (Path file : files.toList()) {
+                    if (Files.isSymbolicLink(file)) throw new IllegalArgumentException("Symlink in container loot tables");
+                    if (!Files.isRegularFile(file)) continue;
+                    String relative = containerLoot.relativize(file).toString().replace('\\', '/');
+                    write(output, "resources/data/" + ID + "/" + (policy.legacy() ? "loot_tables" : "loot_table")
+                            + "/chests/" + relative, Files.readString(file));
+                }
+            }
+        }
         for (String block : List.of("workbench", "timed_workbench", "fluid_tank", "orientation_test", "axis_test", "storage_cabinet")) {
             if (!policy.modernRecipes()) write(output, "resources/assets/" + ID + "/models/item/" + block + ".json",
                     "{\"parent\":\"" + ID + ":block/" + block + "\"}\n");

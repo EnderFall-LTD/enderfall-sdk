@@ -42,7 +42,8 @@ final class BlockEntityPreviewSources {
                 import uk.co.enderfall.sdk.runtime.blockentity.ProcessingStateCodec;
 
                 /** Development-only native binding. Not shipped until container/drop integration is complete. */
-                public final class StoredBlockEntity extends BlockEntity implements net.minecraft.world.WorldlyContainer {
+                public final class StoredBlockEntity extends net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity
+                        implements net.minecraft.world.WorldlyContainer {
                     private static final String SAVE_KEY = "enderfall_storage";
                     private static final String PROCESS_KEY = "enderfall_processing";
                     private PortableProcessingCycle.State processing = PortableProcessingCycle.State.idle();
@@ -81,6 +82,7 @@ final class BlockEntityPreviewSources {
                         ${CONTAINER_PLAYER_CAST}
                         if (level == null || level.isClientSide || player.isSpectator() || binding.storageContainer == null) return;
                         requireServer();
+                        unpackLootTable(player);
                         if (containerViewers.add(player.getUUID()) && containerViewers.size() == 1) {
                             updateContainerOpenState(true);
                             playContainerSound(true);
@@ -239,12 +241,41 @@ final class BlockEntityPreviewSources {
                         for (int slot = 0; slot < container.getContainerSize(); slot++) stacks.add(container.getItem(slot));
                         return stacks;
                     }
+                    @Override protected net.minecraft.network.chat.Component getDefaultName() {
+                        return net.minecraft.network.chat.Component.translatable("container."
+                                + definition.block().id().namespace() + "." + definition.block().id().path());
+                    }
+                    @Override protected net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id,
+                            net.minecraft.world.entity.player.Inventory playerInventory) {
+                        return null; // SDK menu registration owns the actual menu factory.
+                    }
+                    @Override protected net.minecraft.core.NonNullList<ItemStack> getItems() {
+                        var items = net.minecraft.core.NonNullList.withSize(inventory.getContainerSize(), ItemStack.EMPTY);
+                        for (int slot = 0; slot < inventory.getContainerSize(); slot++) items.set(slot, inventory.getItem(slot));
+                        return items;
+                    }
+                    @Override protected void setItems(net.minecraft.core.NonNullList<ItemStack> items) {
+                        if (items.size() != inventory.getContainerSize()) {
+                            throw new IllegalArgumentException("Native container component has the wrong slot count");
+                        }
+                        restoringInventory = true;
+                        try {
+                            for (int slot = 0; slot < items.size(); slot++) inventory.setItem(slot, items.get(slot));
+                        } finally { restoringInventory = false; }
+                        inventory.setChanged();
+                    }
+                    @Override public void unpackLootTable(Player player) {
+                        if (!definition.lootTableInventory()) return;
+                        boolean pending = lootTable != null;
+                        super.unpackLootTable(player);
+                        if (pending && lootTable == null) inventory.setChanged();
+                    }
                     @Override public int getContainerSize() { return inventory.getContainerSize(); }
-                    @Override public boolean isEmpty() { return inventory.isEmpty(); }
-                    @Override public ItemStack getItem(int slot) { return inventory.getItem(slot); }
-                    @Override public ItemStack removeItem(int slot, int amount) { return inventory.removeItem(slot, amount); }
-                    @Override public ItemStack removeItemNoUpdate(int slot) { return inventory.removeItemNoUpdate(slot); }
-                    @Override public void setItem(int slot, ItemStack stack) { inventory.setItem(slot, stack); }
+                    @Override public boolean isEmpty() { unpackLootTable(null); return inventory.isEmpty(); }
+                    @Override public ItemStack getItem(int slot) { unpackLootTable(null); return inventory.getItem(slot); }
+                    @Override public ItemStack removeItem(int slot, int amount) { unpackLootTable(null); return inventory.removeItem(slot, amount); }
+                    @Override public ItemStack removeItemNoUpdate(int slot) { unpackLootTable(null); return inventory.removeItemNoUpdate(slot); }
+                    @Override public void setItem(int slot, ItemStack stack) { unpackLootTable(null); inventory.setItem(slot, stack); }
                     @Override public void clearContent() { inventory.clearContent(); }
                     @Override public boolean stillValid(Player player) { return inventory.stillValid(player); }
                     @Override public boolean canPlaceItem(int slot, ItemStack stack) {
@@ -277,10 +308,11 @@ final class BlockEntityPreviewSources {
                                 || binding.ports != null && binding.ports.canExtract(slot, machinePortFace(face));
                     }
                     public BlockEntitySpec definition() { return definition; }
-                    public ItemStack stack(int slot) { return inventory.getItem(slot).copy(); }
+                    public ItemStack stack(int slot) { return getItem(slot).copy(); }
                     /** Internal server menu binding. Menus must remove listeners on close, not clear this inventory. */
                     public SimpleContainer inventory() {
                         requireServer();
+                        unpackLootTable(null);
                         return inventory;
                     }
                     public int value(BlockEntityInt field) { return storage.get(field); }
@@ -422,6 +454,7 @@ final class BlockEntityPreviewSources {
                     @Override
                     protected void saveAdditional(${SAVE_ARGS}) {
                         super.saveAdditional(${SAVE_SUPER_ARGS});
+                        if (definition.lootTableInventory()) trySaveLootTable(tag);
                         serializationRegistries = ${REGISTRY_CONTEXT};
                         try {
                             // Native slots can mutate live stacks before issuing their change notification.
@@ -438,9 +471,10 @@ final class BlockEntityPreviewSources {
                     ${LOAD_SIGNATURE} {
                         ${LOAD_SUPER};
                         ${RENDER_LOAD}
+                        boolean pendingLoot = definition.lootTableInventory() && tryLoadLootTable(tag);
                         if (!tag.contains(SAVE_KEY)) {
                             if (tag.contains(PROCESS_KEY)) throw new IllegalArgumentException("Processing state has no inventory snapshot");
-                            return; // Newly placed block, no saved inventory yet.
+                            return; // Newly placed block or external structure loot table; no SDK snapshot yet.
                         }
                         if (!tag.contains(SAVE_KEY, Tag.TAG_BYTE_ARRAY)) {
                             throw new IllegalArgumentException("Wrong EnderFall block-entity storage tag type");
@@ -720,6 +754,7 @@ final class BlockEntityPreviewSources {
                                                 BlockState next, boolean moved) {
                             if (!state.is(next.getBlock()) && !level.isClientSide
                                     && level.getBlockEntity(pos) instanceof StoredBlockEntity entity) {
+                                entity.unpackLootTable(null);
                                 Containers.dropContents(level, pos, entity.inventory);
                                 entity.inventory.clearContent();
                                 level.updateNeighbourForOutputSignal(pos, this);

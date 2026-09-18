@@ -60,6 +60,7 @@ final class BlockEntity26Sources {
                     @Override
                     public void preRemoveSideEffects(BlockPos pos, BlockState next) {
                         if (level != null && !level.isClientSide() && !getBlockState().is(next.getBlock())) {
+                            unpackLootTable(null);
                             Containers.dropContents(level, pos, inventory);
                             inventory.clearContent();
                             level.updateNeighbourForOutputSignal(pos, getBlockState().getBlock());

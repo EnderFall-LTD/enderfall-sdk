@@ -171,6 +171,19 @@ class PersistenceRuntimeSourcesTest {
                 }
                 Path storage = sources.stream().filter(path -> path.getFileName().toString().equals("StoredBlockEntity.java")).findFirst().orElseThrow();
                 String storedSource = Files.readString(storage);
+                assertTrue(storedSource.contains("extends net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity"), target);
+                assertTrue(storedSource.contains("if (!definition.lootTableInventory()) return;"), target);
+                assertTrue(storedSource.contains("super.unpackLootTable(player);"), target);
+                assertTrue(storedSource.contains("definition.lootTableInventory() && tryLoadLootTable(tag)"), target);
+                assertTrue(storedSource.contains("definition.lootTableInventory()) trySaveLootTable(tag)"), target);
+                assertTrue(storedSource.contains(target.startsWith("26.2-")
+                        ? "preRemoveSideEffects(BlockPos pos, BlockState next)" : "entity.unpackLootTable(null);"), target);
+                if (target.startsWith("26.2-")) {
+                    int removal = storedSource.indexOf("preRemoveSideEffects(BlockPos pos, BlockState next)");
+                    int unpack = storedSource.indexOf("unpackLootTable(null);", removal);
+                    int drops = storedSource.indexOf("Containers.dropContents", removal);
+                    assertTrue(unpack >= removal && drops > unpack, target);
+                }
                 assertTrue(storedSource.contains("notifyRenderSnapshot();"), target);
                 int updateStart = storedSource.indexOf("public CompoundTag getUpdateTag(");
                 assertTrue(updateStart >= 0, target);

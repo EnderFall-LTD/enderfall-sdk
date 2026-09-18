@@ -10,8 +10,10 @@ rotation, mirroring, neighbor-derived state, scheduled transitions and real
 waterlogging, barrel/dispenser six-way direction and log/pillar axis placement are
 implemented. General 9-54 slot storage containers now have portable
 registration, vanilla synchronization, shift-click, hopper access, viewer tracking,
-open state, sound profiles and configurable per-face slot access. Connecting-table and storage fixtures still need
-cross-target gameplay acceptance; loot-table-backed inventories remain next.
+open state, sound profiles, configurable per-face slot access and opt-in vanilla-style
+lazy loot-table population. Connecting-table, storage and loot-table fixtures still
+need cross-target gameplay acceptance. Portable item behaviour and durable item data
+are the next implementation stage.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

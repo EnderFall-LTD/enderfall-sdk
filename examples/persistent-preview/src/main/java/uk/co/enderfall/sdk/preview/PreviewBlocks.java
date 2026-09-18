@@ -36,7 +36,7 @@ public final class PreviewBlocks {
             p -> p.tank(PreviewFluids.RESERVOIR).renderTank(PreviewFluids.RESERVOIR.name())
                     .serverTicker(PreviewFluids::tick));
     public static final BlockEntitySpec CABINET_STORAGE = Registration.storage(STORAGE_CABINET,
-            p -> p.inventorySlots(27).inventoryAccess(access -> access
+            p -> p.inventorySlots(27).lootTableInventory().inventoryAccess(access -> access
                     .insert(BlockDirection.UP)
                     .horizontalFaces(InventoryAccessMode.BOTH)
                     .extract(BlockDirection.DOWN)));

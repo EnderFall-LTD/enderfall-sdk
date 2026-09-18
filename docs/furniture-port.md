@@ -35,7 +35,7 @@ explicit extension points, never SDK-generated or loader-owned implementation cl
 | Stage | Concrete furniture evidence | SDK work and acceptance |
 | --- | --- | --- |
 | 1. Custom block definitions | `common/blocks/BarrelModBlock.java`, `TableBlock.java` | Factory/configuration, server-use hooks, static cuboid shapes, typed boolean/integer/enum state, state-dependent shapes, server-world state mutation, opt-in horizontal/six-way facing, custom initial-state placement, neighbor-derived state, scheduled transitions and real waterlogging are implemented. The portable connecting-table fixture compiles unchanged on all targets; live connection, bucket, fluid-tick and save/reload acceptance remains. |
-| 2. General containers | `common/blocks/entity/BarrelModBlockEntity.java` | A 9-54 slot vanilla-synchronized storage API, shift-click routing, all-face hopper access, first/last viewer tracking, sounds and portable open block state are implemented. Loot-table-backed inventory is still missing. Prove simultaneous viewers, death/disconnect, save/reload, drops and hopper transfer in live targets. Existing timed workbench menus are not a substitute. |
+| 2. General containers | `common/blocks/entity/BarrelModBlockEntity.java` | A 9-54 slot vanilla-synchronized storage API, shift-click routing, configurable hopper access, first/last viewer tracking, sounds, portable open block state and opt-in lazy vanilla loot tables are implemented. Prove simultaneous viewers, death/disconnect, pending-loot save/reload, exactly-once loot generation, drops and hopper transfer in live targets. Existing timed workbench menus are not a substitute. |
 | 3. Items and durable data | `registry/ModComponents.java`, `common/items/WrenchItem.java` | Portable letter author/text data persisted and synchronized, with legacy representation on pre-component targets. Custom use-on-block behavior, tooltips and wrench/hammer state changes. Verify copies, stacks, dropped items and reconnects preserve data. |
 | 4. Recipes and richer screens | `common/menus/WorkstationMenu.java`, `client/screens/WorkstationScreen.java` | Selectable/filterable recipes, custom layouts, selection validation, scroll/input widgets, secure editable text and synchronized results. Current positional recipes and label/button screens only cover part of this. |
 | 5. Specialized furniture behavior | `common/blocks/entity/CounterOvenBlockEntity.java`, `common/blocks/ModBedBlock.java`, `common/entity/SeatEntity.java` | Furnace/fuel semantics, multipart storage/blocks, beds, seat mounting/dismounting and lifecycle. Do not replace these with visually similar inert blocks. |
@@ -74,6 +74,14 @@ plain storage exposes every slot to hoppers on every face by default. A storage 
 may instead use `inventoryAccess(...)` to assign insert, extract or bidirectional
 access to each face, either for every slot or a bounded slot list. These automation
 rules do not restrict ordinary player menu interaction.
+
+Calling `lootTableInventory()` on a storage definition opts that inventory into
+vanilla `LootTable`/`LootTableSeed` block-entity data. It does not choose a loot table:
+world generation, a structure, a command or another authorized server system supplies
+the table ID and optional seed. Pending loot survives save/reload and is expanded once
+when a player, hopper or block-removal path first needs the contents. Player-placed
+containers without that data remain empty. Generated source and native compilation
+cover all nine targets; exactly-once behavior is still a live gameplay acceptance gate.
 
 The persistent preview now includes `PreviewStorageCabinetBlock`, `PreviewContainers`
 and a 27-slot cabinet declared entirely in portable source. All generated targets

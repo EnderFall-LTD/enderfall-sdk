@@ -20,6 +20,18 @@ Also test two simultaneous viewers, player death, disconnect and spectator chang
 Generated source and compilation cover all nine targets, but these are still live
 gameplay acceptance checks rather than claims inferred from a successful build.
 
+The cabinet also opts into vanilla-compatible lazy loot tables. In a disposable
+world, place an unopened populated test cabinet with:
+
+```text
+/setblock ~ ~ ~ enderfall_persistent_preview:storage_cabinet{LootTable:"enderfall_persistent_preview:chests/storage_cabinet_test",LootTableSeed:1L}
+```
+
+Its inventory must remain pending across save/reload and generate exactly one
+diamond on first player, hopper or break access. Reopening must not generate again.
+The table ID and seed are native world data; ordinary player-placed cabinets remain
+empty. This command uses the Java block-entity NBT syntax supported by the test target.
+
 ## Connecting table and waterlogging test
 
 Place several **Connecting Waterlogged Table** blocks side by side. Each block's
@@ -39,11 +51,12 @@ remain manual acceptance.
 `enderfall_persistent_preview:orientation_test` is a separate six-way direction
 test block in the preview creative tab. It uses barrel/dispenser placement: its
 front points opposite the player's nearest look direction, including up and down.
-Its asymmetric brace, selection outline and collision should
-rotate together. Right-click it with an empty hand: its portable `compact` property should
-toggle and its selection/collision shape should alternate between the furniture
-shape and a four-pixel-high slab without changing its facing. It has no inventory
-and does not change the working horizontal workbench.
+It is deliberately modelled as a north-authored wooden tube with a copper front, so
+looking down at the floor places its long axis vertically while looking horizontally
+places it on its side. The model, selection outline and collision must rotate together.
+Right-click it with an empty hand: its portable `compact` property should toggle both
+the model and shape between long and short tubes without changing its facing. It has
+no inventory and does not change the working horizontal workbench.
 
 `enderfall_persistent_preview:axis_test` separately proves log/pillar placement.
 Place it on the top or bottom of a block for a vertical Y post, on east/west faces

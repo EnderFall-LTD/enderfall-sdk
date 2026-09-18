@@ -20,6 +20,12 @@ Also test two simultaneous viewers, player death, disconnect and spectator chang
 Generated source and compilation cover all nine targets, but these are still live
 gameplay acceptance checks rather than claims inferred from a successful build.
 
+The preview tab also contains a `Portable Tool Test`. Right-click it in either hand;
+an action-bar message must identify the current Minecraft version and loader exactly
+once. Its Java class implements `PortableItem`, configures durability/rarity itself and
+is compiled unchanged for every target. Hand-aware stack mutation and use-on-block
+behavior are deliberately not claimed by this initial item slice.
+
 The cabinet also opts into vanilla-compatible lazy loot tables. In a disposable
 world, place an unopened populated test cabinet with:
 

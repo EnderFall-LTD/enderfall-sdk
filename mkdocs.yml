@@ -20,6 +20,7 @@ nav:
   - Compatibility: compatibility.md
   - Portable API: portable-api.md
   - Registration: registration.md
+  - Portable items: portable-items.md
   - Furniture port: furniture-port.md
   - Block entities: block-entities.md
   - Block-entity rendering: block-entity-rendering.md

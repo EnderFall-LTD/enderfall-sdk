@@ -9,6 +9,7 @@ import uk.co.enderfall.sdk.api.registry.ItemRef;
 public final class PersistentDemo implements EnderfallMod {
     @Override public void initialize(ModContext context) {
         PreviewBlocks.register(context);
+        PreviewItems.register(context);
         var storage = PreviewBlocks.WORKBENCH_STORAGE;
         var timedStorage = PreviewBlocks.TIMED_STORAGE;
         var tankStorage = PreviewBlocks.TANK_STORAGE;
@@ -23,7 +24,8 @@ public final class PersistentDemo implements EnderfallMod {
                 .entry(new ItemRef(PreviewBlocks.ORIENTATION_TEST.id()))
                 .entry(new ItemRef(PreviewBlocks.AXIS_TEST.id()))
                 .entry(new ItemRef(PreviewBlocks.CONNECTING_TABLE.id()))
-                .entry(new ItemRef(PreviewBlocks.STORAGE_CABINET.id())).build());
+                .entry(new ItemRef(PreviewBlocks.STORAGE_CABINET.id()))
+                .entry(PreviewItems.PORTABLE_TOOL).build());
         context.logger().info("Persistent workbench preview registered; use a disposable test world.");
     }
 }

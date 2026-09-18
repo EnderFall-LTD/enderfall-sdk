@@ -115,6 +115,22 @@ public final class Registration {
                 if (behavior != null) behavior.onUse(context, event);
             });
         }
+        Map<ResourceId, uk.co.enderfall.sdk.api.item.PortableItem> itemBehaviors = new HashMap<>();
+        for (Entry entry : entries) {
+            if (entry instanceof ItemEntry item && item.behavior != null) {
+                itemBehaviors.put(item.key.id, item.behavior);
+            }
+        }
+        if (!itemBehaviors.isEmpty()) {
+            Map<ResourceId, uk.co.enderfall.sdk.api.item.PortableItem> registered = Map.copyOf(itemBehaviors);
+            context.events().subscribe(uk.co.enderfall.sdk.api.event.SdkEvents.INTERACTION, event -> {
+                if (event.side() != uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER
+                        || event.kind() != uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM
+                        || event.cancelled() || event.handled()) return;
+                var behavior = registered.get(event.target());
+                if (behavior != null) behavior.onUse(context, event);
+            });
+        }
     }
 
     public static final class Blocks extends Group {
@@ -218,15 +234,43 @@ public final class Registration {
         private Items(String namespace) { super(namespace); }
         public ItemRef item(String path) { return item(path, p -> { }); }
         public ItemRef item(String path, Consumer<ItemSpec.Builder> configure) {
-            ResourceId id = id(path); Objects.requireNonNull(configure, "configure");
-            add(new Entry("item", id, 0) {
-                @Override Runnable prepare(ModContext context, Resolution resolution) {
-                    ItemSpec.Builder builder = ItemSpec.builder(); configure.accept(builder);
-                    ItemSpec spec = builder.build();
-                    return () -> context.items().register(id, spec);
-                }
-            });
+            ResourceId id = id(path);
+            add(new ItemEntry(id, null, Objects.requireNonNull(configure, "configure")));
             return new ItemRef(id);
+        }
+        public ItemRef item(String path,
+                java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.item.PortableItem> factory) {
+            return item(path, factory, properties -> { });
+        }
+        public ItemRef item(String path,
+                java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.item.PortableItem> factory,
+                Consumer<ItemSpec.Builder> configure) {
+            ResourceId id = id(path);
+            add(new ItemEntry(id, Objects.requireNonNull(factory, "factory"),
+                    Objects.requireNonNull(configure, "configure")));
+            return new ItemRef(id);
+        }
+    }
+    private static final class ItemEntry extends Entry {
+        final java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.item.PortableItem> factory;
+        final Consumer<ItemSpec.Builder> configure;
+        uk.co.enderfall.sdk.api.item.PortableItem behavior;
+        ItemEntry(ResourceId id,
+                java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.item.PortableItem> factory,
+                Consumer<ItemSpec.Builder> configure) {
+            super("item", id, 0);
+            this.factory = factory;
+            this.configure = configure;
+        }
+        @Override Runnable prepare(ModContext context, Resolution resolution) {
+            ItemSpec.Builder builder = ItemSpec.builder();
+            if (factory != null) {
+                behavior = Objects.requireNonNull(factory.get(), "Item factory returned null");
+                behavior.configure(builder);
+            }
+            configure.accept(builder);
+            ItemSpec spec = builder.build();
+            return () -> context.items().register(key.id, spec);
         }
     }
     public static final class Recipes extends Group {

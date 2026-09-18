@@ -2,7 +2,7 @@ package uk.co.enderfall.sdk.api.registry;
 
 import java.util.Objects;
 
-/** Portable properties for a basic item. Custom subclasses belong in native roots. */
+/** Portable properties shared by basic items and class-based {@code PortableItem} definitions. */
 public final class ItemSpec {
     private final int maxStackSize;
     private final int durability;

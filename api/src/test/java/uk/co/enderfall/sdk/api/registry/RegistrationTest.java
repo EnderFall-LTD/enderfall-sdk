@@ -9,6 +9,69 @@ import uk.co.enderfall.sdk.api.*;
 class RegistrationTest {
     @Test
     @SuppressWarnings("unchecked")
+    void customItemFactoryConfiguresOnceAndReceivesOnlyUnhandledServerUses() throws Exception {
+        var factories = new java.util.concurrent.atomic.AtomicInteger();
+        var uses = new java.util.concurrent.atomic.AtomicInteger();
+        var specs = new HashMap<ResourceId, ItemSpec>();
+        ItemRegistrar registrar = (ItemRegistrar) Proxy.newProxyInstance(ItemRegistrar.class.getClassLoader(),
+                new Class<?>[] { ItemRegistrar.class }, (proxy, method, args) -> {
+                    ResourceId id = (ResourceId) args[0];
+                    specs.put(id, (ItemSpec) args[1]);
+                    return new ItemRef(id);
+                });
+        var listener = new java.util.concurrent.atomic.AtomicReference<uk.co.enderfall.sdk.api.event.EventListener<uk.co.enderfall.sdk.api.event.InteractionEvent>>();
+        var bus = (uk.co.enderfall.sdk.api.event.EventBus) Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[] { uk.co.enderfall.sdk.api.event.EventBus.class },
+                (proxy, method, args) -> {
+                    listener.set((uk.co.enderfall.sdk.api.event.EventListener<uk.co.enderfall.sdk.api.event.InteractionEvent>) args[args.length - 1]);
+                    return null;
+                });
+        var context = (ModContext) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { ModContext.class },
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "modId" -> "test";
+                    case "items" -> registrar;
+                    case "events" -> bus;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        var items = Registration.items("test");
+        ItemRef tool = items.item("tool", () -> {
+            factories.incrementAndGet();
+            return new uk.co.enderfall.sdk.api.item.PortableItem() {
+                @Override public void configure(ItemSpec.Builder properties) {
+                    properties.maxStackSize(32).rarity(Rarity.UNCOMMON);
+                }
+                @Override public void onUse(ModContext ignored,
+                        uk.co.enderfall.sdk.api.event.InteractionEvent event) {
+                    uses.incrementAndGet();
+                    event.handle();
+                }
+            };
+        }, properties -> properties.maxStackSize(16));
+        assertEquals(0, factories.get());
+        Registration.register(context, items);
+        assertEquals(1, factories.get());
+        assertEquals(16, specs.get(tool.id()).maxStackSize());
+        assertEquals(Rarity.UNCOMMON, specs.get(tool.id()).rarity());
+
+        UUID player = UUID.randomUUID();
+        for (var side : uk.co.enderfall.sdk.api.event.InteractionEvent.Side.values()) {
+            listener.get().handle(new uk.co.enderfall.sdk.api.event.InteractionEvent(
+                    uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM, side, player, tool.id()));
+        }
+        var blockUse = new uk.co.enderfall.sdk.api.event.InteractionEvent(
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_BLOCK, player, tool.id());
+        listener.get().handle(blockUse);
+        var consumed = new uk.co.enderfall.sdk.api.event.InteractionEvent(
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM, player, tool.id());
+        consumed.handle();
+        listener.get().handle(consumed);
+        consumed.cancel();
+        listener.get().handle(consumed);
+        assertEquals(1, uses.get());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void customBlockFactoryConfiguresOnceAndReceivesOnlyUnhandledServerUses() throws Exception {
         var calls = new ArrayList<String>();
         var specs = new HashMap<ResourceId, BlockSpec>();

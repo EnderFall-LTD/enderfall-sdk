@@ -53,7 +53,8 @@ normal Minecraft block subclass:
 
 The callback receives the state after built-in horizontal/six-way facing has been
 chosen, the clicked face, the player's horizontal facing and the player's nearest
-look direction. It changes only the block's declared portable properties; native
+look direction. Six-way blocks can independently select clicked-face or view-directed
+native placement in their registration options. The callback changes only the block's declared portable properties; native
 facing is preserved. Returning null or a state from another definition fails the
 placement instead of silently producing a different state. Property-copy operations
 do not copy the behavior instance.

@@ -10,6 +10,9 @@ class BlockShapeTest {
     @Test void sixWayFacingIsExclusiveAndVerticalRotationMapsNorthToUp() {
         var six = BlockSpec.builder().horizontalFacing().sixWayFacing().build();
         assertTrue(six.sixWayFacing()); assertFalse(six.horizontalFacing());
+        assertEquals(SixWayPlacement.VIEW_DIRECTION, six.sixWayPlacement());
+        var attached = BlockSpec.builder().sixWayFacing(SixWayPlacement.CLICKED_FACE).build();
+        assertEquals(SixWayPlacement.CLICKED_FACE, attached.sixWayPlacement());
         var horizontal = BlockSpec.builder().sixWayFacing().horizontalFacing().build();
         assertTrue(horizontal.horizontalFacing()); assertFalse(horizontal.sixWayFacing());
         assertFalse(BlockSpec.builder().copyFrom(six).build().sixWayFacing());

@@ -66,7 +66,7 @@ public final class PersistenceFixtureMain {
                 }
             }
         }
-        for (String block : List.of("workbench", "timed_workbench", "fluid_tank", "orientation_test")) {
+        for (String block : List.of("workbench", "timed_workbench", "fluid_tank", "orientation_test", "storage_cabinet")) {
             if (!policy.modernRecipes()) write(output, "resources/assets/" + ID + "/models/item/" + block + ".json",
                     "{\"parent\":\"" + ID + ":block/" + block + "\"}\n");
             write(output, "resources/data/" + ID + "/" + (policy.legacy() ? "loot_tables" : "loot_table") + "/blocks/" + block + ".json",

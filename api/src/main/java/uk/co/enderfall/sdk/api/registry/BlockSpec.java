@@ -14,9 +14,11 @@ public final class BlockSpec {
     public java.util.Optional<uk.co.enderfall.sdk.api.block.BlockStateShapes> stateShapes() { return java.util.Optional.ofNullable(stateShapes); }
     private final boolean horizontalFacing;
     private final boolean sixWayFacing;
+    private final uk.co.enderfall.sdk.api.block.SixWayPlacement sixWayPlacement;
     private final boolean waterlogged;
     private final boolean scheduledTicks;
     public boolean sixWayFacing() { return sixWayFacing; }
+    public uk.co.enderfall.sdk.api.block.SixWayPlacement sixWayPlacement() { return sixWayPlacement; }
     public boolean horizontalFacing() { return horizontalFacing; }
     public boolean waterlogged() { return waterlogged; }
     public boolean scheduledTicks() { return scheduledTicks; }
@@ -52,6 +54,7 @@ public final class BlockSpec {
             throw new IllegalArgumentException("Custom waterlogged property conflicts with built-in waterlogging");
         horizontalFacing = builder.horizontalFacing;
         sixWayFacing = builder.sixWayFacing;
+        sixWayPlacement = builder.sixWayPlacement;
         waterlogged = builder.waterlogged;
         scheduledTicks = builder.scheduledTicks;
         outlineShape = builder.outlineShape;
@@ -118,12 +121,23 @@ public final class BlockSpec {
         }
         private boolean horizontalFacing;
         private boolean sixWayFacing;
+        private uk.co.enderfall.sdk.api.block.SixWayPlacement sixWayPlacement =
+                uk.co.enderfall.sdk.api.block.SixWayPlacement.VIEW_DIRECTION;
         private boolean waterlogged;
         private boolean scheduledTicks;
         /** Adds north/east/south/west facing, player-facing placement and rotated custom shapes. */
         public Builder horizontalFacing() { horizontalFacing = true; sixWayFacing = false; return this; }
         /** Six-direction facing with placement opposite the player's nearest look direction. */
-        public Builder sixWayFacing() { sixWayFacing = true; horizontalFacing = false; return this; }
+        public Builder sixWayFacing() {
+            return sixWayFacing(uk.co.enderfall.sdk.api.block.SixWayPlacement.VIEW_DIRECTION);
+        }
+        /** Six-direction facing with an explicit, portable placement rule. */
+        public Builder sixWayFacing(uk.co.enderfall.sdk.api.block.SixWayPlacement placement) {
+            sixWayFacing = true;
+            horizontalFacing = false;
+            sixWayPlacement = Objects.requireNonNull(placement, "placement");
+            return this;
+        }
         /** Enables vanilla water placement, bucket interaction, fluid state and fluid ticking. */
         public Builder waterlogged() { waterlogged = true; return this; }
         /** Enables portable placement, neighbor and scheduled-tick transitions. */

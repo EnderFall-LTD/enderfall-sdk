@@ -61,6 +61,12 @@ tasks.register("verifyPersistenceFixtures") {
                         val previous = reference.putIfAbsent(path, bytes)
                         check(previous == null || previous.contentEquals(bytes)) { "Portable class differs between targets: $path" }
                     }
+                    val modernItems = file.get().asFile.name.contains("1.21.4-") || file.get().asFile.name.contains("26.2-")
+                    val cabinetItem = "assets/enderfall_persistent_preview/" +
+                        (if (modernItems) "items/storage_cabinet.json" else "models/item/storage_cabinet.json")
+                    check(zip.getEntry(cabinetItem) != null) {
+                        "Missing target-format preview asset $cabinetItem in ${file.get()}"
+                    }
                     check(zip.getEntry("uk/co/enderfall/sdk/preview/GeneratedPersistenceEntrypoint.class") != null)
                     logger.lifecycle("Portable fixture parity verified: ${file.get().asFile.name}")
                 }

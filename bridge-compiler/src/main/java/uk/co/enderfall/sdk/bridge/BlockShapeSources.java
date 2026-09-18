@@ -226,7 +226,12 @@ final class BlockShapeSources {
                     }
                     @Override public BlockState getStateForPlacement(BlockPlaceContext context) {
                         BlockState placed;
-                        if (this instanceof SixWayDirectional) placed = defaultBlockState().setValue(facingProperty(), context.getNearestLookingDirection().getOpposite());
+                        if (this instanceof SixWayDirectional) {
+                            Direction facing = specification.sixWayPlacement()
+                                    == uk.co.enderfall.sdk.api.block.SixWayPlacement.CLICKED_FACE
+                                    ? context.getClickedFace() : context.getNearestLookingDirection().getOpposite();
+                            placed = defaultBlockState().setValue(facingProperty(), facing);
+                        }
                         else if (this instanceof Directional) placed = defaultBlockState().setValue(facingProperty(), context.getHorizontalDirection().getOpposite());
                         else placed = super.getStateForPlacement(context);
                         if (placed != null && specification.waterlogged()) placed = placed.setValue(BlockStateProperties.WATERLOGGED,

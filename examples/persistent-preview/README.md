@@ -37,9 +37,10 @@ remain manual acceptance.
 ## Workbench shape test
 
 `enderfall_persistent_preview:orientation_test` is a separate six-way orientation
-test block in the preview creative tab. Place it while looking horizontally,
-up and down; its asymmetric brace, selection outline and collision should rotate
-together. Right-click it with an empty hand: its portable `compact` property should
+test block in the preview creative tab. Place it against the north, south, east,
+west, top and underside faces of other blocks; it must face out from the clicked
+surface every time. Its asymmetric brace, selection outline and collision should
+rotate together. Right-click it with an empty hand: its portable `compact` property should
 toggle and its selection/collision shape should alternate between the furniture
 shape and a four-pixel-high slab without changing its facing. It has no inventory
 and does not change the working horizontal workbench.

@@ -26,6 +26,8 @@ class PersistenceFixtureMainTest {
             assertEquals(!policy.modernRecipes(), recipe.contains("\"ingredient\":{\"item\""), target);
             assertEquals(policy.legacy(), recipe.contains("\"result\":{\"item\""), target);
             assertEquals(!policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/models/item/workbench.json")), target);
+            assertEquals(!policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/models/item/storage_cabinet.json")), target);
+            assertEquals(policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/items/storage_cabinet.json")), target);
             String metadata = Files.readString(output.resolve("resources/" + (policy.fabric() ? "fabric.mod.json"
                     : policy.legacy() ? "META-INF/mods.toml" : "META-INF/neoforge.mods.toml")));
             assertTrue(metadata.contains("enderfall_sdk"), target);

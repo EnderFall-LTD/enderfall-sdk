@@ -75,8 +75,10 @@ in-game checks.
 ## Six-way facing
 
 Use `properties.sixWayFacing()` in the portable block class for north/east/south/
-west/up/down. Placement faces opposite the player's nearest look direction,
-including looking up/down. Shapes are authored facing north; vertical variants
+west/up/down. Its default placement faces opposite the player's nearest look direction,
+matching dispenser-like blocks. For attached fixtures and furniture that must reliably
+follow the selected surface, use
+`properties.sixWayFacing(SixWayPlacement.CLICKED_FACE)` instead. Shapes are authored facing north; vertical variants
 use the equivalent of `shape.rotateX(1)` for up and `rotateX(-1)` for down.
 Native rotation/mirror operations preserve vertical directions as Minecraft defines.
 
@@ -86,8 +88,8 @@ blockstate for that ID. Horizontal and six-way modes are exclusive: the last
 configuration call selects the mode. Property copying does not copy either mode.
 
 The preview includes `enderfall_persistent_preview:orientation_test`, an ordinary
-block with asymmetric geometry for six-orientation testing; it is not a barrel or
-storage container. Existing workbenches retain horizontal facing. Test all six
+clicked-face-oriented block with asymmetric geometry for six-orientation testing;
+it is not a barrel or storage container. Existing workbenches retain horizontal facing. Test all six
 orientations, matching outlines/collision, structure rotations, and save/reload.
 Placing it against the underside of a block starts it in the compact shape, proving
 the portable custom-placement callback; other placements start expanded and use

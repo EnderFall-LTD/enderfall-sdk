@@ -78,6 +78,8 @@ class PersistenceRuntimeSourcesTest {
                 assertTrue(shapeSource.contains("rotation.rotate(state.getValue(facingProperty()))"), target);
                 assertTrue(shapeSource.contains("mirror.mirror(state.getValue(facingProperty()))"), target);
                 assertTrue(shapeSource.contains("context.getNearestLookingDirection().getOpposite()"), target);
+                assertTrue(shapeSource.contains("SixWayPlacement.CLICKED_FACE"), target);
+                assertTrue(shapeSource.contains("context.getClickedFace() : context.getNearestLookingDirection().getOpposite()"), target);
                 assertTrue(shapeSource.contains("convert(shape.rotateX(1)), convert(shape.rotateX(-1))"), target);
                 assertTrue(shapeSource.contains("outline[directionIndex(state)]"), target);
                 assertTrue(shapeSource.contains("getShape("), target);

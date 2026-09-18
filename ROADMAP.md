@@ -17,8 +17,10 @@ are the active implementation stage. Class-based portable item registration and
 server-side right-click/use-on-block routing, exact position, hand and crouching context,
 declarative translated/literal tooltips with colour, Shift and advanced visibility, and
 typed held-stack data backed by legacy NBT or component-era custom data now compile from
-identical source on all nine targets. Secure arbitrary-inventory-slot updates and live
-copy/drop/reconnect acceptance remain open.
+identical source on all nine targets. Logical carried-inventory/off-hand addressing and
+server-thread, expected-item-checked typed reads and updates now cover the letter data
+path without exposing native stack or slot classes. A reusable editable-text screen,
+declared tool property policies, and live copy/drop/reconnect acceptance remain open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

@@ -25,7 +25,16 @@ an action-bar message must identify the current Minecraft version and loader exa
 once. Its Java class implements `PortableItem`, configures durability/rarity itself and
 is compiled unchanged for every target. Use it on the six-way direction test to toggle
 that block's compact state; the message must report the actual hand and whether the
-player was crouching. Mutable per-stack data and tooltips remain outside this slice.
+player was crouching. Its use count is durable per-stack data and its translated details
+appear while Shift is held.
+
+The `Portable Letter Test` proves a Furnection-style secure editor update. Put it in a
+carried inventory slot and run `/enderfall_letter <slot> <text>`, where the hotbar is
+0-8, the main inventory is 9-35, and `-1` means off-hand. The command signs the real
+stack, reads the author/text back through the public API, and reports both values. Move
+or replace the letter before an update and the expected-item check must reject it. Then
+right-click the letter to display its stored author and text. Save/rejoin and repeat to
+exercise native NBT on 1.20.1 and custom-data components on newer targets.
 
 The cabinet also opts into vanilla-compatible lazy loot tables. In a disposable
 world, place an unopened populated test cabinet with:

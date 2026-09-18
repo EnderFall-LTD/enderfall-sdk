@@ -9,6 +9,7 @@ public final class PreviewItems {
 
     private static final Registration.Items ITEMS = Registration.items("enderfall_persistent_preview");
     public static final ItemRef PORTABLE_TOOL = ITEMS.item("portable_tool", PreviewToolItem::new);
+    public static final ItemRef PORTABLE_LETTER = ITEMS.item("portable_letter", PreviewLetterItem::new);
 
     public static void register(ModContext context) {
         Registration.register(context, ITEMS);

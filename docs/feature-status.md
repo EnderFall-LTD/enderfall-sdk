@@ -51,7 +51,7 @@ This focused matrix is not full foundation-feature or visual acceptance.
 | Area | Current status | Why it is not presented as working |
 | --- | --- | --- |
 | Fluids | No stable API or adapter | Requires source/flowing registrations, fluid block and bucket coordination, render handlers, tags, and version-specific behaviour |
-| Custom item/block behaviour | Server-side use/use-on-block callbacks, exact hit position, hand, crouching context, block-state mutation, and declared persistent held-stack data | Stack durability/effects and secure mutation of arbitrary inventory slots still need portable contracts |
+| Custom item/block behaviour | Server-side use/use-on-block callbacks, exact hit position, hand, crouching context, block-state mutation, declared persistent held-stack data, and expected-item-checked carried-slot/off-hand reads and updates | Stack durability/effects and reusable item-editor screen sessions still need portable contracts |
 | Block entities and persistent state | No stable API or adapter | Serialization, ticking, update packets, inventory ownership, placement/removal lifecycle, and data migration must be specified together |
 
 ## Proposed developer-facing contracts

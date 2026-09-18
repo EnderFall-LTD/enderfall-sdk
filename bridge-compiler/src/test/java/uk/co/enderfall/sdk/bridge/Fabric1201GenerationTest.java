@@ -30,7 +30,7 @@ class Fabric1201GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("35b35075715c3ac8cd8b44d13c70e856878f12d35fa92ee48ae70a92ac76a1a0", first.sha256());
+        assertEquals("0a623fad3f4ba234d3ce7a27f5fc6d2d61f11f12c19c1dd039532275517a680c", first.sha256());
         assertEquals(14, first.files().size());
         try (var files = Files.walk(firstOutput)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
@@ -42,7 +42,7 @@ class Fabric1201GenerationTest {
         // Independent working-reference hashes lock the legacy transport and recipe/menu ABI.
         assertEquals("3329a727db068c81982619c6cbca65e37603b33eadfcb8a23571a372532a9840",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201ClientHooks.java")));
-        assertEquals("8d4f26c453aaaec84d042da1a9df6ac7877935468b9bef49af741a963ba1f51a",
+        assertEquals("5919bd1c0d005b5983bceaef9d902abfa5eda65302468002d03ba64b931851be",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201PlatformAdapter.java")));
         assertEquals("b734369f8d38a3ec4ddb160cf5eb053b320375e7981cf1bd102d31fae55bd212",
                 sha256(firstOutput.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java")));

@@ -15,7 +15,10 @@ import org.junit.jupiter.api.Test;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.command.CommandSpec;
 import uk.co.enderfall.sdk.api.gameplay.InventoryCost;
+import uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot;
 import uk.co.enderfall.sdk.api.gameplay.PlayerSnapshot;
+import uk.co.enderfall.sdk.api.item.ItemDataKey;
+import uk.co.enderfall.sdk.api.item.MutableItemData;
 import uk.co.enderfall.sdk.api.network.PacketDirection;
 import uk.co.enderfall.sdk.api.platform.CapabilitySet;
 import uk.co.enderfall.sdk.api.platform.Environment;
@@ -30,6 +33,8 @@ import uk.co.enderfall.sdk.api.registry.ItemSpec;
 class DefaultPlayerManagerTest {
     private static final UUID PLAYER = UUID.fromString("18f6eaf0-397b-4f07-8424-cc860573d071");
     private static final ItemRef CRYSTAL = new ItemRef(ResourceId.of("test_mod", "crystal"));
+    private static final ItemDataKey<String> LABEL = ItemDataKey.string(
+            ResourceId.of("test_mod", "label"), 64);
 
     @Test
     void delegatesAtomicInventoryAndPlayerFeedbackOperations() {
@@ -47,8 +52,16 @@ class DefaultPlayerManagerTest {
         players.actionBar(PLAYER, "charge 4/10");
         players.heal(PLAYER, 2.5D);
         players.addExperience(PLAYER, 7);
+        assertTrue(players.updateItemData(PLAYER, PlayerInventorySlot.hotbar(2), CRYSTAL,
+                data -> data.set(LABEL, "portable")));
+        assertFalse(players.updateItemData(PLAYER, PlayerInventorySlot.hotbar(3), CRYSTAL,
+                data -> data.set(LABEL, "wrong slot")));
 
         assertEquals(4, players.count(PLAYER, CRYSTAL));
+        assertEquals("portable", players.itemData(PLAYER, PlayerInventorySlot.hotbar(2),
+                CRYSTAL, LABEL).orElseThrow());
+        assertTrue(players.itemData(PLAYER, PlayerInventorySlot.hotbar(3),
+                CRYSTAL, LABEL).isEmpty());
         assertEquals("hello", adapter.chatMessage);
         assertEquals("charge 4/10", adapter.actionBarMessage);
         assertEquals(2.5D, adapter.healing);
@@ -71,6 +84,7 @@ class DefaultPlayerManagerTest {
         private String actionBarMessage;
         private double healing;
         private int experience;
+        private final Map<ItemDataKey<?>, Object> itemData = new LinkedHashMap<>();
 
         @Override public PlatformInfo platformInfo() { return new TestPlatformInfo(); }
         @Override public CapabilitySet capabilities() { return new ImmutableCapabilitySet(java.util.Set.of()); }
@@ -102,6 +116,31 @@ class DefaultPlayerManagerTest {
         }
         @Override public void givePlayerItem(UUID playerId, ResourceId itemId, int amount) {
             inventory.merge(itemId, amount, Integer::sum);
+        }
+        @Override public <T> Optional<T> playerItemData(UUID playerId, PlayerInventorySlot slot,
+                ResourceId expectedItemId, ItemDataKey<T> key) {
+            if (!CRYSTAL.id().equals(expectedItemId) || !PlayerInventorySlot.hotbar(2).equals(slot)) {
+                return Optional.empty();
+            }
+            Object value = itemData.get(key);
+            return value == null ? Optional.empty() : Optional.of(key.validate(value));
+        }
+        @Override public boolean updatePlayerItemData(UUID playerId, PlayerInventorySlot slot,
+                ResourceId expectedItemId, java.util.function.Consumer<MutableItemData> update) {
+            if (!CRYSTAL.id().equals(expectedItemId) || !PlayerInventorySlot.hotbar(2).equals(slot)) {
+                return false;
+            }
+            update.accept(new MutableItemData() {
+                @Override public <T> Optional<T> get(ItemDataKey<T> key) {
+                    Object value = itemData.get(key);
+                    return value == null ? Optional.empty() : Optional.of(key.validate(value));
+                }
+                @Override public <T> void set(ItemDataKey<T> key, T value) {
+                    itemData.put(key, key.validate(value));
+                }
+                @Override public void remove(ItemDataKey<?> key) { itemData.remove(key); }
+            });
+            return true;
         }
         @Override public void sendPlayerMessage(UUID playerId, String message, boolean actionBar) {
             if (actionBar) {

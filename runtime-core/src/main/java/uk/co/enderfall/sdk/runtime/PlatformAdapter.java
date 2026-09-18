@@ -4,9 +4,13 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.command.CommandSpec;
 import uk.co.enderfall.sdk.api.gameplay.PlayerSnapshot;
+import uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot;
+import uk.co.enderfall.sdk.api.item.ItemDataKey;
+import uk.co.enderfall.sdk.api.item.MutableItemData;
 import uk.co.enderfall.sdk.api.network.PacketDirection;
 import uk.co.enderfall.sdk.api.platform.CapabilitySet;
 import uk.co.enderfall.sdk.api.platform.PlatformInfo;
@@ -133,6 +137,16 @@ public interface PlatformAdapter {
 
     default void givePlayerItem(UUID playerId, ResourceId itemId, int amount) {
         throw new UnsupportedOperationException("Player inventory access is unavailable on this adapter");
+    }
+
+    default <T> Optional<T> playerItemData(UUID playerId, PlayerInventorySlot slot,
+            ResourceId expectedItemId, ItemDataKey<T> key) {
+        throw new UnsupportedOperationException("Player item data is unavailable on this adapter");
+    }
+
+    default boolean updatePlayerItemData(UUID playerId, PlayerInventorySlot slot,
+            ResourceId expectedItemId, Consumer<MutableItemData> update) {
+        throw new UnsupportedOperationException("Player item data is unavailable on this adapter");
     }
 
     default void sendPlayerMessage(UUID playerId, String message, boolean actionBar) {

@@ -3,9 +3,13 @@ package uk.co.enderfall.sdk.runtime;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import uk.co.enderfall.sdk.api.gameplay.InventoryCost;
+import uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot;
 import uk.co.enderfall.sdk.api.gameplay.PlayerManager;
 import uk.co.enderfall.sdk.api.gameplay.PlayerSnapshot;
+import uk.co.enderfall.sdk.api.item.ItemDataKey;
+import uk.co.enderfall.sdk.api.item.MutableItemData;
 import uk.co.enderfall.sdk.api.registry.ItemRef;
 
 final class DefaultPlayerManager implements PlayerManager {
@@ -46,6 +50,24 @@ final class DefaultPlayerManager implements PlayerManager {
             throw new IllegalArgumentException("Grant amount must be between 1 and " + MAXIMUM_GRANT);
         }
         adapter.givePlayerItem(requirePlayerId(playerId), item.id(), amount);
+    }
+
+    @Override
+    public <T> Optional<T> itemData(UUID playerId, PlayerInventorySlot slot, ItemRef expectedItem,
+            ItemDataKey<T> key) {
+        Objects.requireNonNull(slot, "slot");
+        Objects.requireNonNull(expectedItem, "expectedItem");
+        Objects.requireNonNull(key, "key");
+        return adapter.playerItemData(requirePlayerId(playerId), slot, expectedItem.id(), key);
+    }
+
+    @Override
+    public boolean updateItemData(UUID playerId, PlayerInventorySlot slot, ItemRef expectedItem,
+            Consumer<MutableItemData> update) {
+        Objects.requireNonNull(slot, "slot");
+        Objects.requireNonNull(expectedItem, "expectedItem");
+        Objects.requireNonNull(update, "update");
+        return adapter.updatePlayerItemData(requirePlayerId(playerId), slot, expectedItem.id(), update);
     }
 
     @Override

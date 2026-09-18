@@ -33,7 +33,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "EnderfallFabricRuntime.java",
                     "d373ffde76a07543b99d7da37e9ec3ab7da7d8d862eac426b23ebd0785cdb94e"),
             Map.entry(PACKAGE_PATH + "Fabric1211PlatformAdapter.java",
-                    "e0c8c161c149d00274f5021fac2cf41aadedc593044fbef90637c21cfe4a4791"),
+                    "e4224dc5c2824b1cc8548770b010d023a6d6fb1c1283d90d1ba8a550f3bcd16f"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchMenu.java",
                     "7a62b13e6482016d15e1b58655c8536fb3ac855021d3cf6190afef6c7a08f91a"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchRecipe.java",
@@ -106,7 +106,7 @@ class Fabric1211GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("d872f1c5d1c790b4264161d25c78421e4762cc4f5e479425af58af263334d056",
+        assertEquals("47b386b57de7477390ef6144cfb4bcb536109dddc4825b7aebdbef31bba35992",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
@@ -196,7 +196,7 @@ class Fabric1211GenerationTest {
         Path menu = canonical.resolve("src/canonical/java").resolve(CANONICAL_MENU);
         Files.writeString(menu, "// Feature declaration only; no Java template required.\n");
         writeManifest(canonical);
-        assertEquals("d872f1c5d1c790b4264161d25c78421e4762cc4f5e479425af58af263334d056",
+        assertEquals("47b386b57de7477390ef6144cfb4bcb536109dddc4825b7aebdbef31bba35992",
                 generate(canonical, temporaryDirectory.resolve("independent-output")).sha256());
     }
 

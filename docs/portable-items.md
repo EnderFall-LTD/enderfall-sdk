@@ -69,6 +69,23 @@ the data under an SDK-owned compound in legacy item NBT on 1.20.1 and vanilla
 `CUSTOM_DATA` on component-era targets. Minecraft therefore copies, saves, drops and
 synchronizes it as part of the normal item stack.
 
-The current interaction view is sufficient for item-use state such as counters and
-tool modes. Secure editing of an arbitrary player inventory slot, needed by the letter
-screen, is the remaining durable-data API slice.
+For serverbound editors, never trust a native inventory index and mutate it directly.
+Use a logical `PlayerInventorySlot`, the expected `ItemRef`, and the player manager:
+
+```java
+PlayerInventorySlot slot = PlayerInventorySlot.carried(packet.slot());
+boolean updated = context.players().updateItemData(playerId, slot, LETTER, data -> {
+    data.set(LETTER_TEXT, packet.text());
+    data.set(LETTER_AUTHOR, playerName);
+});
+```
+
+Slots are expressed as hotbar 0-8, main inventory 0-26, or off-hand; armor is not
+silently addressable. The native bridge rechecks the online player, server thread,
+actual slot item and expected registered item before exposing its declared keys. A
+stale packet therefore returns `false` rather than writing to whatever item replaced
+the editor's original stack. `itemData(...)` provides the matching typed read path.
+
+This completes the core author/text storage path needed by a letter screen. A reusable
+editable-text screen/session API and live copy/drop/reconnect acceptance are separate
+remaining work.

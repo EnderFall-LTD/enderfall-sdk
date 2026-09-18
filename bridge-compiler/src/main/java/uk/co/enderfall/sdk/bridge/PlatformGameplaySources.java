@@ -73,7 +73,49 @@ final class PlatformGameplaySources {
                             }
                             player.containerMenu.broadcastChanges();
                         }
-                    
+                    """;
+            case PLAYER_ITEM_DATA -> """
+                        @Override
+                        public <T> Optional<T> playerItemData(java.util.UUID playerId,
+                                uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot slot,
+                                ResourceId expectedItemId, uk.co.enderfall.sdk.api.item.ItemDataKey<T> key) {
+                            MinecraftServer current = requireServer();
+                            if (!current.isSameThread()) {
+                                throw new IllegalStateException("Player item data must be read on the server thread");
+                            }
+                            ServerPlayer player = onlinePlayer(playerId);
+                            if (player == null) return Optional.empty();
+                            ItemStack stack = playerItemStack(player, slot);
+                            if (!stack.is(requireItem(expectedItemId))) return Optional.empty();
+                            uk.co.enderfall.sdk.api.item.MutableItemData data =
+                                    uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem.data(stack, false);
+                            return data == null ? Optional.empty() : data.get(key);
+                        }
+
+                    """;
+            case UPDATE_PLAYER_ITEM_DATA -> """
+                        @Override
+                        public boolean updatePlayerItemData(java.util.UUID playerId,
+                                uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot slot,
+                                ResourceId expectedItemId,
+                                java.util.function.Consumer<uk.co.enderfall.sdk.api.item.MutableItemData> update) {
+                            MinecraftServer current = requireServer();
+                            if (!current.isSameThread()) {
+                                throw new IllegalStateException("Player item data must be changed on the server thread");
+                            }
+                            ServerPlayer player = onlinePlayer(playerId);
+                            if (player == null) return false;
+                            ItemStack stack = playerItemStack(player, slot);
+                            if (!stack.is(requireItem(expectedItemId))) return false;
+                            uk.co.enderfall.sdk.api.item.MutableItemData data =
+                                    uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem.data(stack, true);
+                            if (data == null) return false;
+                            update.accept(data);
+                            player.getInventory().setChanged();
+                            player.containerMenu.broadcastChanges();
+                            return true;
+                        }
+
                     """;
             case SEND_PLAYER_MESSAGE -> switch (policy) {
                 case FABRIC_LEGACY, FABRIC_UNKEYED, FABRIC_KEYED, LEGACY_FML, NEOFORGE -> """
@@ -191,6 +233,20 @@ final class PlatformGameplaySources {
                             return player;
                         }
                     
+                    """;
+            case PLAYER_ITEM_STACK -> """
+                        private ItemStack playerItemStack(ServerPlayer player,
+                                uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot slot) {
+                            java.util.Objects.requireNonNull(slot, "slot");
+                            if (slot.area() == uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot.Area.OFF_HAND) {
+                                return player.getOffhandItem();
+                            }
+                            int nativeIndex = slot.area()
+                                    == uk.co.enderfall.sdk.api.gameplay.PlayerInventorySlot.Area.HOTBAR
+                                    ? slot.index() : slot.index() + 9;
+                            return player.getInventory().getItem(nativeIndex);
+                        }
+
                     """;
             case LOCATION -> switch (policy) {
                 case FABRIC_LEGACY -> """

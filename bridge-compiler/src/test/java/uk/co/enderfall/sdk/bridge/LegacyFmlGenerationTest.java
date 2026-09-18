@@ -27,7 +27,7 @@ class LegacyFmlGenerationTest {
             Map.entry("LegacyForgeClientHooks.java", "42b3ca7c790207d28a6aa8629e999e4fe0bda66bd8cd3035173de450fe24bef6"),
             Map.entry("LegacyForgeCommandBridge.java", "59047a9a3912a6de7318acd234dbf7745387b0e7e544f9a638a0845fe215162b"),
             Map.entry("LegacyForgeConsumerBootstrap.java", "c558ac1712ba96c4d54e0f78a425d3c1a135089a8f8797621e0292002c32431b"),
-            Map.entry("LegacyForgePlatformAdapter.java", "d51e0b8d030e765526393e8bf027a5d069fff9f0556f8a6e7a0e5139d2966732"),
+            Map.entry("LegacyForgePlatformAdapter.java", "a5659ebc70d4b5a1d279202d3a3a52f5a829ffce07606c7e1d549e531aabdb48"),
             Map.entry("LegacyForgePlatformInfo.java", "47718fe428c4c2782cd519424933cbac9ea85e98cf1bdc47d48e772db7024f42"),
             Map.entry("LegacyForgePortableMenuScreen.java", "a6a1cfca2851f1fc4ae35814afc591dac17fe88f8454ffd18b096be8ac7cbda1"),
             Map.entry("LegacyForgeRecipeBinding.java", "6d53b08752ab48ca26e051c6bf8681f85c3ce87aefeebd3833535bdc301db66d"),
@@ -47,13 +47,15 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "0499f64254aa10bc186fc63a5a78fa0381728ac24a59bda6ddbe44625d275fb3"
-                    : "c1a506d732a46d97ff93ad10c1027d5b73caf43e4c3451c7d50d607fc4055578", result.sha256());
-            assertEquals(15, result.files().size());
+                    ? "2b3c4f624700539d56db1fde691def17b52d7ec3d3c6861b1025f8bba008bc24"
+                    : "c86f1bb37796b5683983327a4d12e7769af31087c475f0e6c4634fae364dc850", result.sha256());
+            assertEquals(16, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());
             Map<String, String> expected = new TreeMap<>();
             REFERENCE_JAVA_HASHES.forEach((name, hash) -> expected.put(PACKAGE_PATH + name, hash));
+            expected.put("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
+                    "b734369f8d38a3ec4ddb160cf5eb053b320375e7981cf1bd102d31fae55bd212");
             assertEquals(expected, hashes(first.resolve("sources")));
             assertFalse(Files.exists(first.resolve("sources/uk/co/enderfall/sdk/runtime/neoforge")));
             assertFalse(Files.exists(first.resolve("resources/META-INF/neoforge.mods.toml")));

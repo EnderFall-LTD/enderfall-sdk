@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1214GenerationTest {
     private static final String TARGET = "1.21.4-neoforge";
     private static final String EXPECTED_DIGEST =
-            "dc740c23f930bc1f829d04343c7de5d442cff110982785e4ab70dbd1905cbeca";
+            "d1d8330a431ca590985a063fa1c2ca253b542181b27653d7e95a1b89f12d631c";
     private static final String PACKAGE_PATH =
             "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final Map<String, String> EXPECTED_SOURCE_HASHES = Map.ofEntries(
@@ -30,7 +30,7 @@ class NeoForge1214GenerationTest {
             Map.entry("NeoForgeConsumerBootstrap.java",
                     "abf5473d5e2f3aed9f9472db8836e1bcac34e941784186c2f8c09ab291217b2a"),
             Map.entry("NeoForgePlatformAdapter.java",
-                    "bc394ee77b77bb41707095c8ea1702e812c355723622077a467add2f7cdc001b"),
+                    "8dc26d2a4fbee78547b31405b60042ef0d0ff61dba016c1ed8ac81adccb1b3b7"),
             Map.entry("NeoForgePlatformInfo.java",
                     "c565e0680ae053907f90d47df550ee817015f825fc9906bd2acd26b253b1c695"),
             Map.entry("NeoForgePortableMenuScreen.java",
@@ -62,13 +62,15 @@ class NeoForge1214GenerationTest {
                 output.resolve("sources"),
                 output.resolve("resources")));
 
-        assertEquals(16, result.files().size());
+        assertEquals(17, result.files().size());
         assertEquals(EXPECTED_DIGEST, result.sha256());
-        assertEquals(EXPECTED_SOURCE_HASHES.size(), countFiles(output.resolve("sources")));
+        assertEquals(EXPECTED_SOURCE_HASHES.size() + 1, countFiles(output.resolve("sources")));
         for (Map.Entry<String, String> source : EXPECTED_SOURCE_HASHES.entrySet()) {
             assertEquals(source.getValue(), sha256(Files.readAllBytes(
                     output.resolve("sources").resolve(PACKAGE_PATH).resolve(source.getKey()))));
         }
+        assertEquals("24714146b6aabdc67a21a48890c8f2e5b3b94b261a3c00113e9afbe3074ccf73",
+                sha256(Files.readAllBytes(output.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java"))));
 
         Path modsToml = output.resolve("resources/META-INF/neoforge.mods.toml");
         Path packMetadata = output.resolve("resources/pack.mcmeta");

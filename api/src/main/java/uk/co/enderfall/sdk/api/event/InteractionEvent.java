@@ -14,6 +14,7 @@ public final class InteractionEvent {
     private final ResourceId heldItem;
     private final Hand hand;
     private final boolean sneaking;
+    private final uk.co.enderfall.sdk.api.item.MutableItemData itemData;
     private boolean handled;
     private boolean cancelled;
 
@@ -29,13 +30,21 @@ public final class InteractionEvent {
     public InteractionEvent(Kind kind, Side side, UUID playerId, ResourceId target,
             uk.co.enderfall.sdk.api.blockentity.BlockLocation blockLocation) {
         this(kind, side, playerId, target, blockLocation,
-                kind == Kind.USE_ITEM ? target : null, null, false);
+                kind == Kind.USE_ITEM ? target : null, null, false, null);
     }
 
     /** Complete native interaction context. Older event producers may omit item/hand details. */
     public InteractionEvent(Kind kind, Side side, UUID playerId, ResourceId target,
             uk.co.enderfall.sdk.api.blockentity.BlockLocation blockLocation,
             ResourceId heldItem, Hand hand, boolean sneaking) {
+        this(kind, side, playerId, target, blockLocation, heldItem, hand, sneaking, null);
+    }
+
+    /** Complete native interaction context including the real held stack's portable data. */
+    public InteractionEvent(Kind kind, Side side, UUID playerId, ResourceId target,
+            uk.co.enderfall.sdk.api.blockentity.BlockLocation blockLocation,
+            ResourceId heldItem, Hand hand, boolean sneaking,
+            uk.co.enderfall.sdk.api.item.MutableItemData itemData) {
         this.kind = Objects.requireNonNull(kind, "kind");
         this.side = Objects.requireNonNull(side, "side");
         this.playerId = Objects.requireNonNull(playerId, "playerId");
@@ -50,6 +59,7 @@ public final class InteractionEvent {
         this.heldItem = heldItem;
         this.hand = hand;
         this.sneaking = sneaking;
+        this.itemData = itemData;
     }
 
     /** Exact dimension and hit-block coordinates when supplied by the native hook. Never inferred. */
@@ -64,6 +74,15 @@ public final class InteractionEvent {
     public java.util.Optional<Hand> hand() { return java.util.Optional.ofNullable(hand); }
 
     public boolean sneaking() { return sneaking; }
+
+    /**
+     * Typed data on the actual held stack. Present only for SDK items with declared keys.
+     * Native bridges make writes server-only; normal save, copy, drop and inventory sync
+     * semantics are provided by Minecraft's stack serialization.
+     */
+    public java.util.Optional<uk.co.enderfall.sdk.api.item.MutableItemData> itemData() {
+        return java.util.Optional.ofNullable(itemData);
+    }
 
     public Kind kind() {
         return kind;

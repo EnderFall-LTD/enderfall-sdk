@@ -23,8 +23,9 @@ public interface PortableItem {
      * or {@link InteractionEvent#cancel()} explicitly; doing nothing preserves native and
      * other-mod fallback behavior.
      *
-     * <p>The hand is present for native events. Mutable stack data and tooltips are
-     * separate portable contracts.</p>
+     * <p>The hand is present for native events. Declare static portable tooltips through
+     * {@link ItemSpec.Builder#tooltip(TooltipLine)}. Declared mutable held-stack data is
+     * available through {@link InteractionEvent#itemData()} on native events.</p>
      */
     default void onUse(ModContext context, InteractionEvent event) { }
 

@@ -32,6 +32,10 @@ final class SharedRuntimeSources {
         emittedSources.addAll(RawPayloadEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(CommandBridgeEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(WorkbenchInputEmitter.emitIfPresent(target, declarations));
+        emittedSources.add(new RuntimeSource(
+                "uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
+                "uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
+                PortableItemSources.emit(target.id()).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         if (persistence) {
             emittedSources.add(PlatformServiceEmitter.persistentPreview(target.id()));
             emittedSources.addAll(PersistenceRuntimeSources.emit(target.id()));

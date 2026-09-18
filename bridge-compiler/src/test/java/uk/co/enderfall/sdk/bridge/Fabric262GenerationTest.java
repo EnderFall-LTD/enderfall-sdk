@@ -35,7 +35,7 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricConsumerBootstrap.java",
                     "c3414e23f0805220fbeb7cde9baef4a96b564dab43dd050c7c0773d82722b0b5"),
             Map.entry(PACKAGE_PATH + "Fabric26PlatformAdapter.java",
-                    "1715606936e65609f741c0877af80ba88e39f4d66103d36662a24b308db2942c"),
+                    "30142e78870f5d3cc0024747f2e1aa032d7d6b07e0f1d1d5a40af593c8a76c22"),
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "Fabric26PortableMenuScreen.java",
@@ -53,7 +53,9 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "Fabric26WorkbenchRecipe.java",
                     "84b9fd197e7f5faa3c82c437953aeb7f716516b2f2bf47316b714d5e5a9ce1a2"),
             Map.entry(PACKAGE_PATH + "Fabric26WorkbenchScreen.java",
-                    "712c4f399295243e6a3548465a21488670d591407b0887e4a97f7783be90211f"));
+                    "712c4f399295243e6a3548465a21488670d591407b0887e4a97f7783be90211f"),
+            Map.entry("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
+                    "c87faf5fc08ba4576c7edc8d948729c0fcf194d58c34951ca1051e78ff06ddee"));
     private static final String EXPECTED_PACK_METADATA = """
             {
               "pack": {
@@ -77,9 +79,9 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("21acdbd7c86be01d19bc98f544bcf2b4807f3b1fa2f0fa1973cd67eb05489c48",
+        assertEquals("279d2e1cce2bbda9064b04b265d64c6823edc20cfd94a2fc22424e966269435a",
                 first.sha256());
-        assertEquals(16, first.files().size());
+        assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
         assertEquals(hashes(firstOutput.resolve("sources")), hashes(secondOutput.resolve("sources")));
         assertEquals(hashes(firstOutput.resolve("resources")), hashes(secondOutput.resolve("resources")));

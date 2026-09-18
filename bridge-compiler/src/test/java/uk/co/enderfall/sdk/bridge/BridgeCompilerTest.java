@@ -85,7 +85,9 @@ class BridgeCompilerTest {
                 new GeneratedFile(OutputKind.RESOURCE, "nested/data.txt", 5),
                 new GeneratedFile(OutputKind.RESOURCE, "pack.mcmeta", 131),
                 new GeneratedFile(OutputKind.SOURCE,
-                        "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/EnderfallFabricRuntime.java", 487)), first.files());
+                        "uk/co/enderfall/sdk/runtime/fabric/v1_21_4/EnderfallFabricRuntime.java", 487),
+                new GeneratedFile(OutputKind.SOURCE,
+                        "uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java", 6652)), first.files());
         assertTreesEqual(
                 temporaryDirectory.resolve("first-output/sources"),
                 temporaryDirectory.resolve("second-output/sources"));
@@ -271,7 +273,7 @@ class BridgeCompilerTest {
 
         GenerationResult result = generate(canonical, outputs);
 
-        assertEquals(4, result.files().size());
+        assertEquals(5, result.files().size());
         assertEquals("source sentinel\n", Files.readString(outputs.resolve("sources/user-owned.txt")));
         assertEquals("resource sentinel\n", Files.readString(outputs.resolve("resources/user-owned.txt")));
     }

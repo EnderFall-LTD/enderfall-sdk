@@ -8,7 +8,7 @@ its loader adapters have runtime evidence.
 
 | Area | Available today | Demo coverage |
 | --- | --- | --- |
-| Items | Basic item properties, durability, stack size, rarity, fire resistance | Void crystal, resonance rod, and 3D resonance core |
+| Items | Basic properties, class-based portable behavior, literal/translated tooltips with Shift/advanced visibility, and bounded typed held-stack data | Void crystal, resonance rod, 3D resonance core, and persistent preview tool |
 | Blocks | Basic blocks, paired block items, strength, light, friction, jump factor, sounds | Alloy block, luminous lamp, shaped workbench |
 | Creative tabs | Portable title, icon, and entries | One tab containing all demo content |
 | Models/resources | Generated flat/handheld/cube models plus shared hand-authored JSON/resources | Three item sprites, block textures, and multi-element workbench/core models |
@@ -51,7 +51,7 @@ This focused matrix is not full foundation-feature or visual acceptance.
 | Area | Current status | Why it is not presented as working |
 | --- | --- | --- |
 | Fluids | No stable API or adapter | Requires source/flowing registrations, fluid block and bucket coordination, render handlers, tags, and version-specific behaviour |
-| Custom item/block behaviour | Player-facing use behaviour works through sided interaction events and `PlayerManager` | Direct world mutation, held-stack damage, effects, and block-state context are not yet defined |
+| Custom item/block behaviour | Server-side use/use-on-block callbacks, exact hit position, hand, crouching context, block-state mutation, and declared persistent held-stack data | Stack durability/effects and secure mutation of arbitrary inventory slots still need portable contracts |
 | Block entities and persistent state | No stable API or adapter | Serialization, ticking, update packets, inventory ownership, placement/removal lifecycle, and data migration must be specified together |
 
 ## Proposed developer-facing contracts

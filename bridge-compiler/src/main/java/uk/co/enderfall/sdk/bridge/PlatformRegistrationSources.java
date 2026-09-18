@@ -34,7 +34,8 @@ final class PlatformRegistrationSources {
                 case FABRIC_LEGACY, FABRIC_UNKEYED -> """
                         @Override
                         public void registerItem(ResourceId id, ItemSpec spec) {
-                            Item item = Registry.register(BuiltInRegistries.ITEM, location(id), new Item(itemProperties(spec)));
+                            Item item = Registry.register(BuiltInRegistries.ITEM, location(id),
+                                    new uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem(itemProperties(spec), spec));
                             items.put(id, item);
                         }
                     
@@ -45,7 +46,8 @@ final class PlatformRegistrationSources {
                             ResourceLocation location = location(id);
                             ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, location);
                             Item.Properties properties = itemProperties(spec).setId(key);
-                            Item item = Registry.register(BuiltInRegistries.ITEM, key, new Item(properties));
+                            Item item = Registry.register(BuiltInRegistries.ITEM, key,
+                                    new uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem(properties, spec));
                             items.put(id, item);
                         }
                     
@@ -56,7 +58,8 @@ final class PlatformRegistrationSources {
                             Identifier identifier = identifier(id);
                             ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, identifier);
                             Item.Properties properties = itemProperties(spec).setId(key);
-                            Item item = Registry.register(BuiltInRegistries.ITEM, key, new Item(properties));
+                            Item item = Registry.register(BuiltInRegistries.ITEM, key,
+                                    new uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem(properties, spec));
                             items.put(id, item);
                         }
                     
@@ -64,7 +67,8 @@ final class PlatformRegistrationSources {
                 case LEGACY_FML -> """
                         @Override
                         public void registerItem(ResourceId id, ItemSpec spec) {
-                            RegistryObject<Item> item = itemRegister.register(id.path(), () -> new Item(itemProperties(spec)));
+                            RegistryObject<Item> item = itemRegister.register(id.path(), () ->
+                                    new uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem(itemProperties(spec), spec));
                             items.put(id, item);
                         }
                     
@@ -72,7 +76,9 @@ final class PlatformRegistrationSources {
                 case NEOFORGE -> """
                         @Override
                         public void registerItem(ResourceId id, ItemSpec spec) {
-                            var item = itemRegister.registerItem(id.path(), Item::new, itemProperties(spec));
+                            var item = itemRegister.registerItem(id.path(), properties ->
+                                    new uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem(properties, spec),
+                                    itemProperties(spec));
                             items.put(id, item);
                         }
                     
@@ -80,7 +86,9 @@ final class PlatformRegistrationSources {
                 case NEOFORGE_IDENTIFIER -> """
                         @Override
                         public void registerItem(ResourceId id, ItemSpec spec) {
-                            var item = itemRegister.registerItem(id.path(), Item::new, () -> itemProperties(spec));
+                            var item = itemRegister.registerItem(id.path(), properties ->
+                                    new uk.co.enderfall.sdk.runtime.item.nativebridge.PortableSdkItem(properties, spec),
+                                    () -> itemProperties(spec));
                             items.put(id, item);
                         }
                     

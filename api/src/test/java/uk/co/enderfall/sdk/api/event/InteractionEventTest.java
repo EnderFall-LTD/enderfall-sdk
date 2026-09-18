@@ -8,8 +8,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import uk.co.enderfall.sdk.api.ResourceId;
+import uk.co.enderfall.sdk.api.item.ItemDataKey;
+import uk.co.enderfall.sdk.api.item.MutableItemData;
 
 class InteractionEventTest {
+    private static final class TestData implements MutableItemData {
+        private final java.util.Map<ItemDataKey<?>, Object> values = new java.util.HashMap<>();
+        @Override public <T> java.util.Optional<T> get(ItemDataKey<T> key) {
+            return java.util.Optional.ofNullable(values.get(key)).map(key::validate);
+        }
+        @Override public <T> void set(ItemDataKey<T> key, T value) { values.put(key, key.validate(value)); }
+        @Override public void remove(ItemDataKey<?> key) { values.remove(key); }
+    }
+
     @Test void completeBlockContextExposesHeldItemHandAndSneaking() {
         ResourceId block = ResourceId.of("minecraft", "barrel");
         ResourceId item = ResourceId.of("test", "wrench");
@@ -56,5 +67,18 @@ class InteractionEventTest {
         event.cancel();
         assertFalse(event.handled());
         assertTrue(event.cancelled());
+    }
+
+    @Test
+    void completeContextCanExposeTheActualHeldStackData() {
+        ResourceId item = ResourceId.parse("example:letter");
+        ItemDataKey<String> text = ItemDataKey.string(ResourceId.parse("example:letter_text"), 64);
+        TestData data = new TestData();
+        InteractionEvent event = new InteractionEvent(InteractionEvent.Kind.USE_ITEM,
+                InteractionEvent.Side.SERVER, UUID.randomUUID(), item, null, item,
+                InteractionEvent.Hand.MAIN_HAND, false, data);
+
+        event.itemData().orElseThrow().set(text, "hello");
+        assertEquals("hello", data.get(text).orElseThrow());
     }
 }

@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
+import uk.co.enderfall.sdk.api.ResourceId;
+import uk.co.enderfall.sdk.api.item.RepairMaterial;
 import uk.co.enderfall.sdk.api.item.TooltipColor;
 import uk.co.enderfall.sdk.api.item.TooltipVisibility;
 
@@ -37,11 +39,24 @@ class SpecificationTest {
 
     @Test
     void itemCopyIncludesTooltipLinesWithoutSharingBuilderState() {
-        ItemSpec original = ItemSpec.builder().tooltip("tooltip.example.original").build();
+        ItemSpec original = ItemSpec.builder().maxStackSize(1).durability(100)
+                .repairItem(ResourceId.parse("minecraft:iron_ingot"))
+                .tooltip("tooltip.example.original").build();
         ItemSpec.Builder copy = ItemSpec.builder().copyFrom(original);
         ItemSpec changed = copy.tooltip("tooltip.example.additional").build();
 
         assertEquals(1, original.tooltipLines().size());
         assertEquals(2, changed.tooltipLines().size());
+        assertEquals(RepairMaterial.Kind.ITEM, original.repairMaterial().orElseThrow().kind());
+        assertEquals(original.repairMaterial(), changed.repairMaterial());
+    }
+
+    @Test
+    void repairMaterialsRequireDurabilityAndRejectDuplicates() {
+        ResourceId iron = ResourceId.parse("minecraft:iron_ingot");
+        assertThrows(IllegalArgumentException.class,
+                () -> ItemSpec.builder().repairItem(iron).build());
+        assertThrows(IllegalStateException.class,
+                () -> ItemSpec.builder().durability(10).repairItem(iron).repairItem(iron));
     }
 }

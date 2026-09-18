@@ -11,6 +11,8 @@ final class PortableItemSources {
                 : "net.minecraft.client.gui.screens.Screen.hasShiftDown()";
         String method = policy.unobfuscated() ? modernMethod(shiftExpression)
                 : policy.legacy() ? legacyMethod(shiftExpression) : componentEraMethod(shiftExpression);
+        method += repairMethod(policy);
+        method += configurePropertiesMethod(policy);
         String storage = policy.legacy() ? legacyStorage()
                 : policy.unobfuscated() ? unobfuscatedStorage() : componentStorage();
         return """
@@ -26,13 +28,14 @@ final class PortableItemSources {
                 import uk.co.enderfall.sdk.api.item.ItemDataKey;
                 import uk.co.enderfall.sdk.api.item.MutableItemData;
                 import uk.co.enderfall.sdk.api.item.MutableItemStack;
+                import uk.co.enderfall.sdk.api.item.RepairMaterial;
                 import uk.co.enderfall.sdk.api.registry.ItemSpec;
 
                 public final class PortableSdkItem extends Item {
                     private final ItemSpec spec;
 
                     public PortableSdkItem(Properties properties, ItemSpec spec) {
-                        super(properties);
+                        super(configureProperties(properties, spec));
                         this.spec = java.util.Objects.requireNonNull(spec, "spec");
                     }
 
@@ -211,6 +214,61 @@ final class PortableItemSources {
                     }
 
                 """.formatted(shiftExpression);
+    }
+
+    private static String repairMethod(BlockEntityNativePolicy policy) {
+        if (policy.modernRecipes()) return "";
+        String nativeId = policy.unobfuscated()
+                ? "net.minecraft.resources.Identifier.fromNamespaceAndPath(material.id().namespace(), material.id().path())"
+                : policy.legacy()
+                        ? "java.util.Objects.requireNonNull(net.minecraft.resources.ResourceLocation.tryParse(material.id().toString()))"
+                        : "net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(material.id().namespace(), material.id().path())";
+        String itemRegistry = policy.legacy() && !policy.fabric()
+                ? "net.minecraftforge.registries.ForgeRegistries.ITEMS"
+                : "net.minecraft.core.registries.BuiltInRegistries.ITEM";
+        return """
+                    @Override
+                    public boolean isValidRepairItem(ItemStack stack, ItemStack candidate) {
+                        if (super.isValidRepairItem(stack, candidate)) return true;
+                        RepairMaterial material = spec.repairMaterial().orElse(null);
+                        if (material == null) return false;
+                        String candidateId = %s
+                                .getKey(candidate.getItem()).toString();
+                        if (material.kind() == RepairMaterial.Kind.ITEM) {
+                            return candidateId.equals(material.id().toString());
+                        }
+                        return candidate.is(net.minecraft.tags.TagKey.create(
+                                net.minecraft.core.registries.Registries.ITEM, %s));
+                    }
+
+                """.formatted(itemRegistry, nativeId);
+    }
+
+    private static String configurePropertiesMethod(BlockEntityNativePolicy policy) {
+        if (!policy.modernRecipes()) {
+            return """
+                        private static Properties configureProperties(Properties properties, ItemSpec spec) {
+                            return properties;
+                        }
+
+                    """;
+        }
+        String nativeId = policy.unobfuscated()
+                ? "net.minecraft.resources.Identifier.fromNamespaceAndPath(material.id().namespace(), material.id().path())"
+                : "net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(material.id().namespace(), material.id().path())";
+        return """
+                    private static Properties configureProperties(Properties properties, ItemSpec spec) {
+                        RepairMaterial material = spec.repairMaterial().orElse(null);
+                        if (material == null) return properties;
+                        if (material.kind() == RepairMaterial.Kind.ITEM) {
+                            return properties.repairable(net.minecraft.core.registries.BuiltInRegistries.ITEM
+                                    .getValue(%s));
+                        }
+                        return properties.repairable(net.minecraft.tags.TagKey.create(
+                                net.minecraft.core.registries.Registries.ITEM, %s));
+                    }
+
+                """.formatted(nativeId, nativeId);
     }
 
     private static String legacyStorage() {

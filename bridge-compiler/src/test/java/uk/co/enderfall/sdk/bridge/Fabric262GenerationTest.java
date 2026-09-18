@@ -55,7 +55,7 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "Fabric26WorkbenchScreen.java",
                     "712c4f399295243e6a3548465a21488670d591407b0887e4a97f7783be90211f"),
             Map.entry("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
-                    "759e5c25bfe5fc60442cde7e57a6367da067e270808f3f77066b287f6b2258fb"));
+                    "a0f24be0c2aa02e88c616cc0c77d1f837d4faa015d9607e1df40e932f6954610"));
     private static final String EXPECTED_PACK_METADATA = """
             {
               "pack": {
@@ -79,7 +79,7 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("fd9aeb8a54f0c773b1b29618c10b4176793c33ede6a5c7e8d88b21ae31c45516",
+        assertEquals("4d30109bce742a83dd4c13c161ae66b187e6c9e22cb10f09aea22d8a582049f5",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));

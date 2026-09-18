@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1214GenerationTest {
     private static final String TARGET = "1.21.4-neoforge";
     private static final String EXPECTED_DIGEST =
-            "4cd00b6e84ad5dafbf396cd3deb34ae93197985b78958c2840993714bd95f684";
+            "9c571c3538ba12f4c0938af060c6c1fda855b86fc5e59fda1d58f1e5b43b70dc";
     private static final String PACKAGE_PATH =
             "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final Map<String, String> EXPECTED_SOURCE_HASHES = Map.ofEntries(
@@ -69,7 +69,7 @@ class NeoForge1214GenerationTest {
             assertEquals(source.getValue(), sha256(Files.readAllBytes(
                     output.resolve("sources").resolve(PACKAGE_PATH).resolve(source.getKey()))));
         }
-        assertEquals("35392bfbab0efa45b6cc27ccd69ece5a0037c5a09001e37e4421a1e3461fd095",
+        assertEquals("0ebf07e88d2c6f1c41da78b346d6ed55973a62b93c008f3f1f0d0d330879917f",
                 sha256(Files.readAllBytes(output.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java"))));
 
         Path modsToml = output.resolve("resources/META-INF/neoforge.mods.toml");

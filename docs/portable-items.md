@@ -13,6 +13,7 @@ public final class WrenchItem implements PortableItem {
     public void configure(ItemSpec.Builder properties) {
         properties.maxStackSize(1)
                 .durability(256)
+                .repairItem(ResourceId.parse("minecraft:iron_ingot"))
                 .data(USES)
                 .tooltip("tooltip.example.wrench.summary")
                 .shiftHint("tooltip.example.hold_shift")
@@ -68,6 +69,14 @@ consumption clamps at the current count, and durability damage reports whether t
 broke. `creativeMode()` lets a definition follow vanilla-style no-cost creative use.
 These deterministic operations do not roll Unbreaking automatically; call them only
 after the portable action has actually succeeded.
+
+Durable items may declare one anvil repair source with either
+`repairItem(ResourceId)` for one exact item or `repairTag(ResourceId)` for every item
+in a vanilla or modded item tag. A tag is the portable way to accept several repair
+materials. Declaring both, declaring either one more than once, or adding a repair
+source to a non-durable item fails during registration. The bridge uses the native
+repair-item hook on 1.20.1/1.21.1 and the native repairable item component on 1.21.4
+and newer targets; portable mod code remains identical.
 
 Tooltip lines can be literal or translated, coloured, and shown always, while Shift is
 held, while Shift is not held, or only with advanced tooltips. The short builder methods

@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.item.ItemDataKey;
+import uk.co.enderfall.sdk.api.item.RepairMaterial;
 import uk.co.enderfall.sdk.api.item.TooltipColor;
 import uk.co.enderfall.sdk.api.item.TooltipLine;
 import uk.co.enderfall.sdk.api.item.TooltipVisibility;
@@ -18,6 +19,7 @@ public final class ItemSpec {
     private final Rarity rarity;
     private final List<TooltipLine> tooltipLines;
     private final List<ItemDataKey<?>> dataKeys;
+    private final RepairMaterial repairMaterial;
 
     private ItemSpec(Builder builder) {
         maxStackSize = builder.maxStackSize;
@@ -26,8 +28,12 @@ public final class ItemSpec {
         rarity = builder.rarity;
         tooltipLines = List.copyOf(builder.tooltipLines);
         dataKeys = List.copyOf(builder.dataKeys);
+        repairMaterial = builder.repairMaterial;
         if (durability > 0 && maxStackSize != 1) {
             throw new IllegalArgumentException("Durable items must have maxStackSize 1");
+        }
+        if (repairMaterial != null && durability == 0) {
+            throw new IllegalArgumentException("Repair materials require a durable item");
         }
     }
 
@@ -57,6 +63,8 @@ public final class ItemSpec {
 
     public List<ItemDataKey<?>> dataKeys() { return dataKeys; }
 
+    public Optional<RepairMaterial> repairMaterial() { return Optional.ofNullable(repairMaterial); }
+
     public Optional<ItemDataKey<?>> dataKey(ResourceId id) {
         Objects.requireNonNull(id, "id");
         return dataKeys.stream().filter(key -> key.id().equals(id)).findFirst();
@@ -69,6 +77,7 @@ public final class ItemSpec {
             fireResistant = source.fireResistant; rarity = source.rarity;
             tooltipLines.clear(); tooltipLines.addAll(source.tooltipLines);
             dataKeys.clear(); dataKeys.addAll(source.dataKeys);
+            repairMaterial = source.repairMaterial;
             return this;
         }
         private int maxStackSize = 64;
@@ -77,6 +86,7 @@ public final class ItemSpec {
         private Rarity rarity = Rarity.COMMON;
         private final List<TooltipLine> tooltipLines = new ArrayList<>();
         private final List<ItemDataKey<?>> dataKeys = new ArrayList<>();
+        private RepairMaterial repairMaterial;
 
         public Builder maxStackSize(int value) {
             if (value < 1 || value > 64) {
@@ -140,6 +150,25 @@ public final class ItemSpec {
                 throw new IllegalArgumentException("Duplicate item data key " + key.id());
             }
             dataKeys.add(key);
+            return this;
+        }
+
+        /** Accepts one exact registered item ID as an anvil repair material. */
+        public Builder repairItem(ResourceId itemId) {
+            return repairWith(RepairMaterial.item(itemId));
+        }
+
+        /** Accepts every item in a vanilla or modded item tag as an anvil repair material. */
+        public Builder repairTag(ResourceId tagId) {
+            return repairWith(RepairMaterial.tag(tagId));
+        }
+
+        private Builder repairWith(RepairMaterial material) {
+            Objects.requireNonNull(material, "material");
+            if (repairMaterial != null) {
+                throw new IllegalStateException("An item can declare one repair item or one repair tag");
+            }
+            repairMaterial = material;
             return this;
         }
 

@@ -47,15 +47,15 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "fc5e8871b82ddbfc030f9b1b854bdc0fb14d2935a3b3837f7f21d9c826eaadb1"
-                    : "53b866441ac94fd6e2a03839e5e958a3e30764649eee79d32647ddb8fef6662c", result.sha256());
+                    ? "5f6cc264a8108b733256ea31c9b8a9c640e9f9e0751b785ec571e1f35dab8d2a"
+                    : "c62e4cc33171f518955a4db9d3da914fabd705c806f86996a3b6243de4b26805", result.sha256());
             assertEquals(16, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());
             Map<String, String> expected = new TreeMap<>();
             REFERENCE_JAVA_HASHES.forEach((name, hash) -> expected.put(PACKAGE_PATH + name, hash));
             expected.put("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
-                    "bb745b20a292593398b2c279162bef389b24f61927f54bf69790892c17fab7d8");
+                    "3f3546195cd01221b0ecc1625cf52e1cb4f3b225049bde6f615e5d7355186fcc");
             assertEquals(expected, hashes(first.resolve("sources")));
             assertFalse(Files.exists(first.resolve("sources/uk/co/enderfall/sdk/runtime/neoforge")));
             assertFalse(Files.exists(first.resolve("resources/META-INF/neoforge.mods.toml")));

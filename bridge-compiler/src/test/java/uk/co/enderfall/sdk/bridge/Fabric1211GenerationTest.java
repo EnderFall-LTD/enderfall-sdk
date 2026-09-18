@@ -59,7 +59,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricWorkbenchScreen.java",
                     "e2cb7ae4e2e71911f268f7625887b304ce62e90276e4212195ab4bfec007d980"),
             Map.entry("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
-                    "35392bfbab0efa45b6cc27ccd69ece5a0037c5a09001e37e4421a1e3461fd095"));
+                    "9c27205800c68f9abc1da9c297a485919ea1ad41a42107582a97aced5ffb2cc9"));
     private static final String EXPECTED_FABRIC_MOD_JSON = """
             {
               "schemaVersion": 1,
@@ -106,7 +106,7 @@ class Fabric1211GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("78b8a6c007ec2cc6145e409a22d3a8b28230f2431688cfb27ac94b26f515bc7b",
+        assertEquals("aff0f108549429b17f1c42f12b06e2eb0aa51093f9f8e63a9f7ad5b6dd5a10f5",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
@@ -197,7 +197,7 @@ class Fabric1211GenerationTest {
         Path menu = canonical.resolve("src/canonical/java").resolve(CANONICAL_MENU);
         Files.writeString(menu, "// Feature declaration only; no Java template required.\n");
         writeManifest(canonical);
-        assertEquals("78b8a6c007ec2cc6145e409a22d3a8b28230f2431688cfb27ac94b26f515bc7b",
+        assertEquals("aff0f108549429b17f1c42f12b06e2eb0aa51093f9f8e63a9f7ad5b6dd5a10f5",
                 generate(canonical, temporaryDirectory.resolve("independent-output")).sha256());
     }
 

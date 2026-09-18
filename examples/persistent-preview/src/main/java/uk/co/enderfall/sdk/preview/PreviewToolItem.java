@@ -1,6 +1,7 @@
 package uk.co.enderfall.sdk.preview;
 
 import uk.co.enderfall.sdk.api.ModContext;
+import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.event.InteractionEvent;
 import uk.co.enderfall.sdk.api.item.ItemDataKey;
 import uk.co.enderfall.sdk.api.item.PortableItem;
@@ -10,12 +11,13 @@ import uk.co.enderfall.sdk.api.registry.Rarity;
 /** Class-shaped portable item proving configuration and loader-neutral use routing. */
 public final class PreviewToolItem implements PortableItem {
     public static final ItemDataKey<Integer> USE_COUNT = ItemDataKey.integer(
-            uk.co.enderfall.sdk.api.ResourceId.parse("enderfall_persistent_preview:portable_tool_uses"),
+            ResourceId.parse("enderfall_persistent_preview:portable_tool_uses"),
             0, 1_000_000);
 
     @Override public void configure(ItemSpec.Builder properties) {
         properties.maxStackSize(1)
                 .durability(128)
+                .repairItem(ResourceId.parse("minecraft:iron_ingot"))
                 .rarity(Rarity.UNCOMMON)
                 .data(USE_COUNT)
                 .tooltip("tooltip.enderfall_persistent_preview.portable_tool.summary")

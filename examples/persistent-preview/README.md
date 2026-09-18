@@ -28,7 +28,9 @@ that block's compact state; the message must report the actual hand and whether 
 player was crouching. Its use count is durable per-stack data and its translated details
 appear while Shift is held. Each successful compact-state toggle costs one durability in
 survival and reports the remaining value; creative mode performs the same action without
-damaging the tool.
+damaging the tool. An iron ingot repairs it in an anvil on every target, exercising the
+same portable `repairItem` declaration through both legacy and component-era Minecraft
+repair systems.
 
 The `Portable Letter Test` proves a Furnection-style secure editor update. Put it in a
 carried inventory slot and run `/enderfall_letter_edit <slot>`, where the hotbar is 0-8,

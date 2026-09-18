@@ -105,30 +105,28 @@ public final class Registration {
         resolution.resolved.forEach((id, options) -> {
             if (options.behavior != null) behaviors.put(id, options.behavior);
         });
-        if (!behaviors.isEmpty()) {
-            Map<ResourceId, uk.co.enderfall.sdk.api.block.PortableBlock> registered = Map.copyOf(behaviors);
-            context.events().subscribe(uk.co.enderfall.sdk.api.event.SdkEvents.INTERACTION, event -> {
-                if (event.side() != uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER
-                        || event.kind() != uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_BLOCK
-                        || event.cancelled() || event.handled()) return;
-                var behavior = registered.get(event.target());
-                if (behavior != null) behavior.onUse(context, event);
-            });
-        }
         Map<ResourceId, uk.co.enderfall.sdk.api.item.PortableItem> itemBehaviors = new HashMap<>();
         for (Entry entry : entries) {
             if (entry instanceof ItemEntry item && item.behavior != null) {
                 itemBehaviors.put(item.key.id, item.behavior);
             }
         }
-        if (!itemBehaviors.isEmpty()) {
-            Map<ResourceId, uk.co.enderfall.sdk.api.item.PortableItem> registered = Map.copyOf(itemBehaviors);
+        if (!behaviors.isEmpty() || !itemBehaviors.isEmpty()) {
+            Map<ResourceId, uk.co.enderfall.sdk.api.block.PortableBlock> registeredBlocks = Map.copyOf(behaviors);
+            Map<ResourceId, uk.co.enderfall.sdk.api.item.PortableItem> registeredItems = Map.copyOf(itemBehaviors);
             context.events().subscribe(uk.co.enderfall.sdk.api.event.SdkEvents.INTERACTION, event -> {
                 if (event.side() != uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER
-                        || event.kind() != uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM
                         || event.cancelled() || event.handled()) return;
-                var behavior = registered.get(event.target());
-                if (behavior != null) behavior.onUse(context, event);
+                if (event.kind() == uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM) {
+                    var item = registeredItems.get(event.target());
+                    if (item != null) item.onUse(context, event);
+                    return;
+                }
+                var item = event.heldItem().map(registeredItems::get).orElse(null);
+                if (item != null) item.onUseOnBlock(context, event);
+                if (event.cancelled() || event.handled()) return;
+                var block = registeredBlocks.get(event.target());
+                if (block != null) block.onUse(context, event);
             });
         }
     }

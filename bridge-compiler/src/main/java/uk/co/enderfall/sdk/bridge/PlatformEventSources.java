@@ -56,7 +56,10 @@ final class PlatformEventSources {
                                 ResourceLocation target = BuiltInRegistries.ITEM.getKey(player.getItemInHand(hand).getItem());
                                 InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM,
                                         level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        player.getUUID(), target);
+                                        player.getUUID(), target, target,
+                                        hand == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        player.isShiftKeyDown(), null);
                                 return result == InteractionResult.FAIL
                                         ? InteractionResultHolder.fail(player.getItemInHand(hand))
                                         : result == InteractionResult.SUCCESS
@@ -67,7 +70,15 @@ final class PlatformEventSources {
                                     InteractionEvent.Kind.USE_BLOCK,
                                     level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
                                     player.getUUID(),
-                                    BuiltInRegistries.BLOCK.getKey(level.getBlockState(hitResult.getBlockPos()).getBlock())));
+                                    BuiltInRegistries.BLOCK.getKey(level.getBlockState(hitResult.getBlockPos()).getBlock()),
+                                    BuiltInRegistries.ITEM.getKey(player.getItemInHand(hand).getItem()),
+                                    hand == net.minecraft.world.InteractionHand.OFF_HAND
+                                            ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                    player.isShiftKeyDown(),
+                                    new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                                            ResourceId.parse(level.dimension().location().toString()),
+                                            hitResult.getBlockPos().getX(), hitResult.getBlockPos().getY(),
+                                            hitResult.getBlockPos().getZ())));
                             if (platformInfo.environment() == Environment.CLIENT) {
                                 ${ClientHooks}.installLifecycle(context);
                             }
@@ -119,13 +130,24 @@ final class PlatformEventSources {
                                 ResourceLocation target = BuiltInRegistries.ITEM.getKey(player.getItemInHand(hand).getItem());
                                 return interaction(InteractionEvent.Kind.USE_ITEM,
                                         level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        player.getUUID(), target);
+                                        player.getUUID(), target, target,
+                                        hand == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        player.isShiftKeyDown(), null);
                             });
                             UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
                                 ResourceLocation target = BuiltInRegistries.BLOCK.getKey(level.getBlockState(hitResult.getBlockPos()).getBlock());
                                 return interaction(InteractionEvent.Kind.USE_BLOCK,
                                         level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        player.getUUID(), target);
+                                        player.getUUID(), target,
+                                        BuiltInRegistries.ITEM.getKey(player.getItemInHand(hand).getItem()),
+                                        hand == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        player.isShiftKeyDown(),
+                                        new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                                                ResourceId.parse(level.dimension().location().toString()),
+                                                hitResult.getBlockPos().getX(), hitResult.getBlockPos().getY(),
+                                                hitResult.getBlockPos().getZ()));
                             });
                             if (platformInfo.environment() == Environment.CLIENT) {
                                 ${ClientHooks}.installLifecycle(context);
@@ -178,14 +200,25 @@ final class PlatformEventSources {
                                 Identifier target = BuiltInRegistries.ITEM.getKey(player.getItemInHand(hand).getItem());
                                 return interaction(InteractionEvent.Kind.USE_ITEM,
                                         level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        player.getUUID(), target);
+                                        player.getUUID(), target, target,
+                                        hand == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        player.isShiftKeyDown(), null);
                             });
                             UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
                                 Identifier target = BuiltInRegistries.BLOCK.getKey(
                                         level.getBlockState(hitResult.getBlockPos()).getBlock());
                                 return interaction(InteractionEvent.Kind.USE_BLOCK,
                                         level.isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        player.getUUID(), target);
+                                        player.getUUID(), target,
+                                        BuiltInRegistries.ITEM.getKey(player.getItemInHand(hand).getItem()),
+                                        hand == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        player.isShiftKeyDown(),
+                                        new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                                                ResourceId.parse(level.dimension().identifier().toString()),
+                                                hitResult.getBlockPos().getX(), hitResult.getBlockPos().getY(),
+                                                hitResult.getBlockPos().getZ()));
                             });
                             if (platformInfo.environment() == Environment.CLIENT) {
                                 ${ClientHooks}.installLifecycle(context);
@@ -234,7 +267,10 @@ final class PlatformEventSources {
                                 ResourceLocation target = ForgeRegistries.ITEMS.getKey(event.getItemStack().getItem());
                                 InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM,
                                         event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        event.getEntity().getUUID(), target);
+                                        event.getEntity().getUUID(), target, target,
+                                        event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        event.getEntity().isShiftKeyDown(), null);
                                 if (result != InteractionResult.PASS) {
                                     event.setCancellationResult(result);
                                     event.setCanceled(true);
@@ -245,7 +281,14 @@ final class PlatformEventSources {
                                         event.getLevel().getBlockState(event.getPos()).getBlock());
                                 InteractionResult result = interaction(InteractionEvent.Kind.USE_BLOCK,
                                         event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        event.getEntity().getUUID(), target);
+                                        event.getEntity().getUUID(), target,
+                                        ForgeRegistries.ITEMS.getKey(event.getItemStack().getItem()),
+                                        event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        event.getEntity().isShiftKeyDown(),
+                                        new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                                                ResourceId.parse(event.getLevel().dimension().location().toString()),
+                                                event.getPos().getX(), event.getPos().getY(), event.getPos().getZ()));
                                 if (result != InteractionResult.PASS) {
                                     event.setCancellationResult(result);
                                     event.setCanceled(true);
@@ -287,7 +330,10 @@ final class PlatformEventSources {
                                 ResourceLocation target = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
                                 InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM,
                                         event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        event.getEntity().getUUID(), target);
+                                        event.getEntity().getUUID(), target, target,
+                                        event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        event.getEntity().isShiftKeyDown(), null);
                                 if (result != InteractionResult.PASS) {
                                     event.setCancellationResult(result);
                                     event.setCanceled(true);
@@ -298,7 +344,14 @@ final class PlatformEventSources {
                                         event.getLevel().getBlockState(event.getPos()).getBlock());
                                 InteractionResult result = interaction(InteractionEvent.Kind.USE_BLOCK,
                                         event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        event.getEntity().getUUID(), target);
+                                        event.getEntity().getUUID(), target,
+                                        BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem()),
+                                        event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        event.getEntity().isShiftKeyDown(),
+                                        new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                                                ResourceId.parse(event.getLevel().dimension().location().toString()),
+                                                event.getPos().getX(), event.getPos().getY(), event.getPos().getZ()));
                                 if (result != InteractionResult.PASS) {
                                     event.setCancellationResult(result);
                                     event.setCanceled(true);
@@ -340,7 +393,10 @@ final class PlatformEventSources {
                                 Identifier target = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
                                 InteractionResult result = interaction(InteractionEvent.Kind.USE_ITEM,
                                         event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        event.getEntity().getUUID(), target);
+                                        event.getEntity().getUUID(), target, target,
+                                        event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        event.getEntity().isShiftKeyDown(), null);
                                 if (result != InteractionResult.PASS) {
                                     event.setCancellationResult(result);
                                     event.setCanceled(true);
@@ -351,7 +407,14 @@ final class PlatformEventSources {
                                         event.getLevel().getBlockState(event.getPos()).getBlock());
                                 InteractionResult result = interaction(InteractionEvent.Kind.USE_BLOCK,
                                         event.getLevel().isClientSide() ? InteractionEvent.Side.CLIENT : InteractionEvent.Side.SERVER,
-                                        event.getEntity().getUUID(), target);
+                                        event.getEntity().getUUID(), target,
+                                        BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem()),
+                                        event.getHand() == net.minecraft.world.InteractionHand.OFF_HAND
+                                                ? InteractionEvent.Hand.OFF_HAND : InteractionEvent.Hand.MAIN_HAND,
+                                        event.getEntity().isShiftKeyDown(),
+                                        new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                                                ResourceId.parse(event.getLevel().dimension().identifier().toString()),
+                                                event.getPos().getX(), event.getPos().getY(), event.getPos().getZ()));
                                 if (result != InteractionResult.PASS) {
                                     event.setCancellationResult(result);
                                     event.setCanceled(true);
@@ -365,9 +428,13 @@ final class PlatformEventSources {
                 case FABRIC_LEGACY, FABRIC_UNKEYED, FABRIC_KEYED -> """
                         private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
                                                               java.util.UUID playerId,
-                                                              ResourceLocation target) {
+                                                              ResourceLocation target, ResourceLocation heldItem,
+                                                              InteractionEvent.Hand hand, boolean sneaking,
+                                                              uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
                             InteractionEvent event = new InteractionEvent(kind, side, playerId,
-                                    ResourceId.of(target.getNamespace(), target.getPath()));
+                                    ResourceId.of(target.getNamespace(), target.getPath()), location,
+                                    heldItem == null ? null : ResourceId.of(heldItem.getNamespace(), heldItem.getPath()),
+                                    hand, sneaking);
                             context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
                             return event.cancelled() ? InteractionResult.FAIL
                                     : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -377,9 +444,13 @@ final class PlatformEventSources {
                 case FABRIC_IDENTIFIER -> """
                         private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
                                                               java.util.UUID playerId,
-                                                              Identifier target) {
+                                                              Identifier target, Identifier heldItem,
+                                                              InteractionEvent.Hand hand, boolean sneaking,
+                                                              uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
                             InteractionEvent event = new InteractionEvent(kind, side, playerId,
-                                    ResourceId.of(target.getNamespace(), target.getPath()));
+                                    ResourceId.of(target.getNamespace(), target.getPath()), location,
+                                    heldItem == null ? null : ResourceId.of(heldItem.getNamespace(), heldItem.getPath()),
+                                    hand, sneaking);
                             context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
                             return event.cancelled() ? InteractionResult.FAIL
                                     : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -388,12 +459,17 @@ final class PlatformEventSources {
                     """;
                 case LEGACY_FML -> """
                         private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
-                                                              java.util.UUID playerId, ResourceLocation target) {
+                                                              java.util.UUID playerId, ResourceLocation target,
+                                                              ResourceLocation heldItem, InteractionEvent.Hand hand,
+                                                              boolean sneaking,
+                                                              uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
                             if (target == null) {
                                 return InteractionResult.PASS;
                             }
                             InteractionEvent event = new InteractionEvent(kind, side, playerId,
-                                    ResourceId.of(target.getNamespace(), target.getPath()));
+                                    ResourceId.of(target.getNamespace(), target.getPath()), location,
+                                    heldItem == null ? null : ResourceId.of(heldItem.getNamespace(), heldItem.getPath()),
+                                    hand, sneaking);
                             context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
                             return event.cancelled() ? InteractionResult.FAIL
                                     : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -403,9 +479,13 @@ final class PlatformEventSources {
                 case NEOFORGE -> """
                         private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
                                                     java.util.UUID playerId,
-                                                    ResourceLocation target) {
+                                                    ResourceLocation target, ResourceLocation heldItem,
+                                                    InteractionEvent.Hand hand, boolean sneaking,
+                                                    uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
                             InteractionEvent event = new InteractionEvent(kind, side, playerId,
-                                    ResourceId.of(target.getNamespace(), target.getPath()));
+                                    ResourceId.of(target.getNamespace(), target.getPath()), location,
+                                    heldItem == null ? null : ResourceId.of(heldItem.getNamespace(), heldItem.getPath()),
+                                    hand, sneaking);
                             context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
                             return event.cancelled() ? InteractionResult.FAIL
                                     : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -415,9 +495,13 @@ final class PlatformEventSources {
                 case NEOFORGE_IDENTIFIER -> """
                         private InteractionResult interaction(InteractionEvent.Kind kind, InteractionEvent.Side side,
                                                     java.util.UUID playerId,
-                                                    Identifier target) {
+                                                    Identifier target, Identifier heldItem,
+                                                    InteractionEvent.Hand hand, boolean sneaking,
+                                                    uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
                             InteractionEvent event = new InteractionEvent(kind, side, playerId,
-                                    ResourceId.of(target.getNamespace(), target.getPath()));
+                                    ResourceId.of(target.getNamespace(), target.getPath()), location,
+                                    heldItem == null ? null : ResourceId.of(heldItem.getNamespace(), heldItem.getPath()),
+                                    hand, sneaking);
                             context.runtimeEvents().publish(SdkEvents.INTERACTION, event);
                             return event.cancelled() ? InteractionResult.FAIL
                                     : event.handled() ? InteractionResult.SUCCESS : InteractionResult.PASS;

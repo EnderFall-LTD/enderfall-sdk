@@ -39,7 +39,9 @@ ITEMS.item("reinforced_wrench", WrenchItem::new,
         properties -> properties.durability(512));
 ```
 
-The current completed slice routes unhandled server-side right-click-item events on
-all supported targets. It does not yet expose the used hand or mutable stack. Portable
-use-on-block context, shift state, tooltips and per-stack durable data are the next item
-contracts; until they land, those behaviors are not claimed portable.
+The current completed slice routes unhandled server-side right-click-item and
+use-on-block events on all supported targets. `onUseOnBlock` receives the exact block
+location, held item, main/off-hand identity and crouching state through the interaction
+event. It runs before the target portable block callback; leaving the event untouched
+allows block and native fallback behavior to continue. Mutable per-stack data and
+tooltips are the next item contracts and are not yet claimed portable.

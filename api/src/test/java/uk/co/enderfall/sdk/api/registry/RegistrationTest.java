@@ -12,6 +12,7 @@ class RegistrationTest {
     void customItemFactoryConfiguresOnceAndReceivesOnlyUnhandledServerUses() throws Exception {
         var factories = new java.util.concurrent.atomic.AtomicInteger();
         var uses = new java.util.concurrent.atomic.AtomicInteger();
+        var blockUses = new java.util.concurrent.atomic.AtomicInteger();
         var specs = new HashMap<ResourceId, ItemSpec>();
         ItemRegistrar registrar = (ItemRegistrar) Proxy.newProxyInstance(ItemRegistrar.class.getClassLoader(),
                 new Class<?>[] { ItemRegistrar.class }, (proxy, method, args) -> {
@@ -45,6 +46,14 @@ class RegistrationTest {
                     uses.incrementAndGet();
                     event.handle();
                 }
+                @Override public void onUseOnBlock(ModContext ignored,
+                        uk.co.enderfall.sdk.api.event.InteractionEvent event) {
+                    blockUses.incrementAndGet();
+                    assertEquals(uk.co.enderfall.sdk.api.event.InteractionEvent.Hand.OFF_HAND,
+                            event.hand().orElseThrow());
+                    assertTrue(event.sneaking());
+                    event.handle();
+                }
             };
         }, properties -> properties.maxStackSize(16));
         assertEquals(0, factories.get());
@@ -61,6 +70,14 @@ class RegistrationTest {
         var blockUse = new uk.co.enderfall.sdk.api.event.InteractionEvent(
                 uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_BLOCK, player, tool.id());
         listener.get().handle(blockUse);
+        var toolOnBlock = new uk.co.enderfall.sdk.api.event.InteractionEvent(
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_BLOCK,
+                uk.co.enderfall.sdk.api.event.InteractionEvent.Side.SERVER, player,
+                ResourceId.of("minecraft", "stone"),
+                new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                        ResourceId.of("minecraft", "overworld"), 1, 2, 3),
+                tool.id(), uk.co.enderfall.sdk.api.event.InteractionEvent.Hand.OFF_HAND, true);
+        listener.get().handle(toolOnBlock);
         var consumed = new uk.co.enderfall.sdk.api.event.InteractionEvent(
                 uk.co.enderfall.sdk.api.event.InteractionEvent.Kind.USE_ITEM, player, tool.id());
         consumed.handle();
@@ -68,6 +85,8 @@ class RegistrationTest {
         consumed.cancel();
         listener.get().handle(consumed);
         assertEquals(1, uses.get());
+        assertEquals(1, blockUses.get());
+        assertTrue(toolOnBlock.handled());
     }
 
     @Test

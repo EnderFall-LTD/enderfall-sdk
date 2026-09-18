@@ -14,8 +14,9 @@ open state, sound profiles, configurable per-face slot access and opt-in vanilla
 lazy loot-table population. Connecting-table, storage and loot-table fixtures still
 need cross-target gameplay acceptance. Portable item behaviour and durable item data
 are the active implementation stage. Class-based portable item registration and
-server-side right-click routing now compile from identical source on all nine targets;
-use-on-block context, tooltips and persistent synchronized stack data remain open.
+server-side right-click/use-on-block routing, exact position, hand and crouching context
+now compile from identical source on all nine targets; tooltips and persistent
+synchronized stack data remain open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

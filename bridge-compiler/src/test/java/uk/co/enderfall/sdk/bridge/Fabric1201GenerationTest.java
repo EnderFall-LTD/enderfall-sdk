@@ -30,7 +30,7 @@ class Fabric1201GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("ab8e727e3503cd1f9aadcfe541185b3d847d21a67cb0971f9c7275dc19a874d5", first.sha256());
+        assertEquals("d9cc12d0e3dee27cd201c5df5d87d26d5c07f8390afc144495e860fc5cebb0f2", first.sha256());
         assertEquals(13, first.files().size());
         try (var files = Files.walk(firstOutput)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
@@ -42,7 +42,7 @@ class Fabric1201GenerationTest {
         // Independent working-reference hashes lock the legacy transport and recipe/menu ABI.
         assertEquals("3329a727db068c81982619c6cbca65e37603b33eadfcb8a23571a372532a9840",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201ClientHooks.java")));
-        assertEquals("5b8f82cb1b8b41e8fc012796e69e683f15adf4188fbaf82c71f92193ebb61f8c",
+        assertEquals("6de373d974beb0a8c5eb610b7c27b1cf9d0112061ae46c5d88c2d69e4824b962",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201PlatformAdapter.java")));
         assertEquals("64bc53b937943f8aff0e92d54d3f45e42153e2115749cd2e57d331a2b0b184a4",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201WorkbenchMenu.java")));

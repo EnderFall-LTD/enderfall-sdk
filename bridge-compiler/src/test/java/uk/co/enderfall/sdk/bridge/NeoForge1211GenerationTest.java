@@ -24,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1211GenerationTest {
     private static final String TARGET = "1.21.1-neoforge";
     private static final String EXPECTED_DIGEST =
-            "1e57d889e4bce92c7ab896cebe85ee0a93892ba1484c92564bc6c9d7acfd2a55";
+            "c9828d024698e420253ed829a9767bab10dafdac03ca3a5b48e7f7cd7488856f";
     private static final String PACKAGE_PATH = "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final String CANONICAL_MENU = PACKAGE_PATH + "NeoForgeWorkbenchMenu.java";
     private static final String MENU_DESCRIPTION =
@@ -70,7 +70,7 @@ class NeoForge1211GenerationTest {
     }
 
     @Test
-    void reusesTwelveCentralNeoForgeSourcesByteForByte() throws Exception {
+    void reusesUnmigratedCentralNeoForgeSourcesByteForByte() throws Exception {
         Path canonical = canonicalRuntimeRoot();
         Path output = temporaryDirectory.resolve("reuse");
         generate(canonical, output);
@@ -82,13 +82,16 @@ class NeoForge1211GenerationTest {
                 if (name.equals("NeoForgeWorkbenchMenu.java") || name.equals("NeoForgeWorkbenchRecipe.java")) {
                     continue;
                 }
+                if (name.equals("NeoForgePlatformAdapter.java")) {
+                    continue; // Generated interaction context has intentionally moved beyond the reference adapter.
+                }
                 Path relative = canonical.resolve("src/neoforge/java").relativize(canonicalFile);
                 assertArrayEquals(Files.readAllBytes(canonicalFile),
                         Files.readAllBytes(output.resolve("sources").resolve(relative)));
                 reused++;
             }
         }
-        assertEquals(12, reused);
+        assertEquals(11, reused);
     }
 
     @Test

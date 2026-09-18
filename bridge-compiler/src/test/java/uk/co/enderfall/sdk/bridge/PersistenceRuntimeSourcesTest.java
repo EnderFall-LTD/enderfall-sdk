@@ -36,6 +36,10 @@ class PersistenceRuntimeSourcesTest {
                 assertTrue(source.contains("adapter.enableMenuGauges()"), target);
                 Path platform = sources.stream().filter(path -> path.getFileName().toString().endsWith("PersistentPlatformAdapter.java")).findFirst().orElseThrow();
                 String platformSource = Files.readString(platform);
+                assertTrue(platformSource.contains("InteractionEvent.Hand.OFF_HAND"), target);
+                assertTrue(platformSource.contains("isShiftKeyDown()"), target);
+                assertTrue(platformSource.contains("new uk.co.enderfall.sdk.api.blockentity.BlockLocation("), target);
+                assertTrue(platformSource.contains("heldItem == null ? null : ResourceId.of("), target);
                 assertTrue(platformSource.contains("supportsBlockShapes() { return true; }"), target);
                 assertTrue(platformSource.contains("uk.co.enderfall.sdk.runtime.blockentity.nativebridge.PortableShapeBlock.create("), target);
                 String shapeSource = Files.readString(sources.stream().filter(path -> path.getFileName().toString().equals("PortableShapeBlock.java")).findFirst().orElseThrow());

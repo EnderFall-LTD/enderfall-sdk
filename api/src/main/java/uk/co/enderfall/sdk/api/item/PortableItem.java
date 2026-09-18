@@ -23,8 +23,15 @@ public interface PortableItem {
      * or {@link InteractionEvent#cancel()} explicitly; doing nothing preserves native and
      * other-mod fallback behavior.
      *
-     * <p>The initial contract does not expose a hand or mutable stack. Use-on-block,
-     * tooltips and durable stack data are separate portable contracts.</p>
+     * <p>The hand is present for native events. Mutable stack data and tooltips are
+     * separate portable contracts.</p>
      */
     default void onUse(ModContext context, InteractionEvent event) { }
+
+    /**
+     * Server-side callback when this item is used on a block. Native hooks supply the
+     * held item, hand, crouching state and exact block location. Handle or cancel the
+     * event explicitly; otherwise the block callback and native fallback may continue.
+     */
+    default void onUseOnBlock(ModContext context, InteractionEvent event) { }
 }

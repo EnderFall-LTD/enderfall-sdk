@@ -10,6 +10,20 @@ import org.junit.jupiter.api.Test;
 import uk.co.enderfall.sdk.api.ResourceId;
 
 class InteractionEventTest {
+    @Test void completeBlockContextExposesHeldItemHandAndSneaking() {
+        ResourceId block = ResourceId.of("minecraft", "barrel");
+        ResourceId item = ResourceId.of("test", "wrench");
+        var location = new uk.co.enderfall.sdk.api.blockentity.BlockLocation(
+                ResourceId.of("minecraft", "overworld"), 4, 5, 6);
+        var event = new InteractionEvent(InteractionEvent.Kind.USE_BLOCK,
+                InteractionEvent.Side.SERVER, java.util.UUID.randomUUID(), block,
+                location, item, InteractionEvent.Hand.OFF_HAND, true);
+        assertEquals(item, event.heldItem().orElseThrow());
+        assertEquals(InteractionEvent.Hand.OFF_HAND, event.hand().orElseThrow());
+        assertEquals(location, event.blockLocation().orElseThrow());
+        assertTrue(event.sneaking());
+    }
+
     @Test
     void blockEventsRetainExactDimensionAndCoordinates() {
         var location = new uk.co.enderfall.sdk.api.blockentity.BlockLocation(

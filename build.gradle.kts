@@ -143,7 +143,7 @@ val japicmp = configurations.create("japicmp") {
 }
 
 dependencies {
-    japicmp("com.github.siom79.japicmp:japicmp:0.26.1")
+    japicmp("com.github.siom79.japicmp:japicmp:0.26.2")
 }
 
 group = "uk.co.enderfall.sdk"

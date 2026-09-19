@@ -81,6 +81,29 @@ public final class MenuSelectionList {
         return false;
     }
 
+    Optional<String> scrollAction(double localX, double localY, double verticalAmount, MenuState state) {
+        Objects.requireNonNull(state, "state");
+        if (!Double.isFinite(localX) || !Double.isFinite(localY)
+                || !Double.isFinite(verticalAmount) || verticalAmount == 0.0D
+                || localX < x || localX >= x + width
+                || localY < y || localY >= y + visibleRows * rowHeight) {
+            return Optional.empty();
+        }
+        String action = verticalAmount > 0.0D ? previousAction() : nextAction();
+        return enabled(action, state) ? Optional.of(action) : Optional.empty();
+    }
+
+    String displayText(String action, String resolvedText, MenuState state) {
+        for (int row = 0; row < visibleRows; row++) {
+            if (selectAction(row).equals(action)) {
+                String selected = state.value(selectedKey());
+                String rowId = state.value(idKey(row));
+                return !selected.isBlank() && selected.equals(rowId) ? "> " + resolvedText : resolvedText;
+            }
+        }
+        return resolvedText;
+    }
+
     Optional<MenuListAction> resolve(String action, MenuState state) {
         if (!owns(action) || !enabled(action, state)) return Optional.empty();
         if (previousAction().equals(action)) {

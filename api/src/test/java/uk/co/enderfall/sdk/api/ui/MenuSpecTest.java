@@ -75,6 +75,13 @@ class MenuSpecTest {
         assertFalse(spec.actionEnabled("recipes.select.1", state));
         assertFalse(spec.actionEnabled("recipes.previous", state));
         assertTrue(spec.actionEnabled("recipes.next", state));
+        assertEquals("> First", spec.buttonText(spec.buttons().get(0), MenuState.builder()
+                .selectionPage(list, java.util.List.of(
+                        MenuSelectionEntry.enabled("example:first", "First")), 0, "example:first")
+                .build()));
+        assertEquals("recipes.next", spec.scrollAction(20, 30, -1.0D, state).orElseThrow());
+        assertTrue(spec.scrollAction(20, 30, 1.0D, state).isEmpty());
+        assertTrue(spec.scrollAction(150, 30, -1.0D, state).isEmpty());
         var selected = list.resolve("recipes.select.0", state).orElseThrow();
         assertEquals(MenuListAction.Type.SELECT, selected.type());
         assertEquals("example:first", selected.entryId());

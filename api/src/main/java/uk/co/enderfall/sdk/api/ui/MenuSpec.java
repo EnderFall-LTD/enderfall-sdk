@@ -84,6 +84,28 @@ public final class MenuSpec {
         return supportsAction(action);
     }
 
+    /** Resolves state templates and marks the currently selected list row. */
+    public String buttonText(MenuButton button, MenuState state) {
+        Objects.requireNonNull(button, "button");
+        Objects.requireNonNull(state, "state");
+        String resolved = state.resolve(button.text());
+        for (MenuSelectionList list : selectionLists) {
+            if (list.owns(button.action())) return list.displayText(button.action(), resolved, state);
+        }
+        return resolved;
+    }
+
+    /** Returns a permitted page action when the pointer scrolls over a selection list. */
+    public java.util.Optional<String> scrollAction(double localX, double localY,
+            double verticalAmount, MenuState state) {
+        Objects.requireNonNull(state, "state");
+        for (MenuSelectionList list : selectionLists) {
+            java.util.Optional<String> action = list.scrollAction(localX, localY, verticalAmount, state);
+            if (action.isPresent()) return action;
+        }
+        return java.util.Optional.empty();
+    }
+
     public static final class Builder {
         private final String title;
         private int width = 220;

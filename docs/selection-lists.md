@@ -36,7 +36,11 @@ context.menus().open(playerId, menu, state);
 Visible row actions, empty rows, disabled entries, and previous/next actions are checked
 against the active server session before consumer code runs. The client sends only the
 declared row action; it never supplies the trusted entry ID. Labels and enabled states
-update when `MenuActionContext.update` or `MenuManager.update` publishes a new page.
+update when `MenuActionContext.update` or `MenuManager.update` publishes a new page. The
+selected server-owned ID is marked in the list. Scrolling over the rows requests the
+previous or next permitted page, while scrolling elsewhere remains available to other
+screen controls. The generated bridge accounts for the different native scroll callback
+used by Minecraft 1.20.1.
 
 Each page uses three bounded menu-state entries per visible row plus paging metadata.
 The normal 32-entry menu-state limit still applies, including unrelated labels, gauges,

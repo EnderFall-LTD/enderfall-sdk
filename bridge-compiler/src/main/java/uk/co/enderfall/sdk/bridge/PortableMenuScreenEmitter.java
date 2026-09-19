@@ -42,6 +42,9 @@ final class PortableMenuScreenEmitter {
                 : "return new MultiLineEditBox(font, x, y, definition.width(), definition.height(),\n"
                         + "                placeholder, placeholder);";
         String canonicalPrefix = fabric ? "Fabric" : "NeoForge";
+        String mouseScrolled = target.menuAbi() == MenuAbi.V1_20_1
+                ? MOUSE_SCROLLED_1201
+                : MOUSE_SCROLLED_MODERN;
         String root = "uk/co/enderfall/sdk/runtime/" + (fabric ? "fabric" : "neoforge") + "/v1_21_4/";
         String canonical = root + canonicalPrefix + "PortableMenuScreen.java";
         if (!paths.contains(canonical)) return List.of();
@@ -52,7 +55,7 @@ final class PortableMenuScreenEmitter {
                 prefix + "PortableMenuScreen", rendering.graphics, rendering.description, rendering.method,
                 rendering.centeredText, rendering.text, rendering.gui, rendering.screen, gauges ? GAUGES : "",
                 backgroundInsideRender ? "super.renderBackground(graphics, mouseX, mouseY, partialTick);\n        " : "",
-                backgroundInsideRender ? BACKGROUND_OVERRIDE : "", multilineCreation);
+                backgroundInsideRender ? BACKGROUND_OVERRIDE : "", multilineCreation, mouseScrolled);
         return List.of(new RuntimeSource(canonical, outputRoot + filename, content.getBytes(StandardCharsets.UTF_8)));
     }
 
@@ -73,6 +76,23 @@ final class PortableMenuScreenEmitter {
                 // first, so do not blur the panel again during widget rendering.
                 @Override
                 public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+                }
+            """;
+
+    private static final String MOUSE_SCROLLED_1201 = """
+                @Override
+                public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+                    if (submitScroll(mouseX, mouseY, amount)) return true;
+                    return super.mouseScrolled(mouseX, mouseY, amount);
+                }
+            """;
+
+    private static final String MOUSE_SCROLLED_MODERN = """
+                @Override
+                public boolean mouseScrolled(double mouseX, double mouseY,
+                        double horizontalAmount, double verticalAmount) {
+                    if (submitScroll(mouseX, mouseY, verticalAmount)) return true;
+                    return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
                 }
             """;
 
@@ -154,7 +174,7 @@ final class PortableMenuScreenEmitter {
                         }
                     }
                     for (MenuButton definition : view.spec().buttons()) {
-                        Button button = Button.builder(Component.literal(view.state().resolve(definition.text())),
+                        Button button = Button.builder(Component.literal(view.spec().buttonText(definition, view.state())),
                                         ignored -> actionSender.accept(submission(definition.action())))
                                 .bounds(left + definition.x(), top + definition.y(), definition.width(), definition.height())
                                 .build();
@@ -210,7 +230,7 @@ final class PortableMenuScreenEmitter {
                 void update(MenuState state) {
                     view = new PortableMenuView(view.sessionId(), view.menu(), view.spec(), state);
                     for (ButtonBinding binding : buttonBindings) {
-                        binding.button().setMessage(Component.literal(state.resolve(binding.definition().text())));
+                        binding.button().setMessage(Component.literal(view.spec().buttonText(binding.definition(), state)));
                         binding.button().active = view.spec().actionEnabled(binding.definition().action(), state);
                     }
                     for (TextInputBinding binding : textInputBindings) {
@@ -286,6 +306,17 @@ final class PortableMenuScreenEmitter {
                         values.put(key, drafts.getOrDefault(key, ""));
                     }
                     return new PortableMenuSubmission(action, values);
+                }
+
+            %14$s
+                private boolean submitScroll(double mouseX, double mouseY, double verticalAmount) {
+                    int left = (width - view.spec().width()) / 2;
+                    int top = (height - view.spec().height()) / 2;
+                    var action = view.spec().scrollAction(mouseX - left, mouseY - top,
+                            verticalAmount, view.state());
+                    if (action.isEmpty()) return false;
+                    actionSender.accept(submission(action.orElseThrow()));
+                    return true;
                 }
 
                 private MultiLineEditBox createMultiline(MenuTextInput definition, int x, int y) {

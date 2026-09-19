@@ -71,7 +71,8 @@ portable scheduled-tick callback without continuously ticking the block.
 
 Run `/enderfall_recipes` to open the server-owned portable recipe browser. Its rows are
 filled from synchronized state, Search filters on the server, arrow buttons page through
-the results, and clicking a row returns its server-held ID. The deliberately disabled
+the results, the mouse wheel pages while it is over the rows, and clicking a row marks
+the server-held selection. The deliberately disabled
 `Locked upgrade` row cannot send an accepted action. This preview uses no consumer client
 screen, widget, or packet code.
 

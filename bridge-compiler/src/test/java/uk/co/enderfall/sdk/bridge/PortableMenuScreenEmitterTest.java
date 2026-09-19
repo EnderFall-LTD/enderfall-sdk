@@ -64,11 +64,15 @@ class PortableMenuScreenEmitterTest {
             assertTrue(source.contains("return new PortableMenuSubmission(action, values);"));
             assertTrue(source.contains(".bounds(left + definition.x(), top + definition.y(), definition.width(), definition.height())"));
             assertTrue(source.contains("view = new PortableMenuView(view.sessionId(), view.menu(), view.spec(), state);"));
-            assertTrue(source.contains("binding.button().setMessage(Component.literal(state.resolve(binding.definition().text())));"));
+            assertTrue(source.contains("view.spec().buttonText(binding.definition(), state)"));
             assertTrue(source.contains("button.active = view.spec().actionEnabled(definition.action(), view.state());"));
             assertTrue(source.contains("binding.button().active = view.spec().actionEnabled(binding.definition().action(), state);"));
             assertTrue(source.contains("for (MenuLabel label : view.spec().labels())"));
             assertTrue(source.contains("public boolean isPauseScreen() {\n        return false;"));
+            assertTrue(source.contains("view.spec().scrollAction(mouseX - left, mouseY - top,"));
+            assertTrue(source.contains(id.startsWith("1.20.1")
+                    ? "mouseScrolled(double mouseX, double mouseY, double amount)"
+                    : "double horizontalAmount, double verticalAmount)"));
         }
     }
 

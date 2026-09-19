@@ -58,6 +58,12 @@ final class ContainerWorkbenchMenuEmitter {
         c.line(4, "private final Inventory playerInventory;");
         c.line(4, "private final SimpleContainer inputs;");
         c.line(4, "private final ResultContainer result = new ResultContainer();");
+        c.line(4, "private final SimpleContainer recipeChoices;");
+        c.line(4, "private List<" + p.holder() + "> matchingRecipes = List.of();");
+        c.line(4, "private final DataSlot selectedRecipeIndex = DataSlot.standalone();");
+        c.line(4, "private final DataSlot recipePage = DataSlot.standalone();");
+        c.line(4, "private final DataSlot recipePages = DataSlot.standalone();");
+        c.line(4, "private final DataSlot[] requiredCounts;");
         c.line(4, "private " + p.holder() + " selectedRecipe;");
         if (p.persistent()) c.line(4, "private final Runnable inputListener; private uk.co.enderfall.sdk.runtime.blockentity.nativebridge.StoredBlockEntity owner;");
         c.blank();
@@ -67,6 +73,12 @@ final class ContainerWorkbenchMenuEmitter {
         } else c.line(4, p.menu() + "(int containerId, Inventory playerInventory, " + p.binding() + " binding" + ownerArgument(p) + ") {");
         c.line(8, "super(" + (p.fabric() && p.legacy() ? "type" : "binding.menuType()" + p.handle()) + ", containerId);");
         c.line(8, "this.binding = binding;"); c.line(8, "this.playerInventory = playerInventory;");
+        c.line(8, "recipeChoices = new SimpleContainer(binding.definition().spec().recipeBrowserEntries());");
+        c.line(8, "requiredCounts = new DataSlot[binding.recipes().inputSlots()];");
+        c.line(8, "addDataSlot(selectedRecipeIndex); addDataSlot(recipePage); addDataSlot(recipePages);");
+        c.line(8, "for (int slot = 0; slot < requiredCounts.length; slot++) {");
+        c.line(12, "requiredCounts[slot] = DataSlot.standalone(); addDataSlot(requiredCounts[slot]);");
+        c.line(8, "}");
         if (p.persistent()) {
             c.line(8, "inputs = owner.inventory();");
             c.line(8, "if (inputs.getContainerSize() != binding.recipes().inputSlots() || !inputs.stillValid(playerInventory.player)) throw new IllegalArgumentException(\"Invalid persistent menu owner\");");
@@ -93,7 +105,14 @@ final class ContainerWorkbenchMenuEmitter {
             c.line(16, "completeCraft(player" + (p.verbose() ? ", stack" : "") + ");");
             c.line(16, "super.onTake(player, stack);"); c.line(12, "}");
         }
-        c.line(8, "});"); c.line(8, "addPlayerInventory(playerInventory);"); c.line(8, "updateResult();"); c.line(4, "}"); c.gap();
+        c.line(8, "});");
+        c.line(8, "for (int choice = 0; choice < recipeChoices.getContainerSize(); choice++) {");
+        c.line(12, "addSlot(new Slot(recipeChoices, choice, 44 + choice * 18, 59) {");
+        c.line(16, "@Override public boolean mayPlace(ItemStack stack) { return false; }");
+        c.line(16, "@Override public boolean mayPickup(Player player) { return false; }");
+        c.line(12, "});");
+        c.line(8, "}");
+        c.line(8, "addPlayerInventory(playerInventory);"); c.line(8, "updateRecipes();"); c.line(4, "}"); c.gap();
         accessors(c, p);
         quickMove(c, p);
         c.gap(); c.override(4, "public void removed(Player player) {", !p.compact());
@@ -106,7 +125,7 @@ final class ContainerWorkbenchMenuEmitter {
             c.line(8, "return new " + p.input() + "(inputs.getItems().stream().map(ItemStack::copy).toList());");
             c.line(4, "}"); c.gap();
         }
-        updateResult(c, p); c.gap(); craft(c, p); c.gap();
+        updateRecipes(c, p); c.gap(); updateResult(c, p); c.gap(); browserActions(c, p); c.gap(); craft(c, p); c.gap();
         c.line(4, "private void addPlayerInventory(Inventory inventory) {");
         c.line(8, "for (int row = 0; row < 3; row++) {"); c.line(12, "for (int column = 0; column < 9; column++) {");
         c.line(16, "addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 84 + row * 18));");
@@ -126,18 +145,25 @@ final class ContainerWorkbenchMenuEmitter {
     private static void accessors(Code c, Plan p) {
         if (p.verbose()) {
             c.line(4, "PortableWorkbenchDefinition definition() {"); c.line(8, "return binding.definition();"); c.line(4, "}"); c.blank();
-            c.line(4, "int machineSlots() {"); c.line(8, "return binding.recipes().inputSlots() + 1;"); c.line(4, "}"); c.blank();
+            c.line(4, "int machineSlots() {"); c.line(8, "return binding.recipes().inputSlots() + 1 + recipeChoices.getContainerSize();"); c.line(4, "}"); c.blank();
         } else {
             c.line(4, "PortableWorkbenchDefinition definition() { return binding.definition(); }");
-            c.line(4, "int machineSlots() { return binding.recipes().inputSlots() + 1; }");
+            c.line(4, "int machineSlots() { return binding.recipes().inputSlots() + 1 + recipeChoices.getContainerSize(); }");
             if (!p.compact()) c.blank();
             c.line(4, "@Override public boolean stillValid(Player player) { return " + validity(p) + "; }");
             if (!p.compact()) c.blank();
         }
-        if (p.compact()) c.line(4, "@Override public void slotsChanged(Container container) { super.slotsChanged(container); updateResult(); }");
+        c.line(4, "int recipeChoiceStart() { return binding.recipes().inputSlots() + 1; }");
+        c.line(4, "int recipeChoiceCount() { return recipeChoices.getContainerSize(); }");
+        c.line(4, "int recipePage() { return recipePage.get(); }");
+        c.line(4, "int recipePages() { return recipePages.get(); }");
+        c.line(4, "int selectedRecipeIndex() { return selectedRecipeIndex.get(); }");
+        c.line(4, "int requiredCount(int slot) { return slot >= 0 && slot < requiredCounts.length ? requiredCounts[slot].get() : 0; }");
+        c.blank();
+        if (p.compact()) c.line(4, "@Override public void slotsChanged(Container container) { super.slotsChanged(container); updateRecipes(); }");
         else {
             c.override(4, "public void slotsChanged(Container container) {", true);
-            c.line(8, "super.slotsChanged(container);"); c.line(8, "updateResult();"); c.line(4, "}");
+            c.line(8, "super.slotsChanged(container);"); c.line(8, "updateRecipes();"); c.line(4, "}");
         }
         c.blank();
         if (p.verbose()) {
@@ -152,10 +178,12 @@ final class ContainerWorkbenchMenuEmitter {
         c.line(8, "ItemStack original = ItemStack.EMPTY;"); c.line(8, "Slot slot = slots.get(index);");
         c.line(8, "if (slot != null && slot.hasItem()) {");
         c.line(12, "ItemStack moving = slot.getItem();"); c.line(12, "original = moving.copy();");
-        c.line(12, "int machineSlots = machineSlots();"); c.line(12, "if (index < machineSlots) {");
+        c.line(12, "int machineSlots = machineSlots();");
+        c.line(12, "if (index >= recipeChoiceStart() && index < machineSlots) return ItemStack.EMPTY;");
+        c.line(12, "if (index < machineSlots) {");
         c.guard(16, "!moveItemStackTo(moving, machineSlots, slots.size(), true)", "return ItemStack.EMPTY;", p.verbose());
-        if (p.compact()) c.line(12, "} else if (!moveItemStackTo(moving, 0, machineSlots - 1, false)) return ItemStack.EMPTY;");
-        else { c.line(12, "} else if (!moveItemStackTo(moving, 0, machineSlots - 1, false)) {"); c.line(16, "return ItemStack.EMPTY;"); c.line(12, "}"); }
+        if (p.compact()) c.line(12, "} else if (!moveItemStackTo(moving, 0, binding.recipes().inputSlots(), false)) return ItemStack.EMPTY;");
+        else { c.line(12, "} else if (!moveItemStackTo(moving, 0, binding.recipes().inputSlots(), false)) {"); c.line(16, "return ItemStack.EMPTY;"); c.line(12, "}"); }
         if (p.verbose()) {
             c.line(12, "if (moving.isEmpty()) {"); c.line(16, "slot.set(ItemStack.EMPTY);"); c.line(12, "} else {"); c.line(16, "slot.setChanged();"); c.line(12, "}");
         } else c.line(12, "if (moving.isEmpty()) slot.set(ItemStack.EMPTY); else slot.setChanged();");
@@ -163,24 +191,93 @@ final class ContainerWorkbenchMenuEmitter {
         c.line(12, "slot.onTake(player, moving);"); c.line(8, "}"); c.line(8, "return original;"); c.line(4, "}");
     }
 
-    private static void updateResult(Code c, Plan p) {
-        c.line(4, "private void updateResult() {"); c.line(8, "selectedRecipe = null;"); c.line(8, "result.setItem(0, ItemStack.EMPTY);");
+    private static void updateRecipes(Code c, Plan p) {
+        String existingId = p.legacy() ? "selectedRecipe.getId().toString()"
+                : "selectedRecipe.id().identifier().toString()";
+        String candidateId = p.legacy() ? "matchingRecipes.get(index).getId().toString()"
+                : "matchingRecipes.get(index).id().identifier().toString()";
+        c.line(4, "private void updateRecipes() {");
+        c.line(8, "String previousId = selectedRecipe == null ? \"\" : " + existingId + ";");
+        c.line(8, "selectedRecipe = null; matchingRecipes = List.of();");
+        c.line(8, "selectedRecipeIndex.set(-1); recipePage.set(0); recipePages.set(1);");
+        c.line(8, "for (int row = 0; row < recipeChoices.getContainerSize(); row++) recipeChoices.setItem(row, ItemStack.EMPTY);");
+        c.line(8, "result.setItem(0, ItemStack.EMPTY);");
         c.line(8, "Player player = playerInventory.player;");
         c.guard(8, p.legacy() ? "player.level().isClientSide()" : "!(player instanceof ServerPlayer serverPlayer)", "return;", p.verbose());
-        if (!p.legacy()) c.line(8, p.input() + " input = recipeInput();");
-        if (p.legacy() && !p.fabric()) {
-            c.line(8, "player.level().getRecipeManager().getRecipeFor(binding.recipes().type().get(), inputs, player.level())");
-            c.line(16, ".ifPresent(recipe -> {"); c.line(20, "selectedRecipe = recipe;"); c.line(20, "result.setRecipeUsed(recipe);");
-            c.line(20, "result.setItem(0, recipe.assemble(inputs, player.level().registryAccess()));"); c.line(16, "});");
+        if (p.legacy()) {
+            c.line(8, "matchingRecipes = player.level().getRecipeManager().getAllRecipesFor(binding.recipes().type()" + p.handle() + ").stream()");
+            c.line(16, ".filter(recipe -> recipe.matches(inputs, player.level()))");
+            c.line(16, ".sorted(Comparator.comparing(recipe -> recipe.getId().toString())).limit(256).toList();");
         } else {
-            String lookup = p.legacy() ? "player.level().getRecipeManager()" : "serverPlayer.level().recipeAccess()";
-            String arguments = "binding.recipes().type()" + p.handle() + ", " + (p.legacy() ? "inputs, player.level()" : "input, serverPlayer.level()") + ");";
-            c.line(8, "Optional<" + p.holder() + "> match = " + lookup + (p.fabric() ? ".getRecipeFor(" : ""));
-            c.line(16, (p.fabric() ? "" : ".getRecipeFor(") + arguments);
-            c.line(8, "if (match.isPresent()) {"); c.line(12, "selectedRecipe = match.get();"); c.line(12, "result.setRecipeUsed(selectedRecipe);");
-            c.line(12, "result.setItem(0, selectedRecipe" + (p.legacy() ? ".assemble(inputs, player.level().registryAccess())" : ".value().assemble(input)") + ");"); c.line(8, "}");
+            c.line(8, p.input() + " input = recipeInput();");
+            c.line(8, "List<" + p.holder() + "> discovered = new ArrayList<>();");
+            c.line(8, "for (RecipeHolder<?> candidate : serverPlayer.level().recipeAccess().getRecipes()) {");
+            c.line(12, "if (candidate.value() instanceof " + p.recipe() + " recipe");
+            c.line(20, "&& recipe.getType() == binding.recipes().type()" + p.handle());
+            c.line(20, "&& recipe.matches(input, serverPlayer.level())) {");
+            c.line(16, "@SuppressWarnings(\"unchecked\")");
+            c.line(16, p.holder() + " typed = (" + p.holder() + ") (RecipeHolder<?>) candidate;");
+            c.line(16, "discovered.add(typed);"); c.line(12, "}"); c.line(8, "}");
+            c.line(8, "discovered.sort(Comparator.comparing(holder -> holder.id().identifier().toString()));");
+            c.line(8, "matchingRecipes = List.copyOf(discovered.subList(0, Math.min(256, discovered.size())));");
         }
+        c.line(8, "if (!matchingRecipes.isEmpty()) {");
+        c.line(12, "int selected = 0;");
+        c.line(12, "if (!previousId.isBlank()) for (int index = 0; index < matchingRecipes.size(); index++) {");
+        c.line(16, "if (" + candidateId + ".equals(previousId)) { selected = index; break; }");
+        c.line(12, "}");
+        c.line(12, "selectedRecipeIndex.set(selected);");
+        c.line(12, "int visible = Math.max(1, recipeChoices.getContainerSize());");
+        c.line(12, "recipePages.set(Math.max(1, (matchingRecipes.size() + visible - 1) / visible));");
+        c.line(12, "recipePage.set(selected / visible);");
+        c.line(8, "}");
+        c.line(8, "updateRecipeChoices(); updateResult();");
+        c.line(4, "}");
+
+        c.gap(); c.line(4, "private void updateRecipeChoices() {");
+        c.line(8, "for (int row = 0; row < recipeChoices.getContainerSize(); row++) {");
+        c.line(12, "int index = recipePage.get() * recipeChoices.getContainerSize() + row;");
+        String result = p.legacy() ? "matchingRecipes.get(index).result().copy()"
+                : "matchingRecipes.get(index).value().result().copy()";
+        c.line(12, "recipeChoices.setItem(row, index < matchingRecipes.size() ? " + result + " : ItemStack.EMPTY);");
+        c.line(8, "}"); c.line(8, "broadcastChanges();"); c.line(4, "}");
+    }
+
+    private static void updateResult(Code c, Plan p) {
+        c.line(4, "private void updateResult() {");
+        c.line(8, "selectedRecipe = null; result.setItem(0, ItemStack.EMPTY);");
+        c.line(8, "for (DataSlot count : requiredCounts) count.set(0);");
+        c.line(8, "Player player = playerInventory.player;");
+        c.guard(8, p.legacy() ? "player.level().isClientSide()" : "!(player instanceof ServerPlayer serverPlayer)", "return;", p.verbose());
+        c.line(8, "int selected = selectedRecipeIndex.get();");
+        c.line(8, "if (selected < 0 || selected >= matchingRecipes.size()) { broadcastChanges(); return; }");
+        c.line(8, "selectedRecipe = matchingRecipes.get(selected);");
+        if (!p.legacy()) c.line(8, p.input() + " input = recipeInput();");
+        String matches = p.legacy() ? "selectedRecipe.matches(inputs, player.level())"
+                : "selectedRecipe.value().matches(input, serverPlayer.level())";
+        c.line(8, "if (!" + matches + ") { updateRecipes(); return; }");
+        c.line(8, "result.setRecipeUsed(selectedRecipe);");
+        c.line(8, "result.setItem(0, " + (p.legacy()
+                ? "selectedRecipe.assemble(inputs, player.level().registryAccess())"
+                : "selectedRecipe.value().assemble(input)") + ");");
+        String ingredients = p.legacy() ? "selectedRecipe.countedIngredients()"
+                : "selectedRecipe.value().countedIngredients()";
+        c.line(8, "var ingredients = " + ingredients + ";");
+        c.line(8, "for (int slot = 0; slot < requiredCounts.length; slot++) requiredCounts[slot].set(ingredients.get(slot).count());");
         c.line(8, "broadcastChanges();"); c.line(4, "}");
+    }
+
+    private static void browserActions(Code c, Plan p) {
+        c.override(4, "public boolean clickMenuButton(Player player, int id) {", !p.compact());
+        c.line(8, "int visible = recipeChoices.getContainerSize();");
+        c.line(8, "if (id >= 0 && id < visible) {");
+        c.line(12, "int selected = recipePage.get() * visible + id;");
+        c.line(12, "if (selected >= matchingRecipes.size()) return false;");
+        c.line(12, "selectedRecipeIndex.set(selected); updateResult(); return true;");
+        c.line(8, "}");
+        c.line(8, "if (id == 100 && recipePage.get() > 0) { recipePage.set(recipePage.get() - 1); updateRecipeChoices(); return true; }");
+        c.line(8, "if (id == 101 && recipePage.get() + 1 < recipePages.get()) { recipePage.set(recipePage.get() + 1); updateRecipeChoices(); return true; }");
+        c.line(8, "return false;"); c.line(4, "}");
     }
 
     private static void craft(Code c, Plan p) {
@@ -208,15 +305,15 @@ final class ContainerWorkbenchMenuEmitter {
     }
 
     private static void header(Code c, Plan p) {
-        var imports = new TreeSet<>(List.of("net.minecraft.server.level.ServerPlayer", "net.minecraft.world.Container",
+        var imports = new TreeSet<>(List.of("java.util.ArrayList", "java.util.Comparator", "java.util.List",
+                "net.minecraft.server.level.ServerPlayer", "net.minecraft.world.Container",
                 "net.minecraft.world.SimpleContainer", "net.minecraft.world.entity.player.Inventory", "net.minecraft.world.entity.player.Player",
-                "net.minecraft.world.inventory.AbstractContainerMenu", "net.minecraft.world.inventory.ResultContainer",
+                "net.minecraft.world.inventory.AbstractContainerMenu", "net.minecraft.world.inventory.DataSlot", "net.minecraft.world.inventory.ResultContainer",
                 "net.minecraft.world.inventory.Slot", "net.minecraft.world.item.ItemStack", "uk.co.enderfall.sdk.api.ResourceId",
                 "uk.co.enderfall.sdk.runtime.PortableWorkbenchCraft", "uk.co.enderfall.sdk.runtime.PortableWorkbenchDefinition"));
         if (p.legacy() && !p.fabric()) imports.add("net.minecraftforge.registries.ForgeRegistries");
-        else { imports.add("java.util.Optional"); imports.add("net.minecraft.core.registries.BuiltInRegistries"); }
+        else imports.add("net.minecraft.core.registries.BuiltInRegistries");
         if (p.persistent()) imports.add("net.minecraft.server.level.ServerLevel");
-        if (!(p.legacy() && p.fabric())) imports.add("java.util.List");
         if (!p.legacy()) imports.add("net.minecraft.world.item.crafting.RecipeHolder");
         if (p.legacy() && p.fabric()) imports.add("net.minecraft.world.inventory.MenuType");
         c.line(0, "package " + p.root().substring(0, p.root().length() - 1).replace('/', '.') + ";"); c.blank();

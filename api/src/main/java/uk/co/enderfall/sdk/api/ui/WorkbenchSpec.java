@@ -13,6 +13,7 @@ public final class WorkbenchSpec {
     private final int backgroundColor;
     private final int processingTicks;
     private final uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec storage;
+    private final int recipeBrowserEntries;
 
     private WorkbenchSpec(Builder builder) {
         title = builder.title;
@@ -23,6 +24,7 @@ public final class WorkbenchSpec {
         backgroundColor = builder.backgroundColor;
         processingTicks = builder.processingTicks;
         storage = builder.storage;
+        recipeBrowserEntries = builder.recipeBrowserEntries;
     }
 
     public static Builder builder(String title, WorkbenchRecipeTypeRef recipeType) {
@@ -46,6 +48,9 @@ public final class WorkbenchSpec {
 
     /** Zero for instant crafting; otherwise the loaded-server-tick duration of each batch. */
     public int processingTicks() { return processingTicks; }
+
+    /** Number of server-discovered recipe outputs shown as synchronized ghost slots. */
+    public int recipeBrowserEntries() { return recipeBrowserEntries; }
 
     /** Empty for the existing temporary, menu-owned workbench. */
     public java.util.Optional<uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec> storage() {
@@ -77,6 +82,7 @@ public final class WorkbenchSpec {
         private int backgroundColor = 0xFF1A1426;
         private int processingTicks;
         private uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec storage;
+        private int recipeBrowserEntries;
 
         private Builder(String title, WorkbenchRecipeTypeRef recipeType) {
             this.title = Objects.requireNonNull(title, "title");
@@ -91,7 +97,24 @@ public final class WorkbenchSpec {
             return this;
         }
 
+        /** Shows up to five matching data-pack recipes without consumer packets or client code. */
+        public Builder recipeBrowser() {
+            return recipeBrowser(5);
+        }
+
+        /** Shows a bounded horizontal page of matching data-pack recipe outputs. */
+        public Builder recipeBrowser(int visibleEntries) {
+            if (visibleEntries < 1 || visibleEntries > 5) {
+                throw new IllegalArgumentException("Recipe browsers show 1-5 entries per page");
+            }
+            recipeBrowserEntries = visibleEntries;
+            return this;
+        }
+
         public WorkbenchSpec build() {
+            if (recipeBrowserEntries > 0 && (processingTicks > 0 || machine)) {
+                throw new IllegalStateException("Recipe browsers currently require an instant item workbench");
+            }
             return new WorkbenchSpec(this);
         }
 

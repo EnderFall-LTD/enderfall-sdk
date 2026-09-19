@@ -32,9 +32,9 @@ class LegacyFmlGenerationTest {
             Map.entry("LegacyForgePortableMenuScreen.java", "c4218970a6796f3565dd86c92ea55ba9e52243db5793e570aa5edd01d9547e41"),
             Map.entry("LegacyForgeRecipeBinding.java", "6d53b08752ab48ca26e051c6bf8681f85c3ce87aefeebd3833535bdc301db66d"),
             Map.entry("LegacyForgeWorkbenchBinding.java", "9c3fbbf1af8524c2e84dab2ed3f68bbc221932ebbdb013dca58431c5b2d6ab87"),
-            Map.entry("LegacyForgeWorkbenchMenu.java", "aeece40188f2a2ab8d02a6d68dc3b6f9b6940649aad33d220d5291180e51e4b7"),
+            Map.entry("LegacyForgeWorkbenchMenu.java", "da72c67be0174599c00d46b3e1d864baa6f218c7e1b4d17ca34fe59e21635ecc"),
             Map.entry("LegacyForgeWorkbenchRecipe.java", "6cb660698058e6c4daebe012384b7704444f38477623ea36ce6c96653a21b588"),
-            Map.entry("LegacyForgeWorkbenchScreen.java", "5b2411991458e0d87b163102fb21372d90e813162d3d4905d9e28dc917c951bd"));
+            Map.entry("LegacyForgeWorkbenchScreen.java", "8ca423e1d12bd7e7d123f91c7db7392c47ed5ec23e0553c207058cb6b5b02ee0"));
 
     @TempDir
     Path temporaryDirectory;
@@ -47,8 +47,8 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "5f748954cf9b979b601c9a42a236f77de91d0ef5f3f7ce7e2b2ba3fcffdb08f1"
-                    : "af0e617782ce1d60fadd3c3bed58e155a1cb12f7bc8bb14ff0c1d492e5d19bed", result.sha256());
+                    ? "cfd18f1b1d23b93eead8ca7ad7c191b3b07505d6ea2b811681807be9d5756602"
+                    : "289c757215e34af208c3d89bbef66a857f468ca8f951561e30a2c0e20ff8f912", result.sha256());
             assertEquals(16, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());

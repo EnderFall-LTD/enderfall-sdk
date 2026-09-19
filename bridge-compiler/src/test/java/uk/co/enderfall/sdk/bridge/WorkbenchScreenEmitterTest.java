@@ -54,6 +54,20 @@ class WorkbenchScreenEmitterTest {
         }
     }
 
+    @Test void emitsNativeBrowserSelectionPagingAndIngredientCounts() throws Exception {
+        for (String id : TargetCatalog.standard().targetIds()) {
+            String source = text(id);
+            boolean extracted = id.startsWith("26.2");
+            assertTrue(source.contains("menu.recipeChoiceCount()"));
+            assertTrue(source.contains("menu.requiredCount(slot)"));
+            assertTrue(source.contains("handleInventoryButtonClick(menu.containerId, action)"));
+            assertTrue(source.contains("action = scroll > 0.0D ? 100 : 101"));
+            assertTrue(source.contains(extracted
+                    ? "mouseClicked(MouseButtonEvent event, boolean doubleClick)"
+                    : "mouseClicked(double mouseX, double mouseY, int button)"));
+        }
+    }
+
     private static String root(String id) {
         boolean fabric = id.endsWith("-fabric");
         return "uk/co/enderfall/sdk/runtime/" + (fabric ? "fabric" : "neoforge") + "/v1_21_4/" + (fabric ? "Fabric" : "NeoForge");

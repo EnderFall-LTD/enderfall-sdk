@@ -1,0 +1,9 @@
+{
+  "type":"enderfall_persistent_preview:assembly",
+  "ingredients":[
+    {"ingredient":"minecraft:iron_ingot","count":2},
+    {"ingredient":"minecraft:redstone","count":1},
+    {"ingredient":"minecraft:quartz","count":1}
+  ],
+  "result":{"id":"minecraft:redstone_lamp","count":2}
+}

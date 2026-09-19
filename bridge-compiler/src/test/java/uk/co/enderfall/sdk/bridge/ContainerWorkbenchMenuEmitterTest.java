@@ -49,7 +49,7 @@ class ContainerWorkbenchMenuEmitterTest {
         for (String id : TARGETS) {
             String source = text(id);
             assertTrue(source.contains("mayPlace(ItemStack stack) { return false; }"));
-            assertTrue(source.contains("moveItemStackTo(moving, 0, machineSlots - 1, false)"));
+            assertTrue(source.contains("moveItemStackTo(moving, 0, binding.recipes().inputSlots(), false)"));
             assertTrue(source.contains("moveItemStackTo(moving, machineSlots, slots.size(), true)"));
             assertTrue(source.contains("clearContainer(player, inputs);"));
             int craft = source.indexOf("private void completeCraft(");
@@ -57,6 +57,19 @@ class ContainerWorkbenchMenuEmitterTest {
             int consume = source.indexOf("inputs.removeItem(", craft);
             int notify = source.indexOf("craftListener().accept(", craft);
             assertTrue(craft >= 0 && validate > craft && consume > validate && notify > consume);
+        }
+    }
+
+    @Test void discoversAndSynchronizesSelectableRecipePagesWithoutConsumerPackets() throws Exception {
+        for (String id : TARGETS) {
+            String source = text(id);
+            assertTrue(source.contains("new SimpleContainer(binding.definition().spec().recipeBrowserEntries())"));
+            assertTrue(source.contains("DataSlot selectedRecipeIndex = DataSlot.standalone()"));
+            assertTrue(source.contains("public boolean clickMenuButton(Player player, int id)"));
+            assertTrue(source.contains("String previousId = selectedRecipe == null"));
+            assertTrue(source.contains("requiredCounts[slot].set(ingredients.get(slot).count())"));
+            assertTrue(source.contains(id.startsWith("1.20.1")
+                    ? "getAllRecipesFor(binding.recipes().type()" : "recipeAccess().getRecipes()"));
         }
     }
 

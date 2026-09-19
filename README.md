@@ -111,9 +111,10 @@ The full showcase lives in `examples/demo-mod`. It keeps item, block, creative-t
 configuration, networking, command, event, gameplay, and data registration in separate
 classes. Its playable resonance loop uses atomic inventory costs, item rewards, healing,
 experience, action-bar feedback, cooldowns, and server-authoritative interactions. The
-workbench also uses the experimental inventory-menu API: one portable recipe definition,
+workbench also uses the experimental inventory-menu API: portable recipe definitions,
 real synchronized slots, target-native serializers/codecs, server-side matching and input
-consumption, and native rendering on every target. This sits
+consumption, and an opt-in synchronized recipe browser with protected result previews on
+every target. Mods do not provide loader-specific screens or packets for it. This sits
 alongside original textures and hand-authored multi-element models. See
 `docs/feature-status.md` for the exact implemented and proposed feature boundaries.
 

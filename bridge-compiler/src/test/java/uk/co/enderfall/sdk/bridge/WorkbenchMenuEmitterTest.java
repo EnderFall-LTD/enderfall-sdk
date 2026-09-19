@@ -41,13 +41,12 @@ class WorkbenchMenuEmitterTest {
             String handle = id.endsWith("-fabric") ? "" : ".get()";
             assertTrue(source.contains("super(binding.menuType()" + handle + ", containerId);"));
             boolean modern = id.startsWith("1.21.4");
-            assertTrue(source.contains("binding.recipes().type()" + handle + ", input, "
-                    + (modern ? "level" : "player.level()") + ");"));
+            assertTrue(source.contains("recipe.getType() == binding.recipes().type()" + handle));
             int reset = source.indexOf("selectedRecipe = null;");
             int guard = source.indexOf(modern ? "if (!(player.level() instanceof ServerLevel level)) return;"
                     : "if (player.level().isClientSide()) return;", reset);
-            int lookup = source.indexOf(modern ? "level.recipeAccess().getRecipeFor("
-                    : "player.level().getRecipeManager().getRecipeFor(", guard);
+            int lookup = source.indexOf(modern ? "level.recipeAccess().getRecipes()"
+                    : "player.level().getRecipeManager().getRecipes()", guard);
             int sync = source.indexOf("broadcastChanges();", lookup);
             assertTrue(reset >= 0 && guard > reset && lookup > guard && sync > lookup);
         }
@@ -59,9 +58,21 @@ class WorkbenchMenuEmitterTest {
             assertTrue(source.contains("addSlot(new Slot(inputs, slot, inputStart + slot * 18, 35));"));
             assertTrue(source.contains("mayPlace(ItemStack stack) { return false; }"));
             assertTrue(source.contains("moveItemStackTo(moving, machineSlots, slots.size(), true)"));
-            assertTrue(source.contains("moveItemStackTo(moving, 0, machineSlots - 1, false)"));
+            assertTrue(source.contains("moveItemStackTo(moving, 0, binding.recipes().inputSlots(), false)"));
             assertTrue(source.contains("if (!player.level().isClientSide()) clearContainer(player, inputs);"));
             assertTrue(source.contains("inputs.getItems().stream().map(ItemStack::copy).toList()"));
+        }
+    }
+
+    @Test void discoversAndSynchronizesSelectableRecipePagesWithoutConsumerPackets() throws Exception {
+        for (String id : TARGETS) {
+            String source = text(id);
+            assertTrue(source.contains("new SimpleContainer(binding.definition().spec().recipeBrowserEntries())"));
+            assertTrue(source.contains("matchingRecipes.get(index).value().result().copy()"));
+            assertTrue(source.contains("DataSlot selectedRecipeIndex = DataSlot.standalone()"));
+            assertTrue(source.contains("public boolean clickMenuButton(Player player, int id)"));
+            assertTrue(source.contains("String previousId = selectedRecipe == null"));
+            assertTrue(source.contains("requiredCounts[slot].set(ingredients.get(slot).count())"));
         }
     }
 

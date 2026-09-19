@@ -12,7 +12,8 @@ public final class PreviewRecipes {
         var menus = Registration.menus(context.modId());
         var assembly = recipes.workbench("assembly", 3);
         menus.workbench("workbench_menu", "Persistent Workbench", assembly,
-                p -> p.persistent(storage), craft -> context.logger().info("Persistent preview craft: {}", craft.recipeId()));
+                p -> p.persistent(storage).recipeBrowser(),
+                craft -> context.logger().info("Persistent preview craft: {}", craft.recipeId()));
         menus.workbench("timed_workbench_menu", "Timed Workbench", assembly,
                 p -> p.persistentTimed(timedStorage, 100), craft -> { });
         Registration.register(context, menus, recipes);

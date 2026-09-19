@@ -43,7 +43,9 @@ loader-native recipe serializer, menu type, synchronized slots, and client scree
 ```java
 WorkbenchRecipeTypeRef infusing = context.recipes().registerWorkbenchType("infusing", 3);
 WorkbenchRef workbench = context.workbenches().register("resonance_workbench",
-        WorkbenchSpec.builder("Resonance Workbench", infusing).build(), crafted -> {
+        WorkbenchSpec.builder("Resonance Workbench", infusing)
+                .recipeBrowser()
+                .build(), crafted -> {
             context.logger().info("{} crafted {}", crafted.playerId(), crafted.result().id());
         });
 
@@ -60,8 +62,14 @@ context.workbenches().open(playerId, workbench);
 
 Recipe matching and input consumption happen on the logical server. The result slot, player
 inventory, hotbar, and shift-click movement use Minecraft's native menu synchronization.
-Closing the menu returns unused temporary inputs. Persistent inventory belongs to the future
-block-entity slice.
+Closing a temporary workbench returns unused inputs. A workbench declared with
+`persistent(storage)` keeps its input inventory in the placed block entity across closing,
+save/reload and later reopening.
+
+For instant item workbenches, `recipeBrowser()` discovers matching data-pack recipes on
+the server and adds selectable synchronized output previews. Mods do not register a
+packet or target-specific screen for this. See the
+[workbench recipe browser](workbench-recipe-browser.md) for its security and scope.
 
 `tryConsume` checks the complete `InventoryCost` before removing anything. Player operations
 are server-authoritative and must be called from server-side callbacks. `handle()` returns a

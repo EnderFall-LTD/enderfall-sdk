@@ -26,7 +26,9 @@ per-stack selection, atomic typed value cycling, pre-commit validation/resource 
 and committed-change callbacks. Portable synchronized menus now include server-owned,
 paged, filterable selection lists with disabled-row validation, selected-row marking and
 cross-version mouse-wheel paging plus native item-stack icons, counts and bounded hover
-details; recipe discovery and synchronized selected-recipe/result panels remain open.
+details. Instant item workbenches now add server-owned recipe discovery and synchronized
+selected-result previews, counted requirements and paging without consumer packets.
+Workbench search/categories, richer details and timed/fluid-machine browsers remain open.
 Live copy/drop/reconnect acceptance remains open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
@@ -214,6 +216,9 @@ maintainers and add-on authors. Full furniture parity is not yet achieved.
   menu patches while preserving recipe-manager access and recipe ID handling.
 - [x] Extend shared slot-menu generation to all 1.20.1 and 26.2 targets.
 - [x] Generate all nine workbench screens from shared geometry and rendering policies.
+- [x] Add opt-in instant-workbench recipe discovery and synchronized protected result
+  previews, stable server-owned selection, counted requirements and native menu-button
+  paging to all nine generated targets.
 - [x] Generate all nine label/button portable screens from one shared implementation
   with typed rendering and screen-access policies.
 - [x] Migrate native services, loader initialization, and registration hooks into

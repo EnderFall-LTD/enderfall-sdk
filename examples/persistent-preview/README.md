@@ -200,15 +200,21 @@ claims that the gameplay checks have passed.
    `/give @s enderfall_persistent_preview:workbench`.
 3. Place it and right-click it with an empty hand.
 4. Put **2 iron ingots**, **1 redstone dust**, and **1 quartz** into the three input
-   slots, left to right. The custom assembly recipe should produce **1 amethyst shard**.
-5. Take the result and check that only the recipe quantities are consumed.
+   slots, left to right. Three server-discovered output previews should appear:
+   **1 amethyst shard**, **2 redstone lamps**, and **1 observer**.
+5. Click each preview and check that its border and the real output change together.
+   The first input preview should display `x2`. The previews themselves must not be
+   removable or accept shift-clicked items.
+6. Take the selected result and check that only the declared input quantities are
+   consumed. Recipe selection and crafting must continue to work after reopening.
 
 To check persistence, leave extra ingredients in the inputs, close and reopen the
 menu, then save/quit and re-enter the world. Check exact quantities after each step.
 Break the block with ingredients inside and check that contents drop exactly once.
 Multiple viewers and disconnect/reconnect also remain acceptance checks.
 
-The original workbench keeps its instant-craft behaviour and calculated output.
+The original workbench keeps its instant-craft behaviour but now demonstrates the
+SDK-owned recipe browser. It uses no preview-specific packet or client screen code.
 
 ## Try the timed workbench
 

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1211GenerationTest {
     private static final String TARGET = "1.21.1-neoforge";
     private static final String EXPECTED_DIGEST =
-            "d2596b5066ed36e0a2b1f23427976b626d739cdf6f881be5591d72b61388ae0d";
+            "2cebcbb6513c566f76fed34a374391fb4d0a94db3739cb2da767189c0c25f99a";
     private static final String PACKAGE_PATH = "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final String CANONICAL_MENU = PACKAGE_PATH + "NeoForgeWorkbenchMenu.java";
     private static final String MENU_DESCRIPTION =
@@ -44,7 +44,7 @@ class NeoForge1211GenerationTest {
         assertEquals(first, second);
         assertEquals(EXPECTED_DIGEST, first.sha256());
         assertEquals(17, first.files().size());
-        assertEquals("8eecba80ab530ca683dd9c9a4b765607d7d7ed7d4365dd242b1ac70f26746320",
+        assertEquals("df29f43c9b5dff9f6aa514736ccab8ba6dee11a3c7f6e6580999530feb48a8e2",
                 sha256(Files.readAllBytes(firstOutput.resolve("sources").resolve(PACKAGE_PATH)
                         .resolve("NeoForge1211WorkbenchMenu.java"))));
         assertEquals("7289427ba2367fd434576d6cf4f6e9ee01aa7d01ff57a4ca4dc95b0475344693",
@@ -79,7 +79,8 @@ class NeoForge1211GenerationTest {
         try (var stream = Files.walk(canonical.resolve("src/neoforge/java"))) {
             for (Path canonicalFile : stream.filter(Files::isRegularFile).toList()) {
                 String name = canonicalFile.getFileName().toString();
-                if (name.equals("NeoForgeWorkbenchMenu.java") || name.equals("NeoForgeWorkbenchRecipe.java")) {
+                if (name.equals("NeoForgeWorkbenchMenu.java") || name.equals("NeoForgeWorkbenchRecipe.java")
+                        || name.equals("NeoForgeWorkbenchScreen.java")) {
                     continue;
                 }
                 if (name.equals("NeoForgePlatformAdapter.java")) {
@@ -97,7 +98,7 @@ class NeoForge1211GenerationTest {
                 reused++;
             }
         }
-        assertEquals(8, reused);
+        assertEquals(7, reused);
     }
 
     @Test

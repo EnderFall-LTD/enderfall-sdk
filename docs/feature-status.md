@@ -18,7 +18,7 @@ its loader adapters have runtime evidence.
 | Networking | Typed codecs, negotiation, size limits, directions, main-thread handlers | Server/client pulse and acknowledgement |
 | Events | Lifecycle, server/client tick, player join/leave, sided item/block interaction, successful handling and cancellation | Lifecycle, cooldown timing, join guidance, and server-authoritative abilities |
 | Player gameplay | Player snapshots, atomic inventory costs, item rewards and overflow, chat/action-bar feedback, healing, experience | Crystal absorption, workbench infusion ritual, core activation, rod ability, and development kit |
-| Synchronized screens | Portable state-templated labels/buttons, bounded single/multiline text inputs, server-owned paged/disabled selection lists with native item-stack icons, counts, hover details, selected-row marking and mouse-wheel paging, and the experimental inventory-backed workbench surface | The workbench uses real slots; the persistent preview has a secure letter editor and rich searchable recipe-style browser |
+| Synchronized screens | Portable state-templated labels/buttons, bounded single/multiline text inputs, server-owned paged/disabled selection lists with native item-stack icons, counts, hover details and mouse-wheel paging, plus an opt-in server-discovered workbench recipe browser | The workbench uses real slots and synchronized selectable recipe outputs; the persistent preview also has a secure letter editor and rich searchable general-purpose list |
 
 The showcase is in `examples/demo-mod`. All of its Java under `src/main` and `src/client`
 is portable and contains no Minecraft, Fabric, Forge, or NeoForge imports.
@@ -45,6 +45,14 @@ menu-state synchronization, and packet round trips on all nine generated targets
 using identical portable sources. Forge required a diagnostic retry after an
 intermittent login timeout, which remains a reliability issue to investigate.
 This focused matrix is not full foundation-feature or visual acceptance.
+
+Instant item workbenches can opt into
+[`recipeBrowser()`](workbench-recipe-browser.md). Every matching data-pack recipe is
+discovered and validated on the logical server, sorted by stable recipe ID and exposed
+through protected ghost output slots with synchronized selection, paging and required
+input counts. Selecting a result uses the native menu-button path, so portable mods do
+not provide packets or client registration. Timed/fluid machines, text search and
+category tabs are not covered by this first browser slice.
 
 ## Not implemented yet
 

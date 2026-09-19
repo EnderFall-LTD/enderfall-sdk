@@ -84,14 +84,27 @@ public final class PersistenceFixtureMain {
             write(output, "resources/data/" + ID + "/" + (policy.legacy() ? "loot_tables" : "loot_table") + "/blocks/" + block + ".json",
                     Files.readString(fixture.resolve("src/main/resources/data/" + ID + "/loot_table/blocks/" + block + ".json")));
         }
-        String ingredients = policy.modernRecipes()
-                ? "{\"ingredient\":\"%s\",\"count\":%d}"
-                : "{\"ingredient\":{\"item\":\"%s\"},\"count\":%d}";
-        write(output, "resources/data/" + ID + "/" + (policy.legacy() ? "recipes" : "recipe") + "/assembly.json",
-                "{\"type\":\"" + ID + ":assembly\",\"ingredients\":["
-                + ingredients.formatted("minecraft:iron_ingot", 2) + "," + ingredients.formatted("minecraft:redstone", 1)
-                + "," + ingredients.formatted("minecraft:quartz", 1) + "],\"result\":{\""
-                + (policy.legacy() ? "item" : "id") + "\":\"minecraft:amethyst_shard\",\"count\":1}}\n");
+        Path recipes = fixture.resolve("src/main/resources/data/" + ID + "/recipe");
+        if (Files.isSymbolicLink(recipes) || !Files.isDirectory(recipes)) {
+            throw new IllegalArgumentException("Invalid fixture recipe root");
+        }
+        try (var files = Files.walk(recipes)) {
+            for (Path file : files.filter(Files::isRegularFile).toList()) {
+                if (Files.isSymbolicLink(file)) throw new IllegalArgumentException("Symlink in fixture recipes");
+                String relative = recipes.relativize(file).toString().replace('\\', '/');
+                String content = Files.readString(file);
+                if (!policy.modernRecipes()) {
+                    content = content.replaceAll("\\\"ingredient\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"",
+                            "\\\"ingredient\\\":{\\\"item\\\":\\\"$1\\\"}");
+                }
+                if (policy.legacy()) {
+                    content = content.replaceAll("(\\\"result\\\"\\s*:\\s*\\{\\s*)\\\"id\\\"\\s*:",
+                            "$1\\\"item\\\":");
+                }
+                write(output, "resources/data/" + ID + "/" + (policy.legacy() ? "recipes" : "recipe")
+                        + "/" + relative, content);
+            }
+        }
     }
 
     private static void write(Path root, String relative, String content) throws Exception {

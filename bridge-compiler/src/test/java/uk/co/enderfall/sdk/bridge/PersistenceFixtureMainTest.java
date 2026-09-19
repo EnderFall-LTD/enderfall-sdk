@@ -21,10 +21,17 @@ class PersistenceFixtureMainTest {
             String glue = Files.readString(output.resolve("java/uk/co/enderfall/sdk/preview/GeneratedPersistenceEntrypoint.java"));
             assertTrue(glue.contains("ConsumerBootstrap.initialize("), target);
             assertFalse(glue.contains("PersistentPreviewBootstrap"), target);
-            String recipe = Files.readString(output.resolve("resources/data/enderfall_persistent_preview/"
-                    + (policy.legacy() ? "recipes" : "recipe") + "/assembly.json"));
-            assertEquals(!policy.modernRecipes(), recipe.contains("\"ingredient\":{\"item\""), target);
-            assertEquals(policy.legacy(), recipe.contains("\"result\":{\"item\""), target);
+            Path recipeDirectory = output.resolve("resources/data/enderfall_persistent_preview/"
+                    + (policy.legacy() ? "recipes" : "recipe"));
+            for (String name : java.util.List.of("assembly.json", "assembly_lamp.json", "assembly_observer.json")) {
+                String recipe = Files.readString(recipeDirectory.resolve(name));
+                assertEquals(!policy.modernRecipes(), recipe.contains("\"ingredient\":{\"item\""), target + ":" + name);
+                assertEquals(policy.legacy(), recipe.contains("\"result\":{\"item\""), target + ":" + name);
+            }
+            assertTrue(Files.readString(recipeDirectory.resolve("assembly_lamp.json"))
+                    .contains("minecraft:redstone_lamp"), target);
+            assertTrue(Files.readString(recipeDirectory.resolve("assembly_observer.json"))
+                    .contains("minecraft:observer"), target);
             assertEquals(!policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/models/item/workbench.json")), target);
             assertEquals(!policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/models/item/storage_cabinet.json")), target);
             assertEquals(policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/items/storage_cabinet.json")), target);

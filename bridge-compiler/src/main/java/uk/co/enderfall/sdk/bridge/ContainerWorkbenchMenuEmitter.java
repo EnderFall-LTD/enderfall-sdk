@@ -59,10 +59,13 @@ final class ContainerWorkbenchMenuEmitter {
         c.line(4, "private final SimpleContainer inputs;");
         c.line(4, "private final ResultContainer result = new ResultContainer();");
         c.line(4, "private final SimpleContainer recipeChoices;");
+        c.line(4, "private List<" + p.holder() + "> allMatchingRecipes = List.of();");
         c.line(4, "private List<" + p.holder() + "> matchingRecipes = List.of();");
         c.line(4, "private final DataSlot selectedRecipeIndex = DataSlot.standalone();");
         c.line(4, "private final DataSlot recipePage = DataSlot.standalone();");
         c.line(4, "private final DataSlot recipePages = DataSlot.standalone();");
+        c.line(4, "private final DataSlot recipeCategory = DataSlot.standalone();");
+        c.line(4, "private final DataSlot recipeCount = DataSlot.standalone();");
         c.line(4, "private final DataSlot[] requiredCounts;");
         c.line(4, "private " + p.holder() + " selectedRecipe;");
         if (p.persistent()) c.line(4, "private final Runnable inputListener; private uk.co.enderfall.sdk.runtime.blockentity.nativebridge.StoredBlockEntity owner;");
@@ -76,6 +79,7 @@ final class ContainerWorkbenchMenuEmitter {
         c.line(8, "recipeChoices = new SimpleContainer(binding.definition().spec().recipeBrowserEntries());");
         c.line(8, "requiredCounts = new DataSlot[binding.recipes().inputSlots()];");
         c.line(8, "addDataSlot(selectedRecipeIndex); addDataSlot(recipePage); addDataSlot(recipePages);");
+        c.line(8, "addDataSlot(recipeCategory); addDataSlot(recipeCount);");
         c.line(8, "for (int slot = 0; slot < requiredCounts.length; slot++) {");
         c.line(12, "requiredCounts[slot] = DataSlot.standalone(); addDataSlot(requiredCounts[slot]);");
         c.line(8, "}");
@@ -157,6 +161,9 @@ final class ContainerWorkbenchMenuEmitter {
         c.line(4, "int recipeChoiceCount() { return recipeChoices.getContainerSize(); }");
         c.line(4, "int recipePage() { return recipePage.get(); }");
         c.line(4, "int recipePages() { return recipePages.get(); }");
+        c.line(4, "int recipeCategory() { return recipeCategory.get(); }");
+        c.line(4, "String recipeCategoryName() { return switch (recipeCategory.get()) { case 1 -> \"Blocks\"; case 2 -> \"Items\"; default -> \"All\"; }; }");
+        c.line(4, "int recipeCount() { return recipeCount.get(); }");
         c.line(4, "int selectedRecipeIndex() { return selectedRecipeIndex.get(); }");
         c.line(4, "int requiredCount(int slot) { return slot >= 0 && slot < requiredCounts.length ? requiredCounts[slot].get() : 0; }");
         c.blank();
@@ -198,14 +205,14 @@ final class ContainerWorkbenchMenuEmitter {
                 : "matchingRecipes.get(index).id().identifier().toString()";
         c.line(4, "private void updateRecipes() {");
         c.line(8, "String previousId = selectedRecipe == null ? \"\" : " + existingId + ";");
-        c.line(8, "selectedRecipe = null; matchingRecipes = List.of();");
-        c.line(8, "selectedRecipeIndex.set(-1); recipePage.set(0); recipePages.set(1);");
+        c.line(8, "selectedRecipe = null; allMatchingRecipes = List.of(); matchingRecipes = List.of();");
+        c.line(8, "selectedRecipeIndex.set(-1); recipePage.set(0); recipePages.set(1); recipeCount.set(0);");
         c.line(8, "for (int row = 0; row < recipeChoices.getContainerSize(); row++) recipeChoices.setItem(row, ItemStack.EMPTY);");
         c.line(8, "result.setItem(0, ItemStack.EMPTY);");
         c.line(8, "Player player = playerInventory.player;");
         c.guard(8, p.legacy() ? "player.level().isClientSide()" : "!(player instanceof ServerPlayer serverPlayer)", "return;", p.verbose());
         if (p.legacy()) {
-            c.line(8, "matchingRecipes = player.level().getRecipeManager().getAllRecipesFor(binding.recipes().type()" + p.handle() + ").stream()");
+            c.line(8, "allMatchingRecipes = player.level().getRecipeManager().getAllRecipesFor(binding.recipes().type()" + p.handle() + ").stream()");
             c.line(16, ".filter(recipe -> recipe.matches(inputs, player.level()))");
             c.line(16, ".sorted(Comparator.comparing(recipe -> recipe.getId().toString())).limit(256).toList();");
         } else {
@@ -219,8 +226,19 @@ final class ContainerWorkbenchMenuEmitter {
             c.line(16, p.holder() + " typed = (" + p.holder() + ") (RecipeHolder<?>) candidate;");
             c.line(16, "discovered.add(typed);"); c.line(12, "}"); c.line(8, "}");
             c.line(8, "discovered.sort(Comparator.comparing(holder -> holder.id().identifier().toString()));");
-            c.line(8, "matchingRecipes = List.copyOf(discovered.subList(0, Math.min(256, discovered.size())));");
+            c.line(8, "allMatchingRecipes = List.copyOf(discovered.subList(0, Math.min(256, discovered.size())));");
         }
+        c.line(8, "applyRecipeCategory(previousId);");
+        c.line(4, "}");
+
+        c.gap(); c.line(4, "private void applyRecipeCategory(String previousId) {");
+        String categoryResult = p.legacy() ? "candidate.result()" : "candidate.value().result()";
+        c.line(8, "matchingRecipes = allMatchingRecipes.stream().filter(candidate -> {");
+        c.line(12, "boolean block = " + categoryResult + ".getItem() instanceof net.minecraft.world.item.BlockItem;");
+        c.line(12, "return recipeCategory.get() == 0 || recipeCategory.get() == 1 && block || recipeCategory.get() == 2 && !block;");
+        c.line(8, "}).toList();");
+        c.line(8, "recipeCount.set(matchingRecipes.size());");
+        c.line(8, "selectedRecipe = null; selectedRecipeIndex.set(-1); recipePage.set(0); recipePages.set(1);");
         c.line(8, "if (!matchingRecipes.isEmpty()) {");
         c.line(12, "int selected = 0;");
         c.line(12, "if (!previousId.isBlank()) for (int index = 0; index < matchingRecipes.size(); index++) {");
@@ -277,6 +295,13 @@ final class ContainerWorkbenchMenuEmitter {
         c.line(8, "}");
         c.line(8, "if (id == 100 && recipePage.get() > 0) { recipePage.set(recipePage.get() - 1); updateRecipeChoices(); return true; }");
         c.line(8, "if (id == 101 && recipePage.get() + 1 < recipePages.get()) { recipePage.set(recipePage.get() + 1); updateRecipeChoices(); return true; }");
+        String selectedId = p.legacy() ? "selectedRecipe.getId().toString()"
+                : "selectedRecipe.id().identifier().toString()";
+        c.line(8, "if ((id == 102 || id == 103) && visible > 0) {");
+        c.line(12, "String previousId = selectedRecipe == null ? \"\" : " + selectedId + ";");
+        c.line(12, "recipeCategory.set(Math.floorMod(recipeCategory.get() + (id == 102 ? -1 : 1), 3));");
+        c.line(12, "applyRecipeCategory(previousId); return true;");
+        c.line(8, "}");
         c.line(8, "return false;"); c.line(4, "}");
     }
 

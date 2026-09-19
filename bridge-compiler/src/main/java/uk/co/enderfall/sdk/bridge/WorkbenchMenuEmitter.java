@@ -179,10 +179,13 @@ final class WorkbenchMenuEmitter {
                 private final SimpleContainer inputs;
                 private final ResultContainer result = new ResultContainer();
                 private final SimpleContainer recipeChoices;
+                private List<RecipeHolder<${PREFIX}WorkbenchRecipe>> allMatchingRecipes = List.of();
                 private List<RecipeHolder<${PREFIX}WorkbenchRecipe>> matchingRecipes = List.of();
                 private final DataSlot selectedRecipeIndex = DataSlot.standalone();
                 private final DataSlot recipePage = DataSlot.standalone();
                 private final DataSlot recipePages = DataSlot.standalone();
+                private final DataSlot recipeCategory = DataSlot.standalone();
+                private final DataSlot recipeCount = DataSlot.standalone();
                 private final DataSlot[] requiredCounts;
                 private RecipeHolder<${PREFIX}WorkbenchRecipe> selectedRecipe;
             ${OWNER_FIELD}
@@ -193,6 +196,7 @@ final class WorkbenchMenuEmitter {
                     recipeChoices = new SimpleContainer(binding.definition().spec().recipeBrowserEntries());
                     requiredCounts = new DataSlot[binding.recipes().inputSlots()];
                     addDataSlot(selectedRecipeIndex); addDataSlot(recipePage); addDataSlot(recipePages);
+                    addDataSlot(recipeCategory); addDataSlot(recipeCount);
                     for (int slot = 0; slot < requiredCounts.length; slot++) {
                         requiredCounts[slot] = DataSlot.standalone(); addDataSlot(requiredCounts[slot]);
                     }
@@ -223,6 +227,9 @@ final class WorkbenchMenuEmitter {
                 int recipeChoiceCount() { return recipeChoices.getContainerSize(); }
                 int recipePage() { return recipePage.get(); }
                 int recipePages() { return recipePages.get(); }
+                int recipeCategory() { return recipeCategory.get(); }
+                String recipeCategoryName() { return switch (recipeCategory.get()) { case 1 -> "Blocks"; case 2 -> "Items"; default -> "All"; }; }
+                int recipeCount() { return recipeCount.get(); }
                 int selectedRecipeIndex() { return selectedRecipeIndex.get(); }
                 int requiredCount(int slot) { return slot >= 0 && slot < requiredCounts.length ? requiredCounts[slot].get() : 0; }
                 @Override public boolean stillValid(Player player) { return ${VALIDITY}; }
@@ -257,8 +264,8 @@ final class WorkbenchMenuEmitter {
 
                 private void updateRecipes() {
                     String previousId = selectedRecipe == null ? "" : selectedRecipe${HOLDER_ID}.toString();
-                    selectedRecipe = null; matchingRecipes = List.of();
-                    selectedRecipeIndex.set(-1); recipePage.set(0); recipePages.set(1);
+                    selectedRecipe = null; allMatchingRecipes = List.of(); matchingRecipes = List.of();
+                    selectedRecipeIndex.set(-1); recipePage.set(0); recipePages.set(1); recipeCount.set(0);
                     for (int row = 0; row < recipeChoices.getContainerSize(); row++) recipeChoices.setItem(row, ItemStack.EMPTY);
                     result.setItem(0, ItemStack.EMPTY);
                     Player player = playerInventory.player;
@@ -276,7 +283,18 @@ final class WorkbenchMenuEmitter {
                         }
                     }
                     discovered.sort(Comparator.comparing(holder -> holder${HOLDER_ID}.toString()));
-                    matchingRecipes = List.copyOf(discovered.subList(0, Math.min(256, discovered.size())));
+                    allMatchingRecipes = List.copyOf(discovered.subList(0, Math.min(256, discovered.size())));
+                    applyRecipeCategory(previousId);
+                }
+
+                private void applyRecipeCategory(String previousId) {
+                    matchingRecipes = allMatchingRecipes.stream().filter(candidate -> {
+                        boolean block = candidate.value().result().getItem() instanceof net.minecraft.world.item.BlockItem;
+                        return recipeCategory.get() == 0 || recipeCategory.get() == 1 && block
+                                || recipeCategory.get() == 2 && !block;
+                    }).toList();
+                    recipeCount.set(matchingRecipes.size());
+                    selectedRecipe = null; selectedRecipeIndex.set(-1); recipePage.set(0); recipePages.set(1);
                     if (!matchingRecipes.isEmpty()) {
                         int selected = 0;
                         if (!previousId.isBlank()) for (int index = 0; index < matchingRecipes.size(); index++) {
@@ -325,6 +343,11 @@ final class WorkbenchMenuEmitter {
                     }
                     if (id == 100 && recipePage.get() > 0) { recipePage.set(recipePage.get() - 1); updateRecipeChoices(); return true; }
                     if (id == 101 && recipePage.get() + 1 < recipePages.get()) { recipePage.set(recipePage.get() + 1); updateRecipeChoices(); return true; }
+                    if ((id == 102 || id == 103) && visible > 0) {
+                        String previousId = selectedRecipe == null ? "" : selectedRecipe${HOLDER_ID}.toString();
+                        recipeCategory.set(Math.floorMod(recipeCategory.get() + (id == 102 ? -1 : 1), 3));
+                        applyRecipeCategory(previousId); return true;
+                    }
                     return false;
                 }
 

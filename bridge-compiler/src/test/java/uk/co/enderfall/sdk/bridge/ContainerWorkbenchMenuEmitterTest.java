@@ -65,6 +65,13 @@ class ContainerWorkbenchMenuEmitterTest {
             String source = text(id);
             assertTrue(source.contains("new SimpleContainer(binding.definition().spec().recipeBrowserEntries())"));
             assertTrue(source.contains("DataSlot selectedRecipeIndex = DataSlot.standalone()"));
+            assertTrue(source.contains("allMatchingRecipes"));
+            assertTrue(source.contains("DataSlot recipeCategory = DataSlot.standalone()"));
+            assertTrue(source.contains("DataSlot recipeCount = DataSlot.standalone()"));
+            assertTrue(source.contains("private void applyRecipeCategory(String previousId)"));
+            assertTrue(source.contains("result().getItem() instanceof net.minecraft.world.item.BlockItem"));
+            assertTrue(source.contains("if ((id == 102 || id == 103) && visible > 0)"));
+            assertTrue(source.contains("Math.floorMod(recipeCategory.get() + (id == 102 ? -1 : 1), 3)"));
             assertTrue(source.contains("public boolean clickMenuButton(Player player, int id)"));
             assertTrue(source.contains("String previousId = selectedRecipe == null"));
             assertTrue(source.contains("requiredCounts[slot].set(ingredients.get(slot).count())"));

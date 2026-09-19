@@ -30,7 +30,7 @@ class Fabric1201GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("42c2bd9b2772707ae365506c28824cc5f8bc92a9fc2f462b6eafb71b55fc00e5", first.sha256());
+        assertEquals("2981dc8d211ec787802cde60bef7089bf1cc0f9a01a949f0f218ea877cf3346e", first.sha256());
         assertEquals(14, first.files().size());
         try (var files = Files.walk(firstOutput)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
@@ -46,7 +46,7 @@ class Fabric1201GenerationTest {
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201PlatformAdapter.java")));
         assertEquals("4aa8cb994553df721b31067bbc50f96ce7506909d7c41c1b45467f93f8e09515",
                 sha256(firstOutput.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java")));
-        assertEquals("b46202796d3c31be922df32b3ac6aa2408db047f24178db4d4849ce4ef4ef65c",
+        assertEquals("46f68431edcbedda89d308a671e05d9f616a5e4340bea92a55cbde74ebaab03b",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201WorkbenchMenu.java")));
         assertEquals("8a3c6eb3e66c85cd2d566140e970928e85ec4774051874f6cd82c0f9be74ff15",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201WorkbenchRecipe.java")));

@@ -35,7 +35,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "Fabric1211PlatformAdapter.java",
                     "fcec3d0bf35d7c3c5cf7d70cafb801e36a9aefc30394ef403479073d75a72081"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchMenu.java",
-                    "a0f1b3e4b7e062890990f7e388632562d6f8d9d4180dfc7b6e6face13187823c"),
+                    "1b70f6ecc2c9aeaeb31ee8890dd0f62d64ea1ec7106b2ce8185740af5aa54839"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchRecipe.java",
                     "d5e12ee40bd8c35226a1cf9eb3f49887f8e28e053fe7e86e40ad1b6b1a611798"),
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
@@ -57,7 +57,7 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricWorkbenchInput.java",
                     "139313be11f3853bd83ef47ec834280d015bc397d399cc34a3cb8396090ff5d8"),
             Map.entry(PACKAGE_PATH + "FabricWorkbenchScreen.java",
-                    "1ad6ed5b0ef85271cbeca8dd44aa4c9f598199ce4168eacd8f4f773f9a5c5bea"),
+                    "0b03e2541539e350a25bbf1a96d44a53d868bc0cb5f4fda576d09ae57d766c12"),
             Map.entry("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
                     "9c27205800c68f9abc1da9c297a485919ea1ad41a42107582a97aced5ffb2cc9"));
     private static final String EXPECTED_FABRIC_MOD_JSON = """
@@ -106,7 +106,7 @@ class Fabric1211GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("21f2552639c90bafc0df3d91b7309098bf741666ace02b62a4bf49a815cf2ca1",
+        assertEquals("f36ee30a2dfd093d9b4e7ef0f9ee29f1d8f33b824c25243630d1d638ac5cfd72",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
@@ -197,7 +197,7 @@ class Fabric1211GenerationTest {
         Path menu = canonical.resolve("src/canonical/java").resolve(CANONICAL_MENU);
         Files.writeString(menu, "// Feature declaration only; no Java template required.\n");
         writeManifest(canonical);
-        assertEquals("21f2552639c90bafc0df3d91b7309098bf741666ace02b62a4bf49a815cf2ca1",
+        assertEquals("f36ee30a2dfd093d9b4e7ef0f9ee29f1d8f33b824c25243630d1d638ac5cfd72",
                 generate(canonical, temporaryDirectory.resolve("independent-output")).sha256());
     }
 

@@ -60,6 +60,10 @@ class WorkbenchScreenEmitterTest {
             boolean extracted = id.startsWith("26.2");
             assertTrue(source.contains("menu.recipeChoiceCount()"));
             assertTrue(source.contains("menu.requiredCount(slot)"));
+            assertTrue(source.contains("menu.recipeCategoryName()"));
+            assertTrue(source.contains("menu.recipeCount()"));
+            assertTrue(source.contains("action = 102"));
+            assertTrue(source.contains("action = 103"));
             assertTrue(source.contains("handleInventoryButtonClick(menu.containerId, action)"));
             assertTrue(source.contains("action = scroll > 0.0D ? 100 : 101"));
             assertTrue(source.contains(extracted

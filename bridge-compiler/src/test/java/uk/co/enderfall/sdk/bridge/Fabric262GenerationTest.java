@@ -49,11 +49,11 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricWorkbenchInput.java",
                     "139313be11f3853bd83ef47ec834280d015bc397d399cc34a3cb8396090ff5d8"),
             Map.entry(PACKAGE_PATH + "Fabric26WorkbenchMenu.java",
-                    "982149995308128e37db65cd9fe246d5dad2fb2214a04c098b928d245313eae2"),
+                    "1ed88ae260fb465442266968bf412732b4b019bae4fd347ff713d114f78de2a1"),
             Map.entry(PACKAGE_PATH + "Fabric26WorkbenchRecipe.java",
                     "84b9fd197e7f5faa3c82c437953aeb7f716516b2f2bf47316b714d5e5a9ce1a2"),
             Map.entry(PACKAGE_PATH + "Fabric26WorkbenchScreen.java",
-                    "1ded61c58b5c6d9782c397519b363ac43bfb471ce7f222c82e96dbf705f97cbf"),
+                    "30817ef3d98d321b22efad3f395a0961ac4154a1617ca1f4bc00068dae1ebd47"),
             Map.entry("uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",
                     "a0f24be0c2aa02e88c616cc0c77d1f837d4faa015d9607e1df40e932f6954610"));
     private static final String EXPECTED_PACK_METADATA = """
@@ -79,7 +79,7 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("eda5f0261deca7bb61caa881d3d600ac5aae4f3cd3a7f448aff0eb6b19ae5250",
+        assertEquals("2f9bea948cf08935588626e82cca5796bde6e91e9498332f775bc2d93a36e400",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));

@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1214GenerationTest {
     private static final String TARGET = "1.21.4-neoforge";
     private static final String EXPECTED_DIGEST =
-            "a853398717359ec0b71328b06c0f2126d591c08df4459fba38d932c2d25b9c13";
+            "7328ccd922ba9de61ea882632410ce05201cec53631ab93b658b7b2013642e25";
     private static final String PACKAGE_PATH =
             "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final Map<String, String> EXPECTED_SOURCE_HASHES = Map.ofEntries(
@@ -44,11 +44,11 @@ class NeoForge1214GenerationTest {
             Map.entry("NeoForgeWorkbenchInput.java",
                     "c600162ec228efae7ff15ae83e9b1d3878b4a077f01cbfea16a0d78100e9d177"),
             Map.entry("NeoForgeWorkbenchMenu.java",
-                    "58e1691f4d3eb15173c1910f4d4aec4f6c3e9815f5468bb68a2bd197a269661a"),
+                    "47404ab974902b5721833071d42caf413c9472b120ef8391561e999d987c433e"),
             Map.entry("NeoForgeWorkbenchRecipe.java",
                     "af80240af9c25aa54c70b26c9aaecf25a3a2a25e18e72b4627d0a24ece7c58f2"),
             Map.entry("NeoForgeWorkbenchScreen.java",
-                    "1290b015a68c6cbd6fef0ce2a464d2cad97f91d59725f3687193011c00e8f664"));
+                    "196d11558d37d4441c283b2819c9c00dc936d395df515168ca871cdbf9c83680"));
 
     @TempDir
     Path temporaryDirectory;

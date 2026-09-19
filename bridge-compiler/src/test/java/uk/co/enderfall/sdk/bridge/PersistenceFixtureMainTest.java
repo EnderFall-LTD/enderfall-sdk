@@ -23,7 +23,8 @@ class PersistenceFixtureMainTest {
             assertFalse(glue.contains("PersistentPreviewBootstrap"), target);
             Path recipeDirectory = output.resolve("resources/data/enderfall_persistent_preview/"
                     + (policy.legacy() ? "recipes" : "recipe"));
-            for (String name : java.util.List.of("assembly.json", "assembly_lamp.json", "assembly_observer.json")) {
+            for (String name : java.util.List.of("assembly.json", "assembly_chest.json", "assembly_diamond.json",
+                    "assembly_lamp.json", "assembly_observer.json", "assembly_piston.json", "assembly_sticks.json")) {
                 String recipe = Files.readString(recipeDirectory.resolve(name));
                 assertEquals(!policy.modernRecipes(), recipe.contains("\"ingredient\":{\"item\""), target + ":" + name);
                 assertEquals(policy.legacy(), recipe.contains("\"result\":{\"item\""), target + ":" + name);
@@ -32,6 +33,14 @@ class PersistenceFixtureMainTest {
                     .contains("minecraft:redstone_lamp"), target);
             assertTrue(Files.readString(recipeDirectory.resolve("assembly_observer.json"))
                     .contains("minecraft:observer"), target);
+            assertTrue(Files.readString(recipeDirectory.resolve("assembly_chest.json"))
+                    .contains("minecraft:chest"), target);
+            assertTrue(Files.readString(recipeDirectory.resolve("assembly_diamond.json"))
+                    .contains("minecraft:diamond"), target);
+            assertTrue(Files.readString(recipeDirectory.resolve("assembly_piston.json"))
+                    .contains("minecraft:piston"), target);
+            assertTrue(Files.readString(recipeDirectory.resolve("assembly_sticks.json"))
+                    .contains("minecraft:stick"), target);
             assertEquals(!policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/models/item/workbench.json")), target);
             assertEquals(!policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/models/item/storage_cabinet.json")), target);
             assertEquals(policy.modernRecipes(), Files.exists(output.resolve("resources/assets/enderfall_persistent_preview/items/storage_cabinet.json")), target);

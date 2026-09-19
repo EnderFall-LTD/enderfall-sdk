@@ -27,8 +27,9 @@ and committed-change callbacks. Portable synchronized menus now include server-o
 paged, filterable selection lists with disabled-row validation, selected-row marking and
 cross-version mouse-wheel paging plus native item-stack icons, counts and bounded hover
 details. Instant item workbenches now add server-owned recipe discovery and synchronized
-selected-result previews, counted requirements and paging without consumer packets.
-Workbench search/categories, richer details and timed/fluid-machine browsers remain open.
+selected-result previews, counted requirements, paging and native All/Blocks/Items
+filtering without consumer packets. Workbench text search, consumer-defined categories,
+richer details and timed/fluid-machine browsers remain open.
 Live copy/drop/reconnect acceptance remains open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
@@ -219,6 +220,8 @@ maintainers and add-on authors. Full furniture parity is not yet achieved.
 - [x] Add opt-in instant-workbench recipe discovery and synchronized protected result
   previews, stable server-owned selection, counted requirements and native menu-button
   paging to all nine generated targets.
+- [x] Add server-owned All/Blocks/Items recipe filtering, synchronized category totals
+  and bounded native menu actions to all nine generated workbench targets.
 - [x] Generate all nine label/button portable screens from one shared implementation
   with typed rendering and screen-access policies.
 - [x] Migrate native services, loader initialization, and registration hooks into

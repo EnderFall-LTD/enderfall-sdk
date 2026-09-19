@@ -24,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1211GenerationTest {
     private static final String TARGET = "1.21.1-neoforge";
     private static final String EXPECTED_DIGEST =
-            "2cebcbb6513c566f76fed34a374391fb4d0a94db3739cb2da767189c0c25f99a";
+            "a3872399b123f4f5d46f82aa1b7426686b701f7f1d0ae5c807c785a129b21aab";
     private static final String PACKAGE_PATH = "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final String CANONICAL_MENU = PACKAGE_PATH + "NeoForgeWorkbenchMenu.java";
     private static final String MENU_DESCRIPTION =
@@ -44,7 +44,7 @@ class NeoForge1211GenerationTest {
         assertEquals(first, second);
         assertEquals(EXPECTED_DIGEST, first.sha256());
         assertEquals(17, first.files().size());
-        assertEquals("df29f43c9b5dff9f6aa514736ccab8ba6dee11a3c7f6e6580999530feb48a8e2",
+        assertEquals("16706fb358d2953ab0a5fd1f5c7452d4afcd9bf26df9cc270c0b3b0bd65ca7b3",
                 sha256(Files.readAllBytes(firstOutput.resolve("sources").resolve(PACKAGE_PATH)
                         .resolve("NeoForge1211WorkbenchMenu.java"))));
         assertEquals("7289427ba2367fd434576d6cf4f6e9ee01aa7d01ff57a4ca4dc95b0475344693",

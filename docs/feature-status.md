@@ -49,10 +49,11 @@ This focused matrix is not full foundation-feature or visual acceptance.
 Instant item workbenches can opt into
 [`recipeBrowser()`](workbench-recipe-browser.md). Every matching data-pack recipe is
 discovered and validated on the logical server, sorted by stable recipe ID and exposed
-through protected ghost output slots with synchronized selection, paging and required
-input counts. Selecting a result uses the native menu-button path, so portable mods do
-not provide packets or client registration. Timed/fluid machines, text search and
-category tabs are not covered by this first browser slice.
+through protected ghost output slots with synchronized selection, paging, required
+input counts and server-owned All/Blocks/Items filtering. Selecting a result or category
+uses the native menu-button path, so portable mods do not provide packets or client
+registration. Timed/fluid machines, text search and consumer-defined categories are not
+covered by this browser slice.
 
 ## Not implemented yet
 

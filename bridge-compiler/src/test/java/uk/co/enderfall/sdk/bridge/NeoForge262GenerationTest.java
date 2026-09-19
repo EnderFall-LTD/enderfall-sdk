@@ -30,7 +30,7 @@ class NeoForge262GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("869938f1ce58e65a8d81e2552a4b77f88540268f6737ec2e18c23014fa8e449f", first.sha256());
+        assertEquals("4cc495ac367aecb0d1185974da35744b30fdda96b1ec6920f069b981cbd0bfec", first.sha256());
         assertEquals(15, first.files().size());
         assertEquals(hashes(firstOutput), hashes(secondOutput));
 
@@ -39,7 +39,7 @@ class NeoForge262GenerationTest {
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "NeoForge26PlatformAdapter.java")));
         assertEquals("a0f24be0c2aa02e88c616cc0c77d1f837d4faa015d9607e1df40e932f6954610",
                 sha256(firstOutput.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java")));
-        assertEquals("da6dfa909d247758fbd21422d537db6a4e381fbfdf5af863ff5a97f9351c7de1",
+        assertEquals("8da6fa8035dfd9b3bd1ecd69919bccc965f4f30a96ac5b74c9bf8ed46da3e785",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "NeoForge26WorkbenchMenu.java")));
         assertEquals("f3f833abd1eb94e772093270eb22e651beb9ef6e7fdf79f61aa0e00991e2a5cb",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "NeoForge26WorkbenchRecipe.java")));

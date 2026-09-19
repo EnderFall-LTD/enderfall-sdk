@@ -90,6 +90,10 @@ final class WorkbenchScreenEmitter {
         c.line(8, "graphics." + text + "(font, title, titleLabelX, titleLabelY, 0xFFEADFFF, false);");
         c.line(8, "graphics." + text + "(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFFD8CCE8, false);");
         c.line(8, "if (menu.recipeChoiceCount() > 0) {");
+        c.line(12, "String category = menu.recipeCategoryName() + \"  \" + (menu.selectedRecipeIndex() + 1) + \"/\" + menu.recipeCount();");
+        c.line(12, "graphics." + text + "(font, Component.literal(\"<\"), 10, 19, 0xFFEADFFF, false);");
+        c.line(12, "graphics." + text + "(font, Component.literal(category), (imageWidth - font.width(category)) / 2, 19, 0xFFD8CCE8, false);");
+        c.line(12, "graphics." + text + "(font, Component.literal(\">\"), 160, 19, 0xFFEADFFF, false);");
         c.line(12, "graphics." + text + "(font, Component.literal(\"<\"), 30, 63, menu.recipePage() > 0 ? 0xFFEADFFF : 0xFF665E70, false);");
         c.line(12, "graphics." + text + "(font, Component.literal(\">\"), 142, 63, menu.recipePage() + 1 < menu.recipePages() ? 0xFFEADFFF : 0xFF665E70, false);");
         c.line(8, "}");
@@ -144,6 +148,9 @@ final class WorkbenchScreenEmitter {
         c.line(8, "int action = -1;");
         c.line(8, "if (scroll != 0.0D && x >= 44 && x < 44 + visible * 18 && y >= 57 && y < 77) {");
         c.line(12, "action = scroll > 0.0D ? 100 : 101;");
+        c.line(8, "} else if (scroll == 0.0D && y >= 15 && y < 31) {");
+        c.line(12, "if (x >= 6 && x < 25) action = 102;");
+        c.line(12, "else if (x >= 151 && x < 170) action = 103;");
         c.line(8, "} else if (scroll == 0.0D && y >= 57 && y < 77) {");
         c.line(12, "if (x >= 27 && x < 41) action = 100;");
         c.line(12, "else if (x >= 139 && x < 153) action = 101;");

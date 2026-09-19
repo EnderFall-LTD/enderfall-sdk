@@ -200,9 +200,12 @@ claims that the gameplay checks have passed.
    `/give @s enderfall_persistent_preview:workbench`.
 3. Place it and right-click it with an empty hand.
 4. Put **2 iron ingots**, **1 redstone dust**, and **1 quartz** into the three input
-   slots, left to right. Three server-discovered output previews should appear:
-   **1 amethyst shard**, **2 redstone lamps**, and **1 observer**.
-5. Click each preview and check that its border and the real output change together.
+   slots, left to right. Seven server-discovered outputs should appear across two pages:
+   **1 amethyst shard**, **1 chest**, **1 diamond**, **2 redstone lamps**, **1 observer**,
+   **1 piston**, and **4 sticks**.
+5. Use the upper arrows to switch between **All (7)**, **Blocks (4)** and **Items (3)**.
+   Change result pages with the lower arrows or mouse wheel. Click previews and check
+   that their border and the real output change together.
    The first input preview should display `x2`. The previews themselves must not be
    removable or accept shift-clicked items.
 6. Take the selected result and check that only the declared input quantities are

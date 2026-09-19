@@ -56,7 +56,7 @@ tasks.register("verifyPersistenceFixtures") {
                         "PreviewOrientationBlock", "PreviewAxisBlock",
                         "PreviewContainers", "PreviewRecipes", "PreviewFluids", "PreviewGauge", "PreviewRenderClient",
                         "PreviewItems", "PreviewToolItem", "PreviewLetterItem", "PreviewLetterCommands",
-                        "PreviewLetterEditor").forEach { name ->
+                        "PreviewLetterEditor", "PreviewRecipeBrowser").forEach { name ->
                         val path = "uk/co/enderfall/sdk/preview/$name.class"
                         val entry = zip.getEntry(path) ?: error("Missing portable class $path in ${file.get()}")
                         val bytes = zip.getInputStream(entry).use { it.readBytes() }

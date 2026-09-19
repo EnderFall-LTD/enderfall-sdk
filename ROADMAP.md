@@ -23,7 +23,9 @@ path without exposing native stack or slot classes. Reusable bounded editable-te
 now provide server-validated Save/Sign/Cancel sessions without consumer packets or native
 widgets. Portable block-property tool policies now provide per-block allowlists,
 per-stack selection, atomic typed value cycling, pre-commit validation/resource claims,
-and committed-change callbacks. Live copy/drop/reconnect acceptance remains open.
+and committed-change callbacks. Portable synchronized menus now include server-owned,
+paged, filterable selection lists with disabled-row validation; recipe discovery, item
+icons and rich result previews remain open. Live copy/drop/reconnect acceptance remains open.
 The port must preserve recognizable
 block, block-entity, menu, screen, renderer and registry class responsibilities for
 maintainers and add-on authors. Full furniture parity is not yet achieved.

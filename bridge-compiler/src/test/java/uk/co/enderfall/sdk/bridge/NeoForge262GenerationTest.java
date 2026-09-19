@@ -30,7 +30,7 @@ class NeoForge262GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("47e5b87866d525a8cba666cd372a54394a11439ff7c4e07dae791ff245dd760b", first.sha256());
+        assertEquals("61891ea55c33fe3bce58c495bd6106d5e2689942d294f483ef0e24d89221653a", first.sha256());
         assertEquals(15, first.files().size());
         assertEquals(hashes(firstOutput), hashes(secondOutput));
 

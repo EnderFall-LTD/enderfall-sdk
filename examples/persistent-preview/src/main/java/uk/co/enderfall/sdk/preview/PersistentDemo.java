@@ -12,6 +12,7 @@ public final class PersistentDemo implements EnderfallMod {
         PreviewItems.register(context);
         PreviewLetterCommands.register(context);
         PreviewLetterEditor.register(context);
+        PreviewRecipeBrowser.register(context);
         var storage = PreviewBlocks.WORKBENCH_STORAGE;
         var timedStorage = PreviewBlocks.TIMED_STORAGE;
         var tankStorage = PreviewBlocks.TANK_STORAGE;

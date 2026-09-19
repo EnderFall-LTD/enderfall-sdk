@@ -28,6 +28,8 @@ import uk.co.enderfall.sdk.api.ui.MenuRef;
 import uk.co.enderfall.sdk.api.ui.MenuSpec;
 import uk.co.enderfall.sdk.api.ui.MenuState;
 import uk.co.enderfall.sdk.api.ui.MenuTextInput;
+import uk.co.enderfall.sdk.api.ui.MenuSelectionEntry;
+import uk.co.enderfall.sdk.api.ui.MenuSelectionList;
 
 class DefaultMenuManagerTest {
     @Test void tankBindingRequiresOwnedBlockAndNativeSupport() {
@@ -208,6 +210,34 @@ class DefaultMenuManagerTest {
 
         clientAdapter.actionSender.accept(new PortableMenuSubmission("save", Map.of("name", "ok")));
         assertEquals(1, calls.get());
+    }
+
+    @Test
+    void validatesSelectionRowsAgainstTheActiveServerState() {
+        LinkedAdapter serverAdapter = new LinkedAdapter(Environment.DEDICATED_SERVER);
+        LinkedAdapter clientAdapter = new LinkedAdapter(Environment.CLIENT);
+        serverAdapter.peer = clientAdapter;
+        clientAdapter.peer = serverAdapter;
+        DefaultMenuManager server = manager(serverAdapter);
+        DefaultMenuManager client = manager(clientAdapter);
+        var list = MenuSelectionList.of("recipes", 10, 20, 120, 3);
+        var spec = MenuSpec.builder("Recipes").size(160, 120).selectionList(list).build();
+        var received = new java.util.concurrent.atomic.AtomicReference<uk.co.enderfall.sdk.api.ui.MenuListAction>();
+        var ref = server.register("recipes", spec, action -> received.set(list.action(action).orElseThrow()));
+        client.register("recipes", spec, ignored -> { });
+        server.open(PLAYER, ref, MenuState.builder().selectionPage(list, java.util.List.of(
+                MenuSelectionEntry.enabled("test:first", "First recipe"),
+                new MenuSelectionEntry("test:locked", "Locked recipe", false)), 0, "").build());
+
+        assertThrows(AssertionError.class, () -> clientAdapter.actionSender.accept(
+                new PortableMenuSubmission("recipes.select.1", Map.of())));
+        assertThrows(AssertionError.class, () -> clientAdapter.actionSender.accept(
+                new PortableMenuSubmission("recipes.select.2", Map.of())));
+        org.junit.jupiter.api.Assertions.assertNull(received.get());
+
+        clientAdapter.actionSender.accept(new PortableMenuSubmission("recipes.select.0", Map.of()));
+        assertEquals("test:first", received.get().entryId());
+        assertEquals(uk.co.enderfall.sdk.api.ui.MenuListAction.Type.SELECT, received.get().type());
     }
 
     private static DefaultMenuManager manager(LinkedAdapter adapter) {

@@ -28,6 +28,7 @@ nav:
   - Directional blocks: directional-blocks.md
   - Block-state definitions: block-state-definitions.md
   - Block-property tools: block-property-tools.md
+  - Selection lists: selection-lists.md
   - Feature status: feature-status.md
   - Source boundaries: source-boundaries.md
   - Configuration: configuration.md

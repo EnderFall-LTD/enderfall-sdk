@@ -18,7 +18,7 @@ its loader adapters have runtime evidence.
 | Networking | Typed codecs, negotiation, size limits, directions, main-thread handlers | Server/client pulse and acknowledgement |
 | Events | Lifecycle, server/client tick, player join/leave, sided item/block interaction, successful handling and cancellation | Lifecycle, cooldown timing, join guidance, and server-authoritative abilities |
 | Player gameplay | Player snapshots, atomic inventory costs, item rewards and overflow, chat/action-bar feedback, healing, experience | Crystal absorption, workbench infusion ritual, core activation, rod ability, and development kit |
-| Synchronized screens | Portable state-templated labels/buttons, bounded single/multiline text inputs, and the experimental inventory-backed workbench surface | The workbench uses real slots; the persistent preview has a secure Save/Sign/Cancel letter editor |
+| Synchronized screens | Portable state-templated labels/buttons, bounded single/multiline text inputs, server-owned paged/disabled selection lists, and the experimental inventory-backed workbench surface | The workbench uses real slots; the persistent preview has a secure letter editor and recipe-style searchable selection browser |
 
 The showcase is in `examples/demo-mod`. All of its Java under `src/main` and `src/client`
 is portable and contains no Minecraft, Fabric, Forge, or NeoForge imports.

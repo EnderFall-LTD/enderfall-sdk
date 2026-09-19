@@ -30,7 +30,7 @@ class Fabric1201GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("a92b2f8d59c5a851632dd1fedfa848f6fe84b8803119e4a64fe1349879950ef2", first.sha256());
+        assertEquals("206cc7b820af2b2e21dd5fb0dbe47d5d131064d1c2460772216df5da941645d3", first.sha256());
         assertEquals(14, first.files().size());
         try (var files = Files.walk(firstOutput)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {

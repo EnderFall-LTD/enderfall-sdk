@@ -69,6 +69,12 @@ tables. Breaking a middle block must remove the two exposed arms. A tiny red mar
 appears for four server ticks after a connection actually changes, exercising the
 portable scheduled-tick callback without continuously ticking the block.
 
+Run `/enderfall_recipes` to open the server-owned portable recipe browser. Its rows are
+filled from synchronized state, Search filters on the server, arrow buttons page through
+the results, and clicking a row returns its server-held ID. The deliberately disabled
+`Locked upgrade` row cannot send an accepted action. This preview uses no consumer client
+screen, widget, or packet code.
+
 Place one in a water source or use a water bucket on it. Water must remain inside
 the non-full shape, flow/update normally around it, and be recoverable with an empty
 bucket. Repeat after save/reload. The block class and registration are identical for

@@ -279,6 +279,9 @@ public final class DefaultMenuManager implements MenuManager {
         if (!session.registration().spec().supportsAction(action)) {
             throw new PacketDecodingException("Unknown menu action " + action);
         }
+        if (!session.registration().spec().actionEnabled(action, session.state())) {
+            throw new PacketDecodingException("Disabled menu action " + action);
+        }
         Map<String, String> inputs = readInputs(reader, session.registration().spec());
         session.registration().handler().handle(new ActionContext(playerId, session, action, inputs));
     }

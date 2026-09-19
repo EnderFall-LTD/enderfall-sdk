@@ -1,6 +1,7 @@
 package uk.co.enderfall.sdk.api.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,5 +56,36 @@ class MenuSpecTest {
                 .size(120, 80)
                 .textInput(MenuTextInput.singleLine("outside", "Outside", 50, 65, 80, 20))
                 .build());
+    }
+
+    @Test
+    void expandsASelectionListIntoStateValidatedActions() {
+        var list = MenuSelectionList.of("recipes", 10, 20, 120, 3);
+        var spec = MenuSpec.builder("Recipes").size(160, 120).selectionList(list).build();
+        var state = MenuState.builder().selectionPage(list, java.util.List.of(
+                MenuSelectionEntry.enabled("example:first", "First"),
+                new MenuSelectionEntry("example:locked", "Locked", false),
+                MenuSelectionEntry.enabled("example:third", "Third"),
+                MenuSelectionEntry.enabled("example:fourth", "Fourth")), 0, "").build();
+
+        assertEquals(5, spec.buttons().size());
+        assertEquals(1, spec.selectionLists().size());
+        assertTrue(spec.supportsAction("recipes.select.0"));
+        assertTrue(spec.actionEnabled("recipes.select.0", state));
+        assertFalse(spec.actionEnabled("recipes.select.1", state));
+        assertFalse(spec.actionEnabled("recipes.previous", state));
+        assertTrue(spec.actionEnabled("recipes.next", state));
+        var selected = list.resolve("recipes.select.0", state).orElseThrow();
+        assertEquals(MenuListAction.Type.SELECT, selected.type());
+        assertEquals("example:first", selected.entryId());
+    }
+
+    @Test
+    void rejectsDuplicateAndOutOfBoundsSelectionLists() {
+        var list = MenuSelectionList.of("recipes", 10, 20, 100, 2);
+        var builder = MenuSpec.builder("Recipes").selectionList(list);
+        assertThrows(IllegalArgumentException.class, () -> builder.selectionList(list));
+        assertThrows(IllegalArgumentException.class, () -> MenuSpec.builder("Recipes").size(120, 80)
+                .selectionList(MenuSelectionList.of("large", 10, 20, 100, 3)).build());
     }
 }

@@ -158,6 +158,7 @@ final class PortableMenuScreenEmitter {
                                         ignored -> actionSender.accept(submission(definition.action())))
                                 .bounds(left + definition.x(), top + definition.y(), definition.width(), definition.height())
                                 .build();
+                        button.active = view.spec().actionEnabled(definition.action(), view.state());
                         addRenderableWidget(button);
                         buttonBindings.add(new ButtonBinding(definition, button));
                     }
@@ -210,6 +211,7 @@ final class PortableMenuScreenEmitter {
                     view = new PortableMenuView(view.sessionId(), view.menu(), view.spec(), state);
                     for (ButtonBinding binding : buttonBindings) {
                         binding.button().setMessage(Component.literal(state.resolve(binding.definition().text())));
+                        binding.button().active = view.spec().actionEnabled(binding.definition().action(), state);
                     }
                     for (TextInputBinding binding : textInputBindings) {
                         String key = binding.definition().key();

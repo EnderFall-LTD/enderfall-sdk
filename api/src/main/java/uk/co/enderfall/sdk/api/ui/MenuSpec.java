@@ -17,6 +17,7 @@ public final class MenuSpec {
     private final List<MenuButton> buttons;
     private final List<MenuGauge> gauges;
     private final List<MenuTextInput> textInputs;
+    private final List<MenuSelectionList> selectionLists;
 
     private MenuSpec(Builder builder) {
         title = builder.title;
@@ -27,6 +28,7 @@ public final class MenuSpec {
         buttons = Collections.unmodifiableList(new ArrayList<>(builder.buttons));
         gauges = List.copyOf(builder.gauges);
         textInputs = List.copyOf(builder.textInputs);
+        selectionLists = List.copyOf(builder.selectionLists);
     }
 
     public static Builder builder(String title) {
@@ -61,6 +63,8 @@ public final class MenuSpec {
 
     public List<MenuTextInput> textInputs() { return textInputs; }
 
+    public List<MenuSelectionList> selectionLists() { return selectionLists; }
+
     public java.util.Optional<MenuTextInput> textInput(String key) {
         Objects.requireNonNull(key, "key");
         return textInputs.stream().filter(input -> input.key().equals(key)).findFirst();
@@ -68,6 +72,16 @@ public final class MenuSpec {
 
     public boolean supportsAction(String action) {
         return buttons.stream().anyMatch(button -> button.action().equals(action));
+    }
+
+    /** Whether the active state permits this declared action right now. */
+    public boolean actionEnabled(String action, MenuState state) {
+        Objects.requireNonNull(action, "action");
+        Objects.requireNonNull(state, "state");
+        for (MenuSelectionList list : selectionLists) {
+            if (list.owns(action)) return list.enabled(action, state);
+        }
+        return supportsAction(action);
     }
 
     public static final class Builder {
@@ -81,6 +95,21 @@ public final class MenuSpec {
         private final List<MenuGauge> gauges = new ArrayList<>();
         private final List<MenuTextInput> textInputs = new ArrayList<>();
         private final Set<String> inputKeys = new LinkedHashSet<>();
+        private final List<MenuSelectionList> selectionLists = new ArrayList<>();
+        private final Set<String> selectionKeys = new LinkedHashSet<>();
+
+        public Builder selectionList(MenuSelectionList list) {
+            Objects.requireNonNull(list, "list");
+            if (selectionLists.size() >= 2) {
+                throw new IllegalArgumentException("A menu supports at most two selection lists");
+            }
+            if (!selectionKeys.add(list.key())) {
+                throw new IllegalArgumentException("Duplicate menu selection-list key: " + list.key());
+            }
+            for (MenuButton button : list.buttons()) addButton(button);
+            selectionLists.add(list);
+            return this;
+        }
 
         public Builder gauge(MenuGauge gauge) {
             Objects.requireNonNull(gauge, "gauge");
@@ -132,9 +161,11 @@ public final class MenuSpec {
 
         public Builder button(MenuButton button) {
             Objects.requireNonNull(button, "button");
-            if (buttons.size() >= 12) {
-                throw new IllegalArgumentException("A menu supports at most 12 buttons");
-            }
+            return addButton(button);
+        }
+
+        private Builder addButton(MenuButton button) {
+            if (buttons.size() >= 24) throw new IllegalArgumentException("A menu supports at most 24 buttons");
             if (!actions.add(button.action())) {
                 throw new IllegalArgumentException("Duplicate menu action: " + button.action());
             }
@@ -165,6 +196,11 @@ public final class MenuSpec {
                         || input.x() + input.width() > width
                         || input.y() + input.height() > height) {
                     throw new IllegalArgumentException("Menu text input is outside the panel: " + input.key());
+                }
+            }
+            for (MenuSelectionList list : selectionLists) {
+                if (list.x() + list.width() > width || list.y() + list.height() > height) {
+                    throw new IllegalArgumentException("Menu selection list is outside the panel: " + list.key());
                 }
             }
             return new MenuSpec(this);

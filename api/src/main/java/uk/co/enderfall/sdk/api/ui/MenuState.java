@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,6 +53,44 @@ public final class MenuState {
         private final Map<String, String> values = new LinkedHashMap<>();
 
         private Builder() {
+        }
+
+        /**
+         * Adds one bounded page for a selection list. Entry IDs remain server-owned and
+         * are recovered only from the active session when a row action is received.
+         */
+        public Builder selectionPage(MenuSelectionList list, List<MenuSelectionEntry> entries,
+                int page, String selectedId) {
+            Objects.requireNonNull(list, "list");
+            Objects.requireNonNull(entries, "entries");
+            Objects.requireNonNull(selectedId, "selectedId");
+            if (entries.size() > 10_000) throw new IllegalArgumentException("Selection list exceeds 10000 entries");
+            int pages = Math.max(1, (entries.size() + list.visibleRows() - 1) / list.visibleRows());
+            if (page < 0 || page >= pages) throw new IllegalArgumentException("Selection-list page is invalid");
+            Builder candidate = new Builder();
+            candidate.values.putAll(values);
+            int offset = page * list.visibleRows();
+            for (int row = 0; row < list.visibleRows(); row++) {
+                int index = offset + row;
+                if (index < entries.size()) {
+                    MenuSelectionEntry entry = Objects.requireNonNull(entries.get(index), "entry");
+                    candidate.value(list.idKey(row), entry.id());
+                    candidate.value(list.labelKey(row), entry.label());
+                    candidate.value(list.enabledKey(row), entry.enabled());
+                } else {
+                    candidate.value(list.idKey(row), "");
+                    candidate.value(list.labelKey(row), "");
+                    candidate.value(list.enabledKey(row), false);
+                }
+            }
+            candidate.value(list.previousEnabledKey(), page > 0);
+            candidate.value(list.nextEnabledKey(), page + 1 < pages);
+            candidate.value(list.pageKey(), page);
+            candidate.value(list.pagesKey(), pages);
+            candidate.value(list.selectedKey(), selectedId);
+            values.clear();
+            values.putAll(candidate.values);
+            return this;
         }
 
         /**

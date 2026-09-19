@@ -29,7 +29,7 @@ class LegacyFmlGenerationTest {
             Map.entry("LegacyForgeConsumerBootstrap.java", "c558ac1712ba96c4d54e0f78a425d3c1a135089a8f8797621e0292002c32431b"),
             Map.entry("LegacyForgePlatformAdapter.java", "74b126e4fc5de1e44177daa9aa159cca9137fdd9f0d334ee504d3a89984afe96"),
             Map.entry("LegacyForgePlatformInfo.java", "47718fe428c4c2782cd519424933cbac9ea85e98cf1bdc47d48e772db7024f42"),
-            Map.entry("LegacyForgePortableMenuScreen.java", "db4d491987db9e4eeefb3b571f11e3ff5544c8c065545f6f909fb314d5d14ea0"),
+            Map.entry("LegacyForgePortableMenuScreen.java", "597855691a0992b4f2563c01e8da1eef60d6b53e7fd57f9d378da8d17bf91ff3"),
             Map.entry("LegacyForgeRecipeBinding.java", "6d53b08752ab48ca26e051c6bf8681f85c3ce87aefeebd3833535bdc301db66d"),
             Map.entry("LegacyForgeWorkbenchBinding.java", "9c3fbbf1af8524c2e84dab2ed3f68bbc221932ebbdb013dca58431c5b2d6ab87"),
             Map.entry("LegacyForgeWorkbenchMenu.java", "aeece40188f2a2ab8d02a6d68dc3b6f9b6940649aad33d220d5291180e51e4b7"),
@@ -47,8 +47,8 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "5f6cc264a8108b733256ea31c9b8a9c640e9f9e0751b785ec571e1f35dab8d2a"
-                    : "c62e4cc33171f518955a4db9d3da914fabd705c806f86996a3b6243de4b26805", result.sha256());
+                    ? "2b9abb34d810833ad8223acfb3ff220815d5af2c6f2d984e8821c4c772c5c446"
+                    : "971ec0476809d5108c133f2948becd70853945e9868e01788bfb1346aa17afc3", result.sha256());
             assertEquals(16, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());

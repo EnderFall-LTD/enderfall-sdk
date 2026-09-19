@@ -3,7 +3,9 @@ package uk.co.enderfall.sdk.preview;
 import java.util.List;
 import java.util.Locale;
 import uk.co.enderfall.sdk.api.ModContext;
+import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.command.CommandSpec;
+import uk.co.enderfall.sdk.api.registry.ItemRef;
 import uk.co.enderfall.sdk.api.ui.MenuButton;
 import uk.co.enderfall.sdk.api.ui.MenuLabel;
 import uk.co.enderfall.sdk.api.ui.MenuListAction;
@@ -17,19 +19,32 @@ import uk.co.enderfall.sdk.api.ui.MenuTextInput;
 public final class PreviewRecipeBrowser {
     private static final MenuSelectionList RECIPES = MenuSelectionList.of("recipes", 15, 52, 210, 5);
     private static final List<MenuSelectionEntry> ALL = List.of(
-            MenuSelectionEntry.enabled("enderfall_persistent_preview:assembly", "Crystal assembly"),
-            MenuSelectionEntry.enabled("enderfall_persistent_preview:washed_crystal", "Washed crystal"),
-            MenuSelectionEntry.enabled("enderfall_persistent_preview:resonant_frame", "Resonant frame"),
-            new MenuSelectionEntry("enderfall_persistent_preview:locked_upgrade", "Locked upgrade", false),
-            MenuSelectionEntry.enabled("minecraft:crafting_table", "Crafting table"),
-            MenuSelectionEntry.enabled("minecraft:furnace", "Furnace"),
-            MenuSelectionEntry.enabled("minecraft:chest", "Chest"),
-            MenuSelectionEntry.enabled("minecraft:barrel", "Barrel"),
-            MenuSelectionEntry.enabled("minecraft:hopper", "Hopper"),
-            MenuSelectionEntry.enabled("minecraft:anvil", "Anvil"),
-            MenuSelectionEntry.enabled("minecraft:smithing_table", "Smithing table"));
+            entry("enderfall_persistent_preview:assembly", "Crystal assembly", "amethyst_shard", 4,
+                    "Workbench recipe: four crystal inputs"),
+            entry("enderfall_persistent_preview:washed_crystal", "Washed crystal", "prismarine_crystals", 1,
+                    "Machine recipe: washed with water"),
+            entry("enderfall_persistent_preview:resonant_frame", "Resonant frame", "echo_shard", 2,
+                    "Timed processing recipe"),
+            new MenuSelectionEntry("enderfall_persistent_preview:locked_upgrade", "Locked upgrade", false)
+                    .item(item("barrier"), 1).details("Disabled server-owned entry"),
+            entry("minecraft:crafting_table", "Crafting table", "crafting_table", 1, "Vanilla crafting block"),
+            entry("minecraft:furnace", "Furnace", "furnace", 1, "Vanilla cooking block"),
+            entry("minecraft:chest", "Chest", "chest", 1, "Vanilla storage block"),
+            entry("minecraft:barrel", "Barrel", "barrel", 1, "Vanilla storage block"),
+            entry("minecraft:hopper", "Hopper", "hopper", 1, "Vanilla item transfer"),
+            entry("minecraft:anvil", "Anvil", "anvil", 1, "Vanilla repair block"),
+            entry("minecraft:smithing_table", "Smithing table", "smithing_table", 1,
+                    "Vanilla smithing block"));
 
     private PreviewRecipeBrowser() { }
+
+    private static MenuSelectionEntry entry(String id, String label, String icon, int count, String details) {
+        return MenuSelectionEntry.enabled(id, label).item(item(icon), count).details(details);
+    }
+
+    private static ItemRef item(String path) {
+        return new ItemRef(ResourceId.of("minecraft", path));
+    }
 
     public static void register(ModContext context) {
         var menu = context.menus().register("recipe_browser", MenuSpec.builder("Portable recipe browser")

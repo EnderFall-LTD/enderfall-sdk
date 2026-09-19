@@ -39,7 +39,7 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "Fabric26PortableMenuScreen.java",
-                    "31bc60bddce0bcde5cbef357b64d5d9ca0f56c9f4a493dc6f11592cde4267f94"),
+                    "6df8bb7b60c2f50d3ae098250887df4a731ba4d94c6416a3cff4ba3ccc785195"),
             Map.entry(PACKAGE_PATH + "FabricRawPayload.java",
                     "45ed5bdacd32817664eb106aef40305c8846e791575131ced6be68b5458173a6"),
             Map.entry(PACKAGE_PATH + "FabricRecipeBinding.java",
@@ -79,7 +79,7 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("bbdae127eb04e9de9022360e2ebbe3c5eff234d06eed0b9eada5e656b2a5878c",
+        assertEquals("73b414c8198a417367e678bac78313e788fda7c2529985bfdf6f4ee3b3f478ce",
                 first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));

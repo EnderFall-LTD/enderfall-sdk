@@ -24,7 +24,9 @@ The server creates a page with stable IDs and display labels:
 
 ```java
 List<MenuSelectionEntry> entries = List.of(
-        MenuSelectionEntry.enabled("example:oak_chair", "Oak chair"),
+        MenuSelectionEntry.enabled("example:oak_chair", "Oak chair")
+                .item(new ItemRef(ResourceId.parse("example:oak_chair")), 4)
+                .details("Crafts four oak chairs"),
         new MenuSelectionEntry("example:locked_chair", "Locked chair", false));
 
 MenuState state = MenuState.builder()
@@ -42,10 +44,16 @@ previous or next permitted page, while scrolling elsewhere remains available to 
 screen controls. The generated bridge accounts for the different native scroll callback
 used by Minecraft 1.20.1.
 
-Each page uses three bounded menu-state entries per visible row plus paging metadata.
-The normal 32-entry menu-state limit still applies, including unrelated labels, gauges,
-and text fields. One list can show up to eight rows and a menu can declare two lists as
-long as the combined button and state limits are respected.
+An entry can optionally add a portable item-stack icon and count with `item`, plus a
+bounded one-line hover description with `details`. The SDK resolves and renders those
+through the target's native item registry; consumer code does not import Minecraft or a
+loader. Unknown or malformed synchronized icon IDs omit the visual without weakening
+the server-owned row action.
+
+Each rich row uses six bounded menu-state entries plus paging metadata. The normal
+64-entry menu-state limit still applies, including unrelated labels, gauges, and text
+fields. One list can show up to eight rows and a menu can declare two lists as long as
+the combined button and state limits are respected.
 
 Filtering is deliberately server-owned. Add a `MenuTextInput` and Search button, validate
 the submitted query through the normal menu action, filter the authoritative entry list,

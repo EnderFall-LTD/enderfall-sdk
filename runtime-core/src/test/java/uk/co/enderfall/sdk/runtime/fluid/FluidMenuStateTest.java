@@ -20,10 +20,11 @@ class FluidMenuStateTest {
 
     @Test void invalidPrefixOrEntryLimitCannotPartiallyChangeBuilder() {
         var builder = MenuState.builder();
-        for (int index = 0; index < 30; index++) builder.value("entry" + index, index);
+        int existingEntries = MenuState.MAXIMUM_ENTRIES - 2;
+        for (int index = 0; index < existingEntries; index++) builder.value("entry" + index, index);
         var tank = new PortableFluidTank(100);
         assertThrows(IllegalArgumentException.class, () -> builder.tank("tank", tank));
-        assertEquals(30, builder.build().values().size());
+        assertEquals(existingEntries, builder.build().values().size());
         assertFalse(builder.build().values().containsKey("tank.fluid"));
         assertThrows(IllegalArgumentException.class, () -> builder.tank("Bad prefix", tank));
     }

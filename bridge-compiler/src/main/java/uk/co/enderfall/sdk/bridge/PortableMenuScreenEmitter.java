@@ -45,6 +45,7 @@ final class PortableMenuScreenEmitter {
         String mouseScrolled = target.menuAbi() == MenuAbi.V1_20_1
                 ? MOUSE_SCROLLED_1201
                 : MOUSE_SCROLLED_MODERN;
+        String selectionRendering = selectionRendering(target);
         String root = "uk/co/enderfall/sdk/runtime/" + (fabric ? "fabric" : "neoforge") + "/v1_21_4/";
         String canonical = root + canonicalPrefix + "PortableMenuScreen.java";
         if (!paths.contains(canonical)) return List.of();
@@ -55,8 +56,60 @@ final class PortableMenuScreenEmitter {
                 prefix + "PortableMenuScreen", rendering.graphics, rendering.description, rendering.method,
                 rendering.centeredText, rendering.text, rendering.gui, rendering.screen, gauges ? GAUGES : "",
                 backgroundInsideRender ? "super.renderBackground(graphics, mouseX, mouseY, partialTick);\n        " : "",
-                backgroundInsideRender ? BACKGROUND_OVERRIDE : "", multilineCreation, mouseScrolled);
+                backgroundInsideRender ? BACKGROUND_OVERRIDE : "", multilineCreation, mouseScrolled,
+                selectionRendering);
         return List.of(new RuntimeSource(canonical, outputRoot + filename, content.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private static String selectionRendering(TargetSpec target) {
+        boolean extracted = target.menuAbi() == MenuAbi.V26_2;
+        boolean legacy = target.menuAbi() == MenuAbi.V1_20_1;
+        boolean legacyFml = target.loaderAbi() == LoaderAbi.LEGACY_FML;
+        boolean valueLookup = target.menuAbi() == MenuAbi.V1_21_4 || extracted;
+        String id = extracted
+                ? "net.minecraft.resources.Identifier.parse(icon.id().toString())"
+                : legacy
+                        ? "net.minecraft.resources.ResourceLocation.tryParse(icon.id().toString())"
+                        : "net.minecraft.resources.ResourceLocation.parse(icon.id().toString())";
+        String registry = legacyFml
+                ? "net.minecraftforge.registries.ForgeRegistries.ITEMS"
+                : "net.minecraft.core.registries.BuiltInRegistries.ITEM";
+        String lookup = legacyFml || valueLookup
+                ? registry + ".getValue(id)"
+                : registry + ".get(id)";
+        String draw = extracted
+                ? "graphics.item(stack, iconX, iconY);\n"
+                        + "                graphics.itemDecorations(font, stack, iconX, iconY);"
+                : "graphics.renderItem(stack, iconX, iconY);\n"
+                        + "                graphics.renderItemDecorations(font, stack, iconX, iconY);";
+        String tooltip = extracted
+                ? "graphics.setTooltipForNextFrame(font, Component.literal(row.tooltip()), mouseX, mouseY);"
+                : "graphics.renderTooltip(font, Component.literal(row.tooltip()), mouseX, mouseY);";
+        return """
+                private void renderSelectionVisuals(%s graphics, int left, int top,
+                        int mouseX, int mouseY) {
+                    var rows = view.spec().selectionVisuals(view.state());
+                    for (var row : rows) {
+                        if (row.icon().isEmpty()) continue;
+                        var icon = row.icon().orElseThrow();
+                        var id = %s;
+                        if (id == null || !%s.containsKey(id)) continue;
+                        var stack = new net.minecraft.world.item.ItemStack(%s, row.count());
+                        int iconX = left + row.x() + 2;
+                        int iconY = top + row.y() + Math.max(0, (row.height() - 16) / 2);
+                        %s
+                    }
+                    for (var row : rows) {
+                        int rowX = left + row.x();
+                        int rowY = top + row.y();
+                        if (!row.tooltip().isBlank() && mouseX >= rowX && mouseX < rowX + row.width()
+                                && mouseY >= rowY && mouseY < rowY + row.height()) {
+                            %s
+                            break;
+                        }
+                    }
+                }
+            """.formatted(extracted ? "GuiGraphicsExtractor" : "GuiGraphics", id, registry, lookup, draw, tooltip);
     }
 
     private static final String GAUGES = """
@@ -204,6 +257,7 @@ final class PortableMenuScreenEmitter {
                         }
                     }
                     super.%5$s(graphics, mouseX, mouseY, partialTick);
+                    renderSelectionVisuals(graphics, left, top, mouseX, mouseY);
                 }
             
             %12$s    @Override
@@ -307,6 +361,8 @@ final class PortableMenuScreenEmitter {
                     }
                     return new PortableMenuSubmission(action, values);
                 }
+
+            %15$s
 
             %14$s
                 private boolean submitScroll(double mouseX, double mouseY, double verticalAmount) {

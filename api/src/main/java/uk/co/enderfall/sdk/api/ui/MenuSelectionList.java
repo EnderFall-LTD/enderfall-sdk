@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import uk.co.enderfall.sdk.api.ResourceId;
+import uk.co.enderfall.sdk.api.registry.ItemRef;
 
 /** Paged, server-owned selection rows rendered without consumer client code. */
 public final class MenuSelectionList {
@@ -104,6 +106,36 @@ public final class MenuSelectionList {
         return resolvedText;
     }
 
+    List<MenuSelectionVisual> visuals(MenuState state) {
+        Objects.requireNonNull(state, "state");
+        List<MenuSelectionVisual> result = new ArrayList<>();
+        String selected = state.value(selectedKey());
+        for (int row = 0; row < visibleRows; row++) {
+            String entryId = state.value(idKey(row));
+            if (entryId.isBlank()) continue;
+            String iconId = state.value(iconKey(row));
+            Optional<ItemRef> icon = Optional.empty();
+            if (!iconId.isBlank()) {
+                try {
+                    icon = Optional.of(new ItemRef(ResourceId.parse(iconId)));
+                } catch (IllegalArgumentException ignored) {
+                    // A malformed synchronized visual is omitted; row actions remain server validated.
+                }
+            }
+            int count;
+            try {
+                count = Integer.parseInt(state.value(countKey(row)));
+            } catch (NumberFormatException ignored) {
+                count = 1;
+            }
+            count = Math.max(1, Math.min(count, 999));
+            result.add(new MenuSelectionVisual(entryId, x, y + row * rowHeight, width, rowHeight,
+                    icon, count, state.value(tooltipKey(row)),
+                    Boolean.parseBoolean(state.value(enabledKey(row))), entryId.equals(selected)));
+        }
+        return List.copyOf(result);
+    }
+
     Optional<MenuListAction> resolve(String action, MenuState state) {
         if (!owns(action) || !enabled(action, state)) return Optional.empty();
         if (previousAction().equals(action)) {
@@ -127,6 +159,9 @@ public final class MenuSelectionList {
     String idKey(int row) { return key + ".row." + row + ".id"; }
     String labelKey(int row) { return key + ".row." + row + ".label"; }
     String enabledKey(int row) { return key + ".row." + row + ".enabled"; }
+    String iconKey(int row) { return key + ".row." + row + ".icon"; }
+    String countKey(int row) { return key + ".row." + row + ".count"; }
+    String tooltipKey(int row) { return key + ".row." + row + ".tooltip"; }
     String previousEnabledKey() { return key + ".previous.enabled"; }
     String nextEnabledKey() { return key + ".next.enabled"; }
     String pageKey() { return key + ".page"; }

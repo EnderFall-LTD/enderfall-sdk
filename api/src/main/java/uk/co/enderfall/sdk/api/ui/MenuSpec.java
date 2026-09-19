@@ -65,6 +65,14 @@ public final class MenuSpec {
 
     public List<MenuSelectionList> selectionLists() { return selectionLists; }
 
+    /** Resolves visible server-owned rows for the native renderer. */
+    public List<MenuSelectionVisual> selectionVisuals(MenuState state) {
+        Objects.requireNonNull(state, "state");
+        List<MenuSelectionVisual> result = new ArrayList<>();
+        for (MenuSelectionList list : selectionLists) result.addAll(list.visuals(state));
+        return List.copyOf(result);
+    }
+
     public java.util.Optional<MenuTextInput> textInput(String key) {
         Objects.requireNonNull(key, "key");
         return textInputs.stream().filter(input -> input.key().equals(key)).findFirst();

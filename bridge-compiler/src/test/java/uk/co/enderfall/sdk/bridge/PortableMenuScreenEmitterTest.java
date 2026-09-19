@@ -76,6 +76,30 @@ class PortableMenuScreenEmitterTest {
         }
     }
 
+    @Test void emitsTargetNativeSelectionIconsCountsAndTooltips() throws Exception {
+        for (String id : TargetCatalog.standard().targetIds()) {
+            String source = text(id);
+            boolean extracted = id.startsWith("26.2");
+            boolean legacy = id.startsWith("1.20.1");
+            assertTrue(source.contains("view.spec().selectionVisuals(view.state())"));
+            assertTrue(source.contains("new net.minecraft.world.item.ItemStack("));
+            assertTrue(source.contains(extracted ? "graphics.item(stack, iconX, iconY);"
+                    : "graphics.renderItem(stack, iconX, iconY);"));
+            assertTrue(source.contains(extracted ? "graphics.itemDecorations(font, stack, iconX, iconY);"
+                    : "graphics.renderItemDecorations(font, stack, iconX, iconY);"));
+            assertTrue(source.contains(extracted ? "graphics.setTooltipForNextFrame(font,"
+                    : "graphics.renderTooltip(font,"));
+            assertTrue(source.contains(extracted ? "net.minecraft.resources.Identifier.parse("
+                    : legacy ? "net.minecraft.resources.ResourceLocation.tryParse("
+                    : "net.minecraft.resources.ResourceLocation.parse("));
+            assertTrue(source.contains(id.endsWith("-forge") || id.equals("1.20.1-neoforge")
+                    ? "ForgeRegistries.ITEMS.getValue(id)"
+                    : id.startsWith("1.21.4") || extracted
+                            ? "BuiltInRegistries.ITEM.getValue(id)"
+                            : "BuiltInRegistries.ITEM.get(id)"));
+        }
+    }
+
     @Test void rejectsUnreviewedTargetsBeforeEmission() {
         TargetSpec base = TargetCatalog.standard().require("26.2-fabric");
         TargetSpec changed = new TargetSpec(base.id(), base.minecraftVersion(), base.loader(), base.javaVersion(),

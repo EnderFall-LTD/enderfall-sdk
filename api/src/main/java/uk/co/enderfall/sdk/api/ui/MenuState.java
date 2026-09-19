@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 /** Immutable, bounded string state synchronized from a menu's server session to its screen. */
 public final class MenuState {
-    public static final int MAXIMUM_ENTRIES = 32;
+    public static final int MAXIMUM_ENTRIES = 64;
     private static final Pattern KEY = Pattern.compile("[a-z][a-z0-9_.-]{0,63}");
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{([a-z][a-z0-9_.-]{0,63})}");
     private final Map<String, String> values;
@@ -77,10 +77,16 @@ public final class MenuState {
                     candidate.value(list.idKey(row), entry.id());
                     candidate.value(list.labelKey(row), entry.label());
                     candidate.value(list.enabledKey(row), entry.enabled());
+                    candidate.value(list.iconKey(row), entry.icon().map(icon -> icon.id().toString()).orElse(""));
+                    candidate.value(list.countKey(row), entry.count());
+                    candidate.value(list.tooltipKey(row), entry.tooltip());
                 } else {
                     candidate.value(list.idKey(row), "");
                     candidate.value(list.labelKey(row), "");
                     candidate.value(list.enabledKey(row), false);
+                    candidate.value(list.iconKey(row), "");
+                    candidate.value(list.countKey(row), 1);
+                    candidate.value(list.tooltipKey(row), "");
                 }
             }
             candidate.value(list.previousEnabledKey(), page > 0);

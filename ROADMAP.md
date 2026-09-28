@@ -7,7 +7,7 @@ now implemented. The settings DSL separates a Java 17 portable API coordinate fr
 Minecraft/loader runtime coordinate and generates required/optional loader metadata.
 Generated runtimes now host arbitrary portable client screens with lifecycle/input, text,
 sprites, nine-slicing, tiling, clipping and transforms across all nine targets. Item/entity
-previews, tooltips, focus widgets, resource reload/hot reload, arbitrary inventory layouts
+previews, focus widgets, resource reload/hot reload, non-block session inventory layouts
 and separate library API publication remain open.
 
 Use [the furniture-port milestone](docs/furniture-port.md) as the concrete feature

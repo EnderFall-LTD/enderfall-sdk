@@ -19,6 +19,7 @@ its loader adapters have runtime evidence.
 | Events | Lifecycle, server/client tick, player join/leave, sided item/block interaction, successful handling and cancellation | Lifecycle, cooldown timing, join guidance, and server-authoritative abilities |
 | Player gameplay | Player snapshots, atomic inventory costs, item rewards and overflow, chat/action-bar feedback, healing, experience | Crystal absorption, workbench infusion ritual, core activation, rod ability, and development kit |
 | Synchronized screens | Portable state-templated labels/buttons, bounded single/multiline text inputs, server-owned paged/disabled selection lists with native item-stack icons, counts, hover details and mouse-wheel paging, plus an opt-in server-discovered workbench recipe browser | The workbench uses real slots and synchronized selectable recipe outputs; the persistent preview also has a secure letter editor and rich searchable general-purpose list |
+| Authored inventories (experimental) | Arbitrary persistent storage/input/output slot coordinates, item filters, per-slot count limits, player inventory/hotbar binding and explicit server-side quick-move routes | The persistent preview cabinet builds the same authored menu and native screen on all nine targets |
 | General client screens (experimental) | Portable lifecycle/input plus fills, text, wrapping, raw sprites, tiling, nine-slicing, clipping and 2D transforms through generated immediate/extraction renderers | The contract client registers the same portable screen on all generated targets; full visual acceptance and advanced primitives remain open |
 
 The showcase is in `examples/demo-mod`. All of its Java under `src/main` and `src/client`
@@ -69,28 +70,10 @@ covered by this browser slice.
 These sketches are the design target for the next implementation phase. They are not
 callable APIs yet.
 
-### Next menu expansion: block-entity ownership
-
-```java
-BlockEntityRef<WorkbenchState> workbenchEntity = context.blockEntities().register(
-        "resonance_workbench",
-        BlockEntitySpec.<WorkbenchState>builder(WorkbenchState.CODEC)
-                .inventory(3)
-                .ticks(WorkbenchState::tick)
-                .build());
-
-MenuRef workbench = context.menus().registerInventory("resonance_workbench",
-        InventoryMenuSpec.builder(workbenchEntity)
-                .slot("input", 0, 36, 52)
-                .slot("catalyst", 1, 62, 52)
-                .output("result", 2, 116, 52)
-                .playerInventory(8, 84)
-                .build());
-```
-
-The workbench slice now owns common registration, native screen construction, temporary
-menu inventory, quick-move rules, server matching, and safe input return. The next slice
-must add persistent per-position storage and data migration without changing portable menu code.
+Authored block-owned inventory layouts are now callable through
+[`StorageContainerSpec`](authored-inventories.md), including persistent ownership, native
+screen construction, player inventory binding and server-side quick-move rules. A future
+slice may add non-block session inventories without weakening those ownership guarantees.
 
 ### General custom processing recipes
 

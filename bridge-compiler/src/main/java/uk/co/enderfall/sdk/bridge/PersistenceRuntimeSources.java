@@ -49,6 +49,7 @@ final class PersistenceRuntimeSources {
                 """));
         if (StandaloneModelRendererSources.supports(policy)) sources.add(source(
                 "uk/co/enderfall/sdk/runtime/blockentity/nativebridge/PortableModelRenderer.java", StandaloneModelRendererSources.emit(policy)));
+        sources.addAll(PortableInventoryMenuSources.emit(policy));
         return List.copyOf(sources);
     }
 

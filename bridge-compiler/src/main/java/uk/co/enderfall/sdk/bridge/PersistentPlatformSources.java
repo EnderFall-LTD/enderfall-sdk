@@ -17,6 +17,8 @@ final class PersistentPlatformSources {
                     private final Map<ResourceId, ${PREFIX}TimedWorkbenchMenu.Binding> timedWorkbenches = new LinkedHashMap<>();
                     private final Map<ResourceId, uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition>
                             storageContainers = new LinkedHashMap<>();
+                    private final Map<ResourceId, ${PREFIX}InventoryMenu.Binding>
+                            authoredStorageMenus = new LinkedHashMap<>();
                     @Override public boolean supportsTimedWorkbenches() { return true; }
                     @Override public boolean supportsStorageContainers() { return true; }
                     private boolean menuGauges;
@@ -72,6 +74,9 @@ final class PersistentPlatformSources {
                                 || storageContainers.putIfAbsent(id, definition) != null) {
                             throw new IllegalArgumentException("[" + modId + "] Unknown, mismatched, duplicate, or already bound storage container: " + id);
                         }
+                        if (definition.spec().customLayout()) {
+                            authoredStorageMenus.put(id, registerAuthoredStorageMenu(definition));
+                        }
                         owner.bindStorageContainer(definition);
                         owner.onUse((player, event) -> {
                             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
@@ -92,7 +97,7 @@ final class PersistentPlatformSources {
                         openStorageAt(requireOnlinePlayer(playerId), definition, location);
                     }
 
-                    private static void openStorageAt(net.minecraft.server.level.ServerPlayer player,
+                    private void openStorageAt(net.minecraft.server.level.ServerPlayer player,
                             uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition definition,
                             uk.co.enderfall.sdk.api.blockentity.BlockLocation location) {
                         var level = player.level();
@@ -109,9 +114,19 @@ final class PersistentPlatformSources {
                         if (!(level.getBlockEntity(pos) instanceof
                                 uk.co.enderfall.sdk.runtime.blockentity.nativebridge.StoredBlockEntity owner)
                                 || owner.definition() != definition.spec().storage()
-                                || owner.inventorySize() != definition.spec().rows() * 9
+                                || owner.inventorySize() != definition.spec().storage().inventorySlots()
                                 || !owner.stillValid(player)) {
                             throw new IllegalArgumentException("Storage container owner, schema, or player reach mismatch");
+                        }
+                        if (definition.spec().customLayout()) {
+                            var binding = authoredStorageMenus.get(definition.reference().id());
+                            if (binding == null || binding.definition() != definition) {
+                                throw new IllegalStateException("Authored storage menu is not registered: " + definition.reference().id());
+                            }
+                            player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                                    (id, inventory, ignored) -> new ${PREFIX}InventoryMenu(id, inventory, binding, owner),
+                                    net.minecraft.network.chat.Component.literal(definition.spec().title())));
+                            return;
                         }
                         player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                                 (id, inventory, ignored) -> new net.minecraft.world.inventory.ChestMenu(
@@ -119,6 +134,8 @@ final class PersistentPlatformSources {
                                         definition.spec().rows()),
                                 net.minecraft.network.chat.Component.literal(definition.spec().title())));
                     }
+
+                    ${AUTHORED_STORAGE_REGISTRATION}
 
                     private static net.minecraft.world.inventory.MenuType<?> storageMenuType(int rows) {
                         return switch (rows) {
@@ -207,10 +224,47 @@ final class PersistentPlatformSources {
                 .replace("${ITEM_REGISTRY}", policy.legacy() && !policy.fabric() ? "net.minecraftforge.registries.ForgeRegistries.ITEMS" : "net.minecraft.core.registries.BuiltInRegistries.ITEM")
                 .replace("${MENU_REGISTRY}", policy.legacy() && !policy.fabric() ? "net.minecraftforge.registries.ForgeRegistries.MENU_TYPES" : "net.minecraft.core.registries.BuiltInRegistries.MENU")
                 .replace("${TIMED_REGISTRATION}", timedRegistration(policy))
+                .replace("${AUTHORED_STORAGE_REGISTRATION}", authoredStorageRegistration(policy))
                 .replace("${CLIENT_ARGS}", policy.fabric() ? "type" : "modBus, type")
                 .replace("${PERSISTENT_ITEM_PROPERTIES}", policy.itemProperties())
                 .replace("${PERSISTENT_ITEM_KEY}", policy.itemKeyDeclaration())
                 .replace("${PREFIX}", policy.prefix());
+    }
+
+    private static String authoredStorageRegistration(BlockEntityNativePolicy policy) {
+        if (policy.fabric()) return """
+                    private ${PREFIX}InventoryMenu.Binding registerAuthoredStorageMenu(
+                            uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition definition) {
+                        ResourceId id = definition.reference().id();
+                        java.util.concurrent.atomic.AtomicReference<${PREFIX}InventoryMenu.Binding> reference =
+                                new java.util.concurrent.atomic.AtomicReference<>();
+                        MenuType<${PREFIX}InventoryMenu> type = Registry.register(BuiltInRegistries.MENU, ${NATIVE_ID},
+                                new MenuType<>((containerId, inventory) -> new ${PREFIX}InventoryMenu(
+                                        containerId, inventory, java.util.Objects.requireNonNull(reference.get()), null),
+                                        FeatureFlags.VANILLA_SET));
+                        var binding = new ${PREFIX}InventoryMenu.Binding(definition, () -> type);
+                        reference.set(binding);
+                        if (platformInfo.environment() == Environment.CLIENT) ${PREFIX}InventoryClient.register(type);
+                        return binding;
+                    }
+                """.replace("${PREFIX}", policy.prefix())
+                .replace("${NATIVE_ID}", policy.unobfuscated() ? "identifier(id)" : "location(id)");
+        return """
+                    private ${PREFIX}InventoryMenu.Binding registerAuthoredStorageMenu(
+                            uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition definition) {
+                        ResourceId id = definition.reference().id();
+                        java.util.concurrent.atomic.AtomicReference<${PREFIX}InventoryMenu.Binding> reference =
+                                new java.util.concurrent.atomic.AtomicReference<>();
+                        java.util.function.Supplier<MenuType<${PREFIX}InventoryMenu>> type = menuRegister.register(id.path(),
+                                () -> new MenuType<>((containerId, inventory) -> new ${PREFIX}InventoryMenu(
+                                        containerId, inventory, java.util.Objects.requireNonNull(reference.get()), null),
+                                        FeatureFlags.VANILLA_SET));
+                        var binding = new ${PREFIX}InventoryMenu.Binding(definition, type);
+                        reference.set(binding);
+                        if (platformInfo.environment() == Environment.CLIENT) ${PREFIX}InventoryClient.register(modBus, type);
+                        return binding;
+                    }
+                """.replace("${PREFIX}", policy.prefix());
     }
 
 

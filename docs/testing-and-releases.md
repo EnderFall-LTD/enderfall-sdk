@@ -55,9 +55,10 @@ has successfully invoked fills, aligned text, clipping, sprites, tiling, nine-sl
 opacity/depth stacks, pose transforms, item/tooltips and a living-entity preview. It also
 requires initial and requested resource reloads. Use
 `-Penderfall.smokeTarget=1.20.1-forge,26.2-neoforge` for a focused legacy/extraction pair.
-That focused pair passed locally on Windows on 2026-09-28 using generated runtimes only;
-the machine-readable evidence is written to
-`build/reports/generated-bridge-runtime-smoke/client.json` on each run.
+The complete nine-target matrix passed locally on Windows on 2026-09-28 using generated
+runtimes only. The machine-readable evidence is written to
+`build/reports/generated-bridge-runtime-smoke/client.json` on each run; the focused pair is
+still useful for a faster oldest/newest development check.
 
 Automated completion proves that the native callbacks executed without an exception; it does
 not prove pixel-perfect composition or human input feel. Release-candidate UI acceptance must

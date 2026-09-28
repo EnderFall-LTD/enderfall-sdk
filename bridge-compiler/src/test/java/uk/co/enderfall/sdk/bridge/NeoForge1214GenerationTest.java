@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1214GenerationTest {
     private static final String TARGET = "1.21.4-neoforge";
     private static final String EXPECTED_DIGEST =
-            "6f2adab3debd1b69e0998e5d9d0fd2f118bec011f14caaee20b279453fb16c0a";
+            "85f28a639cc844b3a5eec5c2dc262f6066c73f5580968b8e9a53df670208c0c9";
     private static final String PACKAGE_PATH =
             "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final Map<String, String> EXPECTED_SOURCE_HASHES = Map.ofEntries(
@@ -25,6 +25,8 @@ class NeoForge1214GenerationTest {
                     "62d1fa0bfef75dc0a99011a04a608be1a568321f0d1eb63be4000d8dccb1ef81"),
             Map.entry("NeoForgeClientHooks.java",
                     "b305726e0d445cbcd97e5ed98df031cad5db5cc2364c1a972648bb97611e9428"),
+            Map.entry("NeoForgeClientCommandBridge.java",
+                    "e207452a56d37261103d15d608d85d5d241971b0aff6e5ea45064b1f115699e6"),
             Map.entry("NeoForgeClientScreenBridge.java",
                     "b42802e40110407153080152082faaad12c13594e118f209c4d18e6ef843fb0f"),
             Map.entry("NeoForgeCommandBridge.java",
@@ -32,7 +34,7 @@ class NeoForge1214GenerationTest {
             Map.entry("NeoForgeConsumerBootstrap.java",
                     "abf5473d5e2f3aed9f9472db8836e1bcac34e941784186c2f8c09ab291217b2a"),
             Map.entry("NeoForgePlatformAdapter.java",
-                    "74a21b9f8294193d80063f28fc9a1f23f11d2d579da6f5ecfec5fddbe18e622e"),
+                    "47b25138e4f4178486f954689b4500cf7f28f3fc3ccac4750449692f674ce324"),
             Map.entry("NeoForgePlatformInfo.java",
                     "c565e0680ae053907f90d47df550ee817015f825fc9906bd2acd26b253b1c695"),
             Map.entry("NeoForgePortableMenuScreen.java",
@@ -64,7 +66,7 @@ class NeoForge1214GenerationTest {
                 output.resolve("sources"),
                 output.resolve("resources")));
 
-        assertEquals(18, result.files().size());
+        assertEquals(19, result.files().size());
         assertEquals(EXPECTED_DIGEST, result.sha256());
         assertEquals(EXPECTED_SOURCE_HASHES.size() + 1, countFiles(output.resolve("sources")));
         for (Map.Entry<String, String> source : EXPECTED_SOURCE_HASHES.entrySet()) {

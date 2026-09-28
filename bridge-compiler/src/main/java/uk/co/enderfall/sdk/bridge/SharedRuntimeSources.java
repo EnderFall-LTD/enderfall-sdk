@@ -32,6 +32,7 @@ final class SharedRuntimeSources {
         emittedSources.addAll(PortableClientScreenEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(RawPayloadEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(CommandBridgeEmitter.emitIfPresent(target, declarations));
+        emittedSources.addAll(ClientCommandBridgeEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(WorkbenchInputEmitter.emitIfPresent(target, declarations));
         emittedSources.add(new RuntimeSource(
                 "uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java",

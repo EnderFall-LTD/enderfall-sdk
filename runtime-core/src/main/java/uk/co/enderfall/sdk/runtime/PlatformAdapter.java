@@ -22,6 +22,10 @@ import uk.co.enderfall.sdk.api.ui.MenuState;
 
 /** Internal boundary implemented once by each Minecraft/loader target. */
 public interface PlatformAdapter {
+    default void registerClientCommand(CommandSpec command) {
+        throw new UnsupportedOperationException("Portable client commands are unavailable");
+    }
+
     default void registerClientResourceReloadListener(ResourceId id, Runnable listener) {
         throw new UnsupportedOperationException("Portable client resources are unavailable");
     }

@@ -30,6 +30,8 @@ class Fabric262GenerationTest {
                     "d373ffde76a07543b99d7da37e9ec3ab7da7d8d862eac426b23ebd0785cdb94e"),
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
                     "e434ddcb643d0a8d3a7fd69602b7ef35f82f7e04475ad8f210051664ee0ff721"),
+            Map.entry(PACKAGE_PATH + "FabricClientCommandBridge.java",
+                    "acdd389502f5f2a003671b536e417afe29496dcd6af9e73a6edc2cb28fd0a570"),
             Map.entry(PACKAGE_PATH + "FabricClientScreenBridge.java",
                     "dbf30acd770ce6a47f46875b552260163d1fa7769c0eb346e1989633aaa55eb5"),
             Map.entry(PACKAGE_PATH + "Fabric26CommandBridge.java",
@@ -37,7 +39,7 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricConsumerBootstrap.java",
                     "c3414e23f0805220fbeb7cde9baef4a96b564dab43dd050c7c0773d82722b0b5"),
             Map.entry(PACKAGE_PATH + "Fabric26PlatformAdapter.java",
-                    "7bb0832afc49b0605580250abd0aece9dead9d9efe269b3e343ed63d7157984b"),
+                    "621ec80887d1ea614e06898e086328101a94e1fd32fb40a92253f1d149ee7b9c"),
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "Fabric26PortableMenuScreen.java",
@@ -81,9 +83,9 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("4e1560a4c44dd453d2b61004df1ac6885092dfd7c168eb03ac329a202055e61c",
+        assertEquals("9c0229f86d847cc37b28df3c2b0af2f26ba96e1a23acdaf816625826f41662eb",
                 first.sha256());
-        assertEquals(18, first.files().size());
+        assertEquals(19, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
         assertEquals(hashes(firstOutput.resolve("sources")), hashes(secondOutput.resolve("sources")));
         assertEquals(hashes(firstOutput.resolve("resources")), hashes(secondOutput.resolve("resources")));

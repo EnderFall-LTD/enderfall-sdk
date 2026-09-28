@@ -33,6 +33,7 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     private final DefaultBlockEntityRendererRegistrar blockEntityRenderers;
     private final DefaultClientScreenManager screens;
     private final DefaultClientResourceManager resources;
+    private final DefaultClientCommandManager clientCommands;
     private final DefaultPlayerManager players;
     private final DefaultMenuManager menus;
     private final DefaultRecipeRegistrar recipes;
@@ -56,6 +57,7 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
         blockEntityRenderers = new DefaultBlockEntityRendererRegistrar(modId, target, adapter, gate);
         screens = new DefaultClientScreenManager(modId, target, adapter, gate);
         resources = new DefaultClientResourceManager(modId, target, adapter, gate, logger);
+        clientCommands = new DefaultClientCommandManager(modId, target, adapter, gate);
         players = new DefaultPlayerManager(modId, target, adapter);
         menus = new DefaultMenuManager(modId, target, adapter, gate, logger, events);
         recipes = new DefaultRecipeRegistrar(modId, target, adapter, gate);
@@ -82,6 +84,10 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     @Override public uk.co.enderfall.sdk.api.client.ui.ClientScreenManager screens() { return screens; }
 
     @Override public uk.co.enderfall.sdk.api.client.resource.ClientResourceManager resources() { return resources; }
+
+    @Override public uk.co.enderfall.sdk.api.client.command.ClientCommandManager clientCommands() {
+        return clientCommands;
+    }
 
     @Override public uk.co.enderfall.sdk.api.block.BlockStateManager blockStates() { return blockStates; }
 

@@ -152,6 +152,13 @@ final class PlatformGameplaySources {
                         }
                     
                     """;
+            case REGISTER_CLIENT_COMMAND -> """
+                        @Override
+                        public void registerClientCommand(uk.co.enderfall.sdk.api.command.CommandSpec command) {
+                            ${ClientCommandBridge}.register(command);
+                        }
+
+                    """;
             case REGISTER_CLIENT_RESOURCE_RELOAD_LISTENER -> """
                         @Override
                         public void registerClientResourceReloadListener(ResourceId id, Runnable listener) {

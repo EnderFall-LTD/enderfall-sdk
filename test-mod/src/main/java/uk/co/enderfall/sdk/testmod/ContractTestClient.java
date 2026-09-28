@@ -7,6 +7,8 @@ import uk.co.enderfall.sdk.api.EnderfallClientMod;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.config.ConfigScope;
 import uk.co.enderfall.sdk.api.config.ConfigSpec;
+import uk.co.enderfall.sdk.api.command.Arguments;
+import uk.co.enderfall.sdk.api.command.CommandSpec;
 import uk.co.enderfall.sdk.api.event.LifecycleEvent;
 import uk.co.enderfall.sdk.api.event.SdkEvents;
 import uk.co.enderfall.sdk.api.event.TickEvent;
@@ -51,6 +53,24 @@ public final class ContractTestClient implements EnderfallClientMod {
             context.logger().info("ENDERFALL_CLIENT_RESOURCES_RELOADED {} {}",
                     context.platform().targetId(), count);
         });
+        if (context.capabilities().supports(Capability.CLIENT_COMMANDS)) {
+            var operation = Arguments.optional(Arguments.word("operation"));
+            context.clientCommands().register(CommandSpec.builder("enderfall_client")
+                    .description("Exercises the portable client-command bridge")
+                    .argument(operation)
+                    .suggests((command, remaining) -> java.util.List.of("reload"))
+                    .executes(command -> {
+                        String requested = (String) command.arguments().getOrDefault("operation", "reload");
+                        if (!"reload".equals(requested)) {
+                            command.reply("Usage: /enderfall_client [reload]");
+                            return 0;
+                        }
+                        context.resources().reload();
+                        command.reply("EnderFall client resource reload requested");
+                        return 1;
+                    })
+                    .build());
+        }
         ConfigSpec.Builder clientConfig = ConfigSpec.builder();
         clientConfig.booleanValue("show_diagnostics", true, "Show client contract diagnostics.");
         context.configs().register("client", ConfigScope.CLIENT, clientConfig.build());

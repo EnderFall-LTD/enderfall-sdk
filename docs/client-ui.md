@@ -69,6 +69,26 @@ Listeners run on the Minecraft client thread after resources have been applied, 
 the initial client load. Listener failures are logged and isolated, while `reload()`
 completes only after the requested reload finishes.
 
+Client-only development commands use the same typed command builder as server commands but
+register through `ClientModContext.clientCommands()`. They execute locally, never send a
+command packet to the server, and can safely drive tasks such as an EnderUI asset reload:
+
+```java
+context.clientCommands().register(CommandSpec.builder("enderui")
+        .argument(Arguments.optional(Arguments.word("operation")))
+        .suggests((command, remaining) -> List.of("reload"))
+        .executes(command -> {
+            context.resources().reload();
+            command.reply("EnderUI resources reloaded");
+            return 1;
+        })
+        .build());
+```
+
+Client commands deliberately reject permission levels and server-only player arguments.
+This keeps their authority boundary explicit: they may change local UI state, but cannot
+perform gameplay actions on behalf of the server.
+
 The bridge compiles against all nine supported targets, including the extraction renderer
 used by 26.2. `GENERAL_CLIENT_SCREENS` is advertised only by generated runtimes containing
 this bridge.

@@ -36,7 +36,8 @@ class TargetProjectConfiguratorTest {
         mod.setEntrypoint("dev.example.PortableMod");
         TargetDefinition target = new TargetDefinition("1.20.1", "forge", 17, "47.4.23", "");
 
-        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, target, List.of(), false);
+        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, target,
+                List.of(), List.of(), false);
         Jar reobfJar = project.getTasks().register("reobfJar", Jar.class).get();
         Files.createDirectories(reobfJar.getArchiveFile().get().getAsFile().toPath().getParent());
         Files.write(reobfJar.getArchiveFile().get().getAsFile().toPath(), new byte[] {1});
@@ -60,7 +61,8 @@ class TargetProjectConfiguratorTest {
         mod.setEntrypoint("dev.example.PortableMod");
         TargetDefinition target = new TargetDefinition("1.20.1", "forge", 17, "47.4.23", "");
 
-        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, target, List.of(), true);
+        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, target,
+                List.of(), List.of(), true);
         ExternalModuleDependency thirdParty = (ExternalModuleDependency) project.getDependencies()
                 .add("implementation", "dev.example:immutable-library:1.0.0");
 

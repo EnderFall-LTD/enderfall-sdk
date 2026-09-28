@@ -6,4 +6,9 @@ public interface ClientModContext extends ModContext {
     default uk.co.enderfall.sdk.api.render.BlockEntityRendererRegistrar blockEntityRenderers() {
         throw new UnsupportedOperationException("Block-entity rendering is unavailable");
     }
+
+    @uk.co.enderfall.sdk.api.annotation.Experimental("General portable client screens")
+    default uk.co.enderfall.sdk.api.client.ui.ClientScreenManager screens() {
+        throw new UnsupportedOperationException("Portable client screens are unavailable");
+    }
 }

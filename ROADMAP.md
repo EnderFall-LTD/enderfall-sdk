@@ -2,6 +2,14 @@
 
 ## Active expansion: furniture-mod portability
 
+Target-aware library dependencies and the first general EnderUI rendering foundation are
+now implemented. The settings DSL separates a Java 17 portable API coordinate from the
+Minecraft/loader runtime coordinate and generates required/optional loader metadata.
+Generated runtimes now host arbitrary portable client screens with lifecycle/input, text,
+sprites, nine-slicing, tiling, clipping and transforms across all nine targets. Item/entity
+previews, tooltips, focus widgets, resource reload/hot reload, arbitrary inventory layouts
+and separate library API publication remain open.
+
 Use [the furniture-port milestone](docs/furniture-port.md) as the concrete feature
 checklist. Custom block factories/configuration/server-use hooks, static cuboid
 outline/collision shapes, typed custom state, state-dependent geometry, server-world

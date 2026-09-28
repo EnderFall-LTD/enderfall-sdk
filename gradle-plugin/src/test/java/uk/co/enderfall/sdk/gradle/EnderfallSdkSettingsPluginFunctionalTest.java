@@ -30,6 +30,9 @@ class EnderfallSdkSettingsPluginFunctionalTest {
         installRuntimeCoreStub(repository);
         installFabricRuntimeStub(repository);
         installNeoForgeRuntimeStub(repository);
+        installLibraryApiStub(repository);
+        installLibraryRuntimeStub(repository, "1.21.4", "fabric");
+        installLibraryRuntimeStub(repository, "1.21.4", "neoforge");
         write("settings.gradle.kts", """
                 pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
                 plugins { id("uk.co.enderfall.sdk") }
@@ -50,6 +53,12 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                         author = "EnderFall"
                         license = "CC0-1.0"
                     }
+                    dependencies {
+                        required("enderui", "2.0.0") {
+                            api = "dev.enderui:enderui-api:2.0.0"
+                            target = "dev.enderui:enderui-{minecraft}-{loader}:2.0.0"
+                        }
+                    }
                     targets { version("1.21.4") { loaders("fabric", "neoforge") } }
                     developmentTarget = "1.21.4-fabric"
                 }
@@ -57,7 +66,8 @@ class EnderfallSdkSettingsPluginFunctionalTest {
         write("build.gradle.kts", "");
         write("src/main/java/dev/example/FunctionalMod.java", """
                 package dev.example;
-                public final class FunctionalMod { }
+                import dev.enderui.api.EnderUiApi;
+                public final class FunctionalMod { EnderUiApi api; }
                 """);
         write("src/main/resources/assets/functional_mod/models/item/example.json", "{}\n");
         write("LICENSE", "CC0 test fixture\n");
@@ -81,11 +91,21 @@ class EnderfallSdkSettingsPluginFunctionalTest {
             assertTrue(zip.getEntry("assets/functional_mod/models/item/example.json") != null);
             assertEquals("COMPILE_VALIDATED", zip.getManifest().getMainAttributes()
                     .getValue("EnderFall-Runtime-Status"));
+            String metadata = new String(zip.getInputStream(zip.getEntry("fabric.mod.json")).readAllBytes(),
+                    StandardCharsets.UTF_8);
+            assertTrue(metadata.contains("\"enderui\": \">=2.0.0\""));
+            String universal = new String(zip.getInputStream(zip.getEntry("META-INF/enderfall.mod.json"))
+                    .readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(universal.contains("\"id\":\"enderui\""));
         }
         try (ZipFile zip = new ZipFile(neoForge.toFile())) {
             assertTrue(zip.getEntry("META-INF/neoforge.mods.toml") != null);
             assertTrue(zip.getEntry("META-INF/enderfall.mod.json") != null);
             assertTrue(zip.getEntry("pack.mcmeta") != null);
+            String metadata = new String(zip.getInputStream(zip.getEntry("META-INF/neoforge.mods.toml"))
+                    .readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(metadata.contains("modId=\"enderui\""));
+            assertTrue(metadata.contains("versionRange=\"[2.0.0,)\""));
         }
         try (ZipFile fabricZip = new ZipFile(fabric.toFile()); ZipFile neoForgeZip = new ZipFile(neoForge.toFile())) {
             byte[] fabricHash = fabricZip.getInputStream(
@@ -380,5 +400,57 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                   <version>0.1.0-beta.1</version>
                 </project>
                 """, StandardCharsets.UTF_8);
+    }
+
+    private static void installLibraryApiStub(Path repository) throws IOException {
+        Path workDirectory = Files.createTempDirectory(repository.getParent(), "enderui-api-stub-");
+        Path source = workDirectory.resolve("src/dev/enderui/api/EnderUiApi.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "package dev.enderui.api; public interface EnderUiApi { }\n",
+                StandardCharsets.UTF_8);
+        Path classes = workDirectory.resolve("classes");
+        Files.createDirectories(classes);
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        if (compiler.run(null, null, null, "--release", "17", "-d", classes.toString(), source.toString()) != 0) {
+            throw new IOException("Could not compile the EnderUI API test stub");
+        }
+        Path artifact = repository.resolve("dev/enderui/enderui-api/2.0.0");
+        Files.createDirectories(artifact);
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(artifact.resolve("enderui-api-2.0.0.jar")))) {
+            output.putNextEntry(new JarEntry("dev/enderui/api/EnderUiApi.class"));
+            output.write(Files.readAllBytes(classes.resolve("dev/enderui/api/EnderUiApi.class")));
+            output.closeEntry();
+        }
+        writePom(artifact.resolve("enderui-api-2.0.0.pom"), "dev.enderui", "enderui-api", "2.0.0");
+    }
+
+    private static void installLibraryRuntimeStub(Path repository, String minecraft, String loader)
+            throws IOException {
+        String artifactId = "enderui-" + minecraft + '-' + loader;
+        Path artifact = repository.resolve("dev/enderui/" + artifactId + "/2.0.0");
+        Files.createDirectories(artifact);
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(
+                artifact.resolve(artifactId + "-2.0.0.jar")))) {
+            String metadataPath = loader.equals("fabric") ? "fabric.mod.json" : "META-INF/neoforge.mods.toml";
+            output.putNextEntry(new JarEntry(metadataPath));
+            String metadata = loader.equals("fabric")
+                    ? "{\"schemaVersion\":1,\"id\":\"enderui\",\"version\":\"2.0.0\"}\n"
+                    : "modLoader=\"javafml\"\nloaderVersion=\"[1,)\"\nlicense=\"Apache-2.0\"\n"
+                    + "[[mods]]\nmodId=\"enderui\"\nversion=\"2.0.0\"\ndisplayName=\"EnderUI\"\n";
+            output.write(metadata.getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+        }
+        writePom(artifact.resolve(artifactId + "-2.0.0.pom"), "dev.enderui", artifactId, "2.0.0");
+    }
+
+    private static void writePom(Path path, String group, String artifact, String version) throws IOException {
+        Files.writeString(path, """
+                <project xmlns="http://maven.apache.org/POM/4.0.0">
+                  <modelVersion>4.0.0</modelVersion>
+                  <groupId>%s</groupId>
+                  <artifactId>%s</artifactId>
+                  <version>%s</version>
+                </project>
+                """.formatted(group, artifact, version), StandardCharsets.UTF_8);
     }
 }

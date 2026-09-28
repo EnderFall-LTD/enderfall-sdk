@@ -19,6 +19,7 @@ nav:
   - Bridge migration: bridge-migration.md
   - Compatibility: compatibility.md
   - Portable API: portable-api.md
+  - General client screens: client-ui.md
   - Registration: registration.md
   - Portable items: portable-items.md
   - Furniture port: furniture-port.md
@@ -32,6 +33,7 @@ nav:
   - Workbench recipe browser: workbench-recipe-browser.md
   - Feature status: feature-status.md
   - Source boundaries: source-boundaries.md
+  - Library mods: library-mods.md
   - Configuration: configuration.md
   - Fluids: fluids.md
   - Machine recipes: machine-recipes.md

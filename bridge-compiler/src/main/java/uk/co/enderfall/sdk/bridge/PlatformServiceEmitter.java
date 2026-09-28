@@ -62,6 +62,7 @@ final class PlatformServiceEmitter {
                 Map.entry("PlatformInfo", prefix + "PlatformInfo"),
                 Map.entry("CommandBridge", prefix + "CommandBridge"),
                 Map.entry("ClientHooks", prefix + "ClientHooks"),
+                Map.entry("ClientScreenBridge", prefix + "ClientScreenBridge"),
                 Map.entry("RawPayload", prefix + "RawPayload"),
                 Map.entry("RecipeBinding", workbenchPrefix + "RecipeBinding"),
                 Map.entry("WorkbenchBinding", workbenchPrefix + "WorkbenchBinding"),
@@ -76,8 +77,10 @@ final class PlatformServiceEmitter {
         if (persistent) source.append(PersistentPlatformSources.operations(BlockEntityNativePolicy.require(target.id())));
         source.append("}\n");
         String rendered = renderNames(source.toString(), names);
-        if (persistent) rendered = rendered.replace("Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS",
-                "Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS, Capability.STORAGE_CONTAINERS, Capability.BLOCK_STATES, "
+        rendered = rendered.replace("Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS",
+                "Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS, Capability.GENERAL_CLIENT_SCREENS");
+        if (persistent) rendered = rendered.replace("Capability.CONTAINER_MENUS, Capability.GENERAL_CLIENT_SCREENS",
+                "Capability.CONTAINER_MENUS, Capability.GENERAL_CLIENT_SCREENS, Capability.STORAGE_CONTAINERS, Capability.BLOCK_STATES, "
                         + "Capability.SCHEDULED_BLOCK_TICKS, Capability.WATERLOGGED_BLOCKS");
         if (persistent && BlockEntityNativePolicy.require(target.id()).unobfuscated()) rendered = BlockEntity26Sources.names(rendered);
         String filePrefix = switch (policy) {
@@ -106,7 +109,9 @@ final class PlatformServiceEmitter {
                 REGISTER_WORKBENCH, OPEN_WORKBENCH, REGISTER_PAYLOAD, SEND_TO_SERVER, SEND_TO_PLAYER, SEND_TO_ALL,
                 CONNECTED_PLAYERS, PLAYER_SNAPSHOT, COUNT_PLAYER_ITEM, CONSUME_PLAYER_ITEMS, GIVE_PLAYER_ITEM,
                 PLAYER_ITEM_DATA, UPDATE_PLAYER_ITEM_DATA,
-                SEND_PLAYER_MESSAGE, HEAL_PLAYER, ADD_PLAYER_EXPERIENCE, SHOW_MENU, UPDATE_MENU, CLOSE_MENU));
+                SEND_PLAYER_MESSAGE, HEAL_PLAYER, ADD_PLAYER_EXPERIENCE,
+                REGISTER_CLIENT_SCREEN, OPEN_CLIENT_SCREEN, CLOSE_CLIENT_SCREEN,
+                SHOW_MENU, UPDATE_MENU, CLOSE_MENU));
         if (!policy.fabric()) {
             if (policy != NativePlatformPolicy.LEGACY_FML) operations.add(REGISTER_PAYLOAD_HANDLERS);
             operations.add(RECEIVE);
@@ -132,7 +137,8 @@ final class PlatformServiceEmitter {
             case REGISTER_PAYLOAD, SEND_TO_SERVER, SEND_TO_PLAYER, SEND_TO_ALL, REGISTER_PAYLOAD_HANDLERS, RECEIVE, READ_PAYLOAD, REQUIRE_PAYLOAD, PAYLOAD_BINDING -> PlatformNetworkingSources.emit(operation, policy);
             case CONNECTED_PLAYERS, PLAYER_SNAPSHOT, COUNT_PLAYER_ITEM, CONSUME_PLAYER_ITEMS, GIVE_PLAYER_ITEM,
                     PLAYER_ITEM_DATA, UPDATE_PLAYER_ITEM_DATA, PLAYER_ITEM_STACK, SEND_PLAYER_MESSAGE,
-                    HEAL_PLAYER, ADD_PLAYER_EXPERIENCE, SHOW_MENU, UPDATE_MENU, CLOSE_MENU, REQUIRE_ITEM,
+                    HEAL_PLAYER, ADD_PLAYER_EXPERIENCE, REGISTER_CLIENT_SCREEN, OPEN_CLIENT_SCREEN,
+                    CLOSE_CLIENT_SCREEN, SHOW_MENU, UPDATE_MENU, CLOSE_MENU, REQUIRE_ITEM,
                     REQUIRE_SERVER, ONLINE_PLAYER, REQUIRE_ONLINE_PLAYER, LOCATION, IDENTIFIER -> PlatformGameplaySources.emit(operation, policy);
             case INSTALL_EVENTS, INTERACTION, PUBLISH_LIFECYCLE, PUBLISH_PLAYER -> PlatformEventSources.emit(operation, policy);
         };

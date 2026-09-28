@@ -38,7 +38,8 @@ For reference-free development, add `'-Penderfall.referenceRuntimes=false'` to a
 Gradle command such as `generateAllBridges` or `compileGeneratedRuntimes`.
 This excludes the handwritten runtime projects, not just their compilation tasks.
 Reference parity tasks are omitted in this mode and generated runtime publishing
-is blocked. The default still includes references until retirement is complete;
+is blocked except for the isolated repository used by generated-runtime smoke tests.
+The default still includes references until retirement is complete;
 the switch does not delete their files, build outputs or saved worlds.
 
 ## Coordinates

@@ -13,6 +13,10 @@ Portable Java is compiled in an isolated Java 17 source set. A verification task
 rejects Minecraft, Fabric, Forge, NeoForge imports and Stonecutter directives there so
 the failure message points directly at the portability breach.
 
+Portable dependencies follow the same rule. A library mod supplies a Java 17 API
+coordinate for portable compilation and a `{minecraft}`/`{loader}` target coordinate for
+native runtime loading. See [Library-mod dependencies](library-mods.md).
+
 Native roots are escape hatches, not portable code. If two active roots contribute the
 same resource path, the build fails instead of selecting an undocumented precedence.
 Loader metadata paths are reserved because the plugin owns them.

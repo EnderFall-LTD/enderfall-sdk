@@ -222,7 +222,10 @@ subprojects {
             }
             tasks.withType<org.gradle.api.publish.maven.tasks.AbstractPublishToMaven>().configureEach {
                 dependsOn(rootProject.tasks.named("verifyBridgeCoverage"))
-                if (providers.gradleProperty("enderfall.referenceRuntimes").orNull == "false") {
+                val isolatedGeneratedBridgeSmokePublication =
+                    name.endsWith("ToGeneratedBridgeWorkspaceRepository")
+                if (providers.gradleProperty("enderfall.referenceRuntimes").orNull == "false"
+                    && !isolatedGeneratedBridgeSmokePublication) {
                     doFirst { error("Publishing requires reference parity until the reference-runtime retirement gate is complete.") }
                 }
             }

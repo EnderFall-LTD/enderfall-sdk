@@ -19,6 +19,7 @@ its loader adapters have runtime evidence.
 | Events | Lifecycle, server/client tick, player join/leave, sided item/block interaction, successful handling and cancellation | Lifecycle, cooldown timing, join guidance, and server-authoritative abilities |
 | Player gameplay | Player snapshots, atomic inventory costs, item rewards and overflow, chat/action-bar feedback, healing, experience | Crystal absorption, workbench infusion ritual, core activation, rod ability, and development kit |
 | Synchronized screens | Portable state-templated labels/buttons, bounded single/multiline text inputs, server-owned paged/disabled selection lists with native item-stack icons, counts, hover details and mouse-wheel paging, plus an opt-in server-discovered workbench recipe browser | The workbench uses real slots and synchronized selectable recipe outputs; the persistent preview also has a secure letter editor and rich searchable general-purpose list |
+| General client screens (experimental) | Portable lifecycle/input plus fills, text, wrapping, raw sprites, tiling, nine-slicing, clipping and 2D transforms through generated immediate/extraction renderers | The contract client registers the same portable screen on all generated targets; full visual acceptance and advanced primitives remain open |
 
 The showcase is in `examples/demo-mod`. All of its Java under `src/main` and `src/client`
 is portable and contains no Minecraft, Fabric, Forge, or NeoForge imports.

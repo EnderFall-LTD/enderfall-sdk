@@ -16,6 +16,7 @@ import org.gradle.api.initialization.Settings;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import uk.co.enderfall.sdk.gradle.model.EnderfallSdkExtension;
+import uk.co.enderfall.sdk.gradle.model.ModDependencyDefinition;
 import uk.co.enderfall.sdk.gradle.model.ModDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetCatalog;
 import uk.co.enderfall.sdk.gradle.model.TargetDefinition;
@@ -38,6 +39,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
 
     private static void createProjects(Settings settings, EnderfallSdkExtension extension) {
         validateMod(extension.modDefinition());
+        validateDependencies(extension.dependenciesDefinition().all());
         Map<String, TargetDefinition> selected = selectTargets(extension);
         if (!selected.containsKey(extension.getDevelopmentTarget())) {
             throw new GradleException("developmentTarget " + extension.getDevelopmentTarget()
@@ -73,7 +75,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                 boolean workspaceDevelopment = settings.getProviders()
                         .gradleProperty("enderfall.workspaceRepository").isPresent();
                 TargetProjectConfigurator.configure(project, settings.getRootDir(), extension.modDefinition(), target,
-                        dependencyRepositories, workspaceDevelopment);
+                        extension.dependenciesDefinition().all(), dependencyRepositories, workspaceDevelopment);
             } else if (project == project.getRootProject()) {
                 configureRoot(project, extension, selected);
             }
@@ -131,6 +133,11 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         doctorLines.add("Mod: " + extension.modDefinition().getName()
                 + " (" + extension.modDefinition().getId() + ')');
         doctorLines.add("Development target: " + development.id());
+        for (ModDependencyDefinition dependency : extension.dependenciesDefinition().all()) {
+            doctorLines.add("Dependency: " + dependency.getId() + " " + dependency.getVersion()
+                    + " | " + dependency.getRequirement().name().toLowerCase(java.util.Locale.ROOT)
+                    + " | " + dependency.getSide().name().toLowerCase(java.util.Locale.ROOT));
+        }
         for (TargetDefinition target : selected.values()) {
             String runtimeStatus = TargetCatalog.hasRuntimeAdapter(target)
                     ? "COMPILE_VALIDATED" : "UNAVAILABLE";
@@ -220,6 +227,32 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         }
         if (mod.getVersion().isBlank()) {
             throw new GradleException("Mod version cannot be blank");
+        }
+    }
+
+    private static void validateDependencies(java.util.List<ModDependencyDefinition> dependencies) {
+        for (ModDependencyDefinition dependency : dependencies) {
+            if (!dependency.getId().matches("[a-z][a-z0-9_]{1,63}")) {
+                throw new GradleException("Invalid dependency mod id " + dependency.getId());
+            }
+            if (!dependency.getVersion().matches("[0-9A-Za-z][0-9A-Za-z.+_-]{0,127}")) {
+                throw new GradleException("Invalid dependency version for " + dependency.getId()
+                        + ": " + dependency.getVersion());
+            }
+            validateCoordinate(dependency.getId(), "api", dependency.getApi(), false);
+            validateCoordinate(dependency.getId(), "target", dependency.getTarget(), true);
+        }
+    }
+
+    private static void validateCoordinate(String id, String field, String coordinate, boolean placeholders) {
+        if (coordinate.isBlank()) return;
+        String artifactPattern = placeholders ? "[0-9A-Za-z_.{}-]+" : "[0-9A-Za-z_.-]+";
+        if (!coordinate.matches("[0-9A-Za-z_.-]+:" + artifactPattern + ":[0-9A-Za-z][0-9A-Za-z.+_-]{0,127}")) {
+            throw new GradleException("Invalid " + field + " coordinate for " + id + ": " + coordinate);
+        }
+        if (placeholders && (!coordinate.contains("{minecraft}") || !coordinate.contains("{loader}"))) {
+            throw new GradleException("Target coordinate for " + id
+                    + " must contain both {minecraft} and {loader}: " + coordinate);
         }
     }
 

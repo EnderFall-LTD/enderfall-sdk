@@ -25,9 +25,10 @@ class LegacyFmlGenerationTest {
     private static final Map<String, String> REFERENCE_JAVA_HASHES = Map.ofEntries(
             Map.entry("EnderfallForgeRuntime.java", "a4208d6dc644248b14f0cd1ee2102dba7c924217933d49e294641c3b04f66a31"),
             Map.entry("LegacyForgeClientHooks.java", "a1cad5ad80302e67129dcf29b519f08ab9b7cc45d364982958e035a5ee2859a9"),
+            Map.entry("LegacyForgeClientScreenBridge.java", "fefc210f17413968a7fe3e5ea96ed8c3a1ba9287947d52ce13666ce396ce2c5f"),
             Map.entry("LegacyForgeCommandBridge.java", "a2c0a1b471efc62005537185fbc486bd3623e63e9db415dd2e67ae69d975f6a4"),
             Map.entry("LegacyForgeConsumerBootstrap.java", "c558ac1712ba96c4d54e0f78a425d3c1a135089a8f8797621e0292002c32431b"),
-            Map.entry("LegacyForgePlatformAdapter.java", "74b126e4fc5de1e44177daa9aa159cca9137fdd9f0d334ee504d3a89984afe96"),
+            Map.entry("LegacyForgePlatformAdapter.java", "db99ad4c5825686f074428a28038bbe3b0ac9b82cf424ca4e03962d50644fede"),
             Map.entry("LegacyForgePlatformInfo.java", "47718fe428c4c2782cd519424933cbac9ea85e98cf1bdc47d48e772db7024f42"),
             Map.entry("LegacyForgePortableMenuScreen.java", "c4218970a6796f3565dd86c92ea55ba9e52243db5793e570aa5edd01d9547e41"),
             Map.entry("LegacyForgeRecipeBinding.java", "6d53b08752ab48ca26e051c6bf8681f85c3ce87aefeebd3833535bdc301db66d"),
@@ -47,9 +48,9 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "82bf566a982bb3e7f39e961d23da8fa6b5873b1c1c1c1f83e4b6c89bafd628a4"
-                    : "bd0595becf441c7d7d921692aebe8cd98f59dc6919d0e6306f75f7b8668080e6", result.sha256());
-            assertEquals(16, result.files().size());
+                    ? "fec03ec3c5fdd9705c7e4a0155335487fc2c31bb8b58f3aa2b3b9fd7ba8a17ac"
+                    : "f778f89dc90126f4e7b1664a64920a3a14ebe36909dcc0fd2160ddbd93100f89", result.sha256());
+            assertEquals(17, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());
             Map<String, String> expected = new TreeMap<>();

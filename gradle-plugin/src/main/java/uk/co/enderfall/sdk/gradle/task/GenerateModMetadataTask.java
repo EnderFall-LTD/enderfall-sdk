@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.ListProperty;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputDirectory;
@@ -14,6 +17,10 @@ import org.gradle.api.tasks.TaskAction;
 
 @CacheableTask
 public abstract class GenerateModMetadataTask extends DefaultTask {
+    public GenerateModMetadataTask() {
+        getModDependencies().convention(List.of());
+    }
+
     @Input
     public abstract Property<String> getModId();
 
@@ -53,6 +60,9 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
     @Input
     public abstract Property<Boolean> getBootstrapEnabled();
 
+    @Input
+    public abstract ListProperty<String> getModDependencies();
+
     @OutputDirectory
     public abstract DirectoryProperty getOutputDirectory();
 
@@ -84,7 +94,8 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
                 + "  \"clientEntrypoint\": " + json(getClientEntrypoint().get()) + ",\n"
                 + "  \"minecraft\": " + json(getMinecraftVersion().get()) + ",\n"
                 + "  \"loader\": " + json(getLoader().get()) + ",\n"
-                + "  \"enderfallSdk\": " + json(getSdkVersion().get()) + "\n"
+                + "  \"enderfallSdk\": " + json(getSdkVersion().get()) + ",\n"
+                + "  \"dependencies\": " + universalDependencies() + "\n"
                 + "}\n";
     }
 
@@ -116,6 +127,24 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
                     + "    \"main\": [" + json(bootstrap) + "]\n"
                     + "  },\n";
         }
+        StringBuilder dependencies = new StringBuilder();
+        dependencies.append("    \"fabricloader\": \">=").append(escapeJson(getLoaderVersion().get()))
+                .append("\",\n")
+                .append("    \"minecraft\": \"=").append(escapeJson(getMinecraftVersion().get()))
+                .append("\",\n")
+                .append("    \"java\": \">=").append(getJavaVersion().get()).append("\",\n")
+                .append("    \"enderfall_sdk\": \">=").append(escapeJson(getSdkVersion().get())).append('"');
+        List<DependencyMetadata> optional = new ArrayList<>();
+        for (DependencyMetadata dependency : dependencies()) {
+            if (dependency.required()) {
+                dependencies.append(",\n    ").append(json(dependency.id())).append(": ")
+                        .append(json(dependency.fabricVersion()));
+            } else {
+                optional.add(dependency);
+            }
+        }
+        String suggests = optional.isEmpty() ? "" : ",\n  \"suggests\": {\n"
+                + dependencyJson(optional) + "\n  }";
         return "{\n"
                 + "  \"schemaVersion\": 1,\n"
                 + "  \"id\": " + json(getModId().get()) + ",\n"
@@ -132,11 +161,8 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
                 + "    }\n"
                 + "  },\n"
                 + "  \"depends\": {\n"
-                + "    \"fabricloader\": \">=" + escapeJson(getLoaderVersion().get()) + "\",\n"
-                + "    \"minecraft\": \"=" + escapeJson(getMinecraftVersion().get()) + "\",\n"
-                + "    \"java\": \">=" + getJavaVersion().get() + "\",\n"
-                + "    \"enderfall_sdk\": \">=" + escapeJson(getSdkVersion().get()) + "\"\n"
-                + "  }\n"
+                + dependencies + "\n"
+                + "  }" + suggests + "\n"
                 + "}\n";
     }
 
@@ -147,34 +173,95 @@ public abstract class GenerateModMetadataTask extends DefaultTask {
         String minecraftRange = '[' + getMinecraftVersion().get() + ']';
         String platformModId = neoForge && !getMinecraftVersion().get().equals("1.20.1")
                 ? "neoforge" : "forge";
-        return "modLoader=\"" + loaderName + "\"\n"
-                + "loaderVersion=\"[1,)\"\n"
-                + "license=" + toml(getLicenseName().get()) + "\n\n"
-                + "[[mods]]\n"
-                + "modId=" + toml(getModId().get()) + "\n"
-                + "version=" + toml(getModVersion().get()) + "\n"
-                + "displayName=" + toml(getModName().get()) + "\n"
-                + "authors=" + toml(getAuthor().get()) + "\n"
-                + "modproperties={enderfall_entrypoint=" + toml(getEntrypoint().get())
-                + ",enderfall_client_entrypoint=" + toml(getClientEntrypoint().get()) + "}\n\n"
-                + "[[dependencies." + getModId().get() + "]]\n"
-                + "modId=\"enderfall_sdk\"\n"
-                + dependencyType
-                + "versionRange=\"[" + getSdkVersion().get() + ",)\"\n"
-                + "ordering=\"NONE\"\n"
-                + "side=\"BOTH\"\n\n"
-                + "[[dependencies." + getModId().get() + "]]\n"
-                + "modId=\"" + platformModId + "\"\n"
-                + dependencyType
-                + "versionRange=\"[" + getLoaderVersion().get() + ",)\"\n"
-                + "ordering=\"NONE\"\n"
-                + "side=\"BOTH\"\n\n"
-                + "[[dependencies." + getModId().get() + "]]\n"
-                + "modId=\"minecraft\"\n"
-                + dependencyType
-                + "versionRange=\"" + minecraftRange + "\"\n"
-                + "ordering=\"NONE\"\n"
-                + "side=\"BOTH\"\n";
+        StringBuilder result = new StringBuilder();
+        result.append("modLoader=\"").append(loaderName).append("\"\n")
+                .append("loaderVersion=\"[1,)\"\n")
+                .append("license=").append(toml(getLicenseName().get())).append("\n\n")
+                .append("[[mods]]\n")
+                .append("modId=").append(toml(getModId().get())).append('\n')
+                .append("version=").append(toml(getModVersion().get())).append('\n')
+                .append("displayName=").append(toml(getModName().get())).append('\n')
+                .append("authors=").append(toml(getAuthor().get())).append('\n')
+                .append("modproperties={enderfall_entrypoint=").append(toml(getEntrypoint().get()))
+                .append(",enderfall_client_entrypoint=").append(toml(getClientEntrypoint().get()))
+                .append("}\n\n")
+                .append("[[dependencies.").append(getModId().get()).append("]]\n")
+                .append("modId=\"enderfall_sdk\"\n")
+                .append(dependencyType)
+                .append("versionRange=\"[").append(getSdkVersion().get()).append(",)\"\n")
+                .append("ordering=\"NONE\"\n")
+                .append("side=\"BOTH\"\n\n")
+                .append("[[dependencies.").append(getModId().get()).append("]]\n")
+                .append("modId=\"").append(platformModId).append("\"\n")
+                .append(dependencyType)
+                .append("versionRange=\"[").append(getLoaderVersion().get()).append(",)\"\n")
+                .append("ordering=\"NONE\"\n")
+                .append("side=\"BOTH\"\n\n")
+                .append("[[dependencies.").append(getModId().get()).append("]]\n")
+                .append("modId=\"minecraft\"\n")
+                .append(dependencyType)
+                .append("versionRange=\"").append(minecraftRange).append("\"\n")
+                .append("ordering=\"NONE\"\n")
+                .append("side=\"BOTH\"\n");
+        for (DependencyMetadata dependency : dependencies()) {
+            result.append("\n[[dependencies.").append(getModId().get()).append("]]\n")
+                    .append("modId=").append(toml(dependency.id())).append('\n')
+                    .append(legacyMetadata ? "mandatory=" + dependency.required() + "\n"
+                            : "type=\"" + (dependency.required() ? "required" : "optional") + "\"\n")
+                    .append("versionRange=\"").append(dependency.forgeVersion()).append("\"\n")
+                    .append("ordering=\"").append(dependency.ordering()).append("\"\n")
+                    .append("side=\"").append(dependency.side()).append("\"\n");
+        }
+        return result.toString();
+    }
+
+    private String universalDependencies() {
+        List<DependencyMetadata> dependencies = dependencies();
+        if (dependencies.isEmpty()) return "[]";
+        StringBuilder result = new StringBuilder("[\n");
+        for (int index = 0; index < dependencies.size(); index++) {
+            DependencyMetadata dependency = dependencies.get(index);
+            result.append("    {\"id\":").append(json(dependency.id()))
+                    .append(",\"version\":").append(json(dependency.version()))
+                    .append(",\"required\":").append(dependency.required())
+                    .append(",\"side\":").append(json(dependency.side().toLowerCase(java.util.Locale.ROOT)))
+                    .append(",\"ordering\":").append(json(dependency.ordering().toLowerCase(java.util.Locale.ROOT)))
+                    .append('}');
+            if (index + 1 < dependencies.size()) result.append(',');
+            result.append('\n');
+        }
+        return result.append("  ]").toString();
+    }
+
+    private static String dependencyJson(List<DependencyMetadata> dependencies) {
+        StringBuilder result = new StringBuilder();
+        for (int index = 0; index < dependencies.size(); index++) {
+            DependencyMetadata dependency = dependencies.get(index);
+            result.append("    ").append(json(dependency.id())).append(": ")
+                    .append(json(dependency.fabricVersion()));
+            if (index + 1 < dependencies.size()) result.append(',');
+            if (index + 1 < dependencies.size()) result.append('\n');
+        }
+        return result.toString();
+    }
+
+    private List<DependencyMetadata> dependencies() {
+        return getModDependencies().getOrElse(List.of()).stream()
+                .map(DependencyMetadata::parse).toList();
+    }
+
+    private record DependencyMetadata(String id, String version, boolean required, String side,
+                                      String ordering, boolean exact) {
+        static DependencyMetadata parse(String descriptor) {
+            String[] fields = descriptor.split("\\|", -1);
+            if (fields.length != 6) throw new IllegalStateException("Invalid mod dependency descriptor");
+            return new DependencyMetadata(fields[0], fields[1], fields[2].equals("REQUIRED"),
+                    fields[3], fields[4], Boolean.parseBoolean(fields[5]));
+        }
+
+        String fabricVersion() { return (exact ? "=" : ">=") + version; }
+
+        String forgeVersion() { return exact ? "[" + version + "]" : "[" + version + ",)"; }
     }
 
     private static void write(Path path, String content) throws IOException {

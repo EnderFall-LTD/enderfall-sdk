@@ -152,6 +152,29 @@ final class PlatformGameplaySources {
                         }
                     
                     """;
+            case REGISTER_CLIENT_SCREEN -> """
+                        @Override
+                        public void registerClientScreen(ResourceId id,
+                                uk.co.enderfall.sdk.api.client.ui.ClientScreenSpec spec,
+                                java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.client.ui.PortableClientScreen> factory) {
+                            ${ClientScreenBridge}.register(id, spec, factory);
+                        }
+
+                    """;
+            case OPEN_CLIENT_SCREEN -> """
+                        @Override
+                        public void openClientScreen(ResourceId id) {
+                            ${ClientScreenBridge}.open(id);
+                        }
+
+                    """;
+            case CLOSE_CLIENT_SCREEN -> """
+                        @Override
+                        public void closeClientScreen() {
+                            ${ClientScreenBridge}.close();
+                        }
+
+                    """;
             case SHOW_MENU -> """
                         @Override
                         public void showMenuWithInputs(uk.co.enderfall.sdk.runtime.PortableMenuView view,

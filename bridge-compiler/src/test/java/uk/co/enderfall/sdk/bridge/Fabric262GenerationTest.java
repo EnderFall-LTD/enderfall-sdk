@@ -30,12 +30,14 @@ class Fabric262GenerationTest {
                     "d373ffde76a07543b99d7da37e9ec3ab7da7d8d862eac426b23ebd0785cdb94e"),
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
                     "b8e1694418bf577c8c71c1a8654d62f7cbfa7dc22ec40d55b6b2e67b2140404d"),
+            Map.entry(PACKAGE_PATH + "FabricClientScreenBridge.java",
+                    "1b1d88b67645857371a2d170c4414f2424417228a028907fbbaa9fc736a86a34"),
             Map.entry(PACKAGE_PATH + "Fabric26CommandBridge.java",
                     "60e8dca1cd62b5d47fd20bab7a00d36d1829e7dab7a23dda010b6e26b9f1f529"),
             Map.entry(PACKAGE_PATH + "FabricConsumerBootstrap.java",
                     "c3414e23f0805220fbeb7cde9baef4a96b564dab43dd050c7c0773d82722b0b5"),
             Map.entry(PACKAGE_PATH + "Fabric26PlatformAdapter.java",
-                    "67807c27ffe2b3838dd289ed6a28a4e1e1d51593c1b26d21e878b3176e871448"),
+                    "04b86b9756cc66e6259e0efafde53b57d51709b04c67397ef5f6b66a7258288d"),
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "Fabric26PortableMenuScreen.java",
@@ -79,9 +81,9 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("2f9bea948cf08935588626e82cca5796bde6e91e9498332f775bc2d93a36e400",
+        assertEquals("dc1176f9a2977c6bc567750c3480322aee0131b10106dd6045210f22c44b2dca",
                 first.sha256());
-        assertEquals(17, first.files().size());
+        assertEquals(18, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
         assertEquals(hashes(firstOutput.resolve("sources")), hashes(secondOutput.resolve("sources")));
         assertEquals(hashes(firstOutput.resolve("resources")), hashes(secondOutput.resolve("resources")));

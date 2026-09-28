@@ -22,6 +22,20 @@ import uk.co.enderfall.sdk.api.ui.MenuState;
 
 /** Internal boundary implemented once by each Minecraft/loader target. */
 public interface PlatformAdapter {
+    default void registerClientScreen(ResourceId id,
+            uk.co.enderfall.sdk.api.client.ui.ClientScreenSpec spec,
+            java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.client.ui.PortableClientScreen> factory) {
+        throw new UnsupportedOperationException("Portable client screens are unavailable");
+    }
+
+    default void openClientScreen(ResourceId id) {
+        throw new UnsupportedOperationException("Portable client screens are unavailable");
+    }
+
+    default void closeClientScreen() {
+        throw new UnsupportedOperationException("Portable client screens are unavailable");
+    }
+
     /** Must validate native persistent-block existence and inventory slot bounds before registering. */
     default void registerBlockEntityRenderer(uk.co.enderfall.sdk.api.registry.BlockRef block,
             uk.co.enderfall.sdk.api.render.BlockEntityRenderSpec spec) {

@@ -23,6 +23,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 import org.gradle.language.jvm.tasks.ProcessResources;
 import uk.co.enderfall.sdk.gradle.model.ModDefinition;
+import uk.co.enderfall.sdk.gradle.model.ModDependencyDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetCatalog;
 import uk.co.enderfall.sdk.gradle.model.TargetDefinition;
 import uk.co.enderfall.sdk.gradle.task.CheckDuplicateResourcesTask;
@@ -36,6 +37,7 @@ final class TargetProjectConfigurator {
     }
 
     static void configure(Project project, File consumerRoot, ModDefinition mod, TargetDefinition target,
+                          List<ModDependencyDefinition> modDependencies,
                           List<URI> dependencyRepositories, boolean workspaceDevelopment) {
         project.getPluginManager().apply(JavaPlugin.class);
         configureWorkspaceDevelopmentDependencies(project, workspaceDevelopment);
@@ -85,6 +87,7 @@ final class TargetProjectConfigurator {
                 "uk.co.enderfall.sdk:enderfall-sdk-api:" + TargetCatalog.SDK_VERSION);
         project.getDependencies().add(main.getCompileOnlyConfigurationName(),
                 "uk.co.enderfall.sdk:enderfall-sdk-api:" + TargetCatalog.SDK_VERSION);
+        configureConsumerModDependencies(project, portable, main, target, modDependencies);
         Configuration dataRuntime = project.getConfigurations().create("enderfallDataRuntime");
         dataRuntime.setCanBeConsumed(false);
         dataRuntime.setCanBeResolved(true);
@@ -123,6 +126,8 @@ final class TargetProjectConfigurator {
             task.getJavaVersion().set(target.javaVersion());
             task.getSdkVersion().set(TargetCatalog.SDK_VERSION);
             task.getBootstrapEnabled().set(TargetCatalog.hasRuntimeAdapter(target));
+            task.getModDependencies().set(modDependencies.stream()
+                    .map(ModDependencyDefinition::metadataDescriptor).toList());
             task.getOutputDirectory().set(project.getLayout().getBuildDirectory().dir("generated/enderfallMetadata"));
         });
         main.getResources().srcDir(metadata.flatMap(GenerateModMetadataTask::getOutputDirectory));
@@ -246,6 +251,55 @@ final class TargetProjectConfigurator {
         });
         project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME).configure(task ->
                 task.dependsOn(generateData));
+    }
+
+    private static void configureConsumerModDependencies(Project project, SourceSet portable, SourceSet main,
+                                                          TargetDefinition target,
+                                                          List<ModDependencyDefinition> dependencies) {
+        for (ModDependencyDefinition dependency : dependencies) {
+            if (!dependency.getApi().isBlank()) {
+                project.getDependencies().add(portable.getCompileOnlyConfigurationName(), dependency.getApi());
+                project.getDependencies().add(main.getCompileOnlyConfigurationName(), dependency.getApi());
+            }
+        }
+        project.afterEvaluate(ignored -> {
+            for (ModDependencyDefinition dependency : dependencies) {
+                if (dependency.getTarget().isBlank()) continue;
+                String coordinate = dependency.resolveTarget(target);
+                if (dependency.getRequirement() == ModDependencyDefinition.Requirement.REQUIRED) {
+                    project.getDependencies().add(runtimeModConfiguration(project, target), coordinate);
+                } else {
+                    project.getDependencies().add(optionalCompileConfiguration(project, target), coordinate);
+                    if (dependency.isDevelopmentRuntime()) {
+                        project.getDependencies().add(optionalRuntimeConfiguration(project, target), coordinate);
+                    }
+                }
+            }
+        });
+    }
+
+    private static String runtimeModConfiguration(Project project, TargetDefinition target) {
+        if ((target.loader().equals("fabric") || target.minecraftVersion().equals("1.20.1"))
+                && project.getConfigurations().findByName("modImplementation") != null) {
+            return "modImplementation";
+        }
+        return JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME;
+    }
+
+    private static String optionalCompileConfiguration(Project project, TargetDefinition target) {
+        if (target.loader().equals("fabric")
+                && project.getConfigurations().findByName("modCompileOnly") != null) {
+            return "modCompileOnly";
+        }
+        return JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME;
+    }
+
+    private static String optionalRuntimeConfiguration(Project project, TargetDefinition target) {
+        if (target.loader().equals("fabric")
+                && project.getConfigurations().findByName("modRuntimeOnly") != null) {
+            return "modRuntimeOnly";
+        }
+        return JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME;
     }
 
     private static void configureWorkspaceDevelopmentDependencies(Project project, boolean workspaceDevelopment) {

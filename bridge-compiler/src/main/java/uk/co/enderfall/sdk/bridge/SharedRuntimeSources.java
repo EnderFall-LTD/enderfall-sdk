@@ -29,6 +29,7 @@ final class SharedRuntimeSources {
         emittedSources.addAll(ClientHooksEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(FabricClientHooksEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(LegacyClientHooksEmitter.emitIfPresent(target, declarations));
+        emittedSources.addAll(PortableClientScreenEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(RawPayloadEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(CommandBridgeEmitter.emitIfPresent(target, declarations));
         emittedSources.addAll(WorkbenchInputEmitter.emitIfPresent(target, declarations));

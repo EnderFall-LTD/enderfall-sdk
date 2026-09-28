@@ -190,20 +190,28 @@ final class PortableClientScreenEmitter {
             """;
 
     private static final String IMMEDIATE_BLIT = """
-            graphics.blit(id, destination.x(), destination.y(), destination.width(), destination.height(),
-                    sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight);
+            int tint = color(argb);
+            com.mojang.blaze3d.systems.RenderSystem.setShaderColor(
+                    ((tint >>> 16) & 255) / 255.0F, ((tint >>> 8) & 255) / 255.0F,
+                    (tint & 255) / 255.0F, ((tint >>> 24) & 255) / 255.0F);
+            try {
+                graphics.blit(id, destination.x(), destination.y(), destination.width(), destination.height(),
+                        sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight);
+            } finally {
+                com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            }
             """;
 
     private static final String KEYED_BLIT = """
             graphics.blit(net.minecraft.client.renderer.RenderType::guiTextured, id,
                     destination.x(), destination.y(), destination.width(), destination.height(),
-                    sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight);
+                    sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight, color(argb));
             """;
 
     private static final String EXTRACTED_BLIT = """
             graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, id,
                     destination.x(), destination.y(), destination.width(), destination.height(),
-                    sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight);
+                    sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight, color(argb));
             """;
 
     private static final String SOURCE = """
@@ -344,10 +352,6 @@ final class PortableClientScreenEmitter {
                         }
                         if (destination.width() == 0 || destination.height() == 0
                                 || sourceWidth == 0 || sourceHeight == 0) return;
-                        if (color(argb) != 0xFFFFFFFF) {
-                            throw new UnsupportedOperationException(
-                                    "Tinted portable sprites are not implemented on this target yet");
-                        }
                         ${IDENTIFIER} id = ${PARSE};
                         ${BLIT}
                     }

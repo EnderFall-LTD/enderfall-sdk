@@ -26,13 +26,17 @@ class PortableClientScreenEmitterTest {
             assertTrue(source.contains("void item(ItemStackRef"), target.id());
             assertTrue(source.contains("void itemTooltip(ItemStackRef"), target.id());
             assertTrue(source.contains("Portable tooltip exceeds 64 lines"), target.id());
+            assertFalse(source.contains("Tinted portable sprites are not implemented"), target.id());
             if (target.minecraftVersion().id().equals("26.2")) {
                 assertTrue(source.contains("GuiGraphicsExtractor"), target.id());
                 assertTrue(source.contains("extractRenderState"), target.id());
                 assertTrue(source.contains("graphics.nextStratum()"), target.id());
+                assertTrue(source.contains("textureHeight, color(argb)"), target.id());
             } else {
                 assertTrue(source.contains("GuiGraphics"), target.id());
                 assertTrue(source.contains("public void render("), target.id());
+                assertTrue(source.contains(target.minecraftVersion().id().equals("1.21.4")
+                        ? "textureHeight, color(argb)" : "RenderSystem.setShaderColor"), target.id());
             }
         }
     }

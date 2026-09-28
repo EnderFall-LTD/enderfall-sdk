@@ -680,7 +680,7 @@ tasks.named("javadoc") {
 }
 
 tasks.named("check") { dependsOn(verifyBridgeTargetCoordinates) }
-if (providers.gradleProperty("enderfall.referenceRuntimes").orNull != "false") {
+if (providers.gradleProperty("enderfall.referenceRuntimes").orNull == "true") {
 val referenceRuntimeProject = project(generatedFabricTarget.referenceProjectPath)
 val referenceRuntimeRoot = rootProject.layout.projectDirectory.dir(
     generatedFabricTarget.referenceProjectPath.removePrefix(":")

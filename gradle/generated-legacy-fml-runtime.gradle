@@ -151,7 +151,7 @@ def generatedReobfJar = obfuscation.reobfuscate(tasks.named('shadowJar'), source
 tasks.named('assemble') { dependsOn generatedReobfJar }
 
 tasks.named('check') { dependsOn verifyBridgeTargetCoordinates }
-if (providers.gradleProperty('enderfall.referenceRuntimes').orNull != 'false') {
+if (providers.gradleProperty('enderfall.referenceRuntimes').orNull == 'true') {
 def referencePath = ":runtime-${target.loader}-1.20.1"
 evaluationDependsOn(referencePath)
 def reference = project(referencePath)

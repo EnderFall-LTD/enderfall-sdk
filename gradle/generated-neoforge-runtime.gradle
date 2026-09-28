@@ -251,7 +251,7 @@ tasks.named('assemble') {
 }
 
 tasks.named('check') { dependsOn verifyBridgeTargetCoordinates }
-if (providers.gradleProperty('enderfall.referenceRuntimes').orNull != 'false') {
+if (providers.gradleProperty('enderfall.referenceRuntimes').orNull == 'true') {
 evaluationDependsOn(target.referenceProjectPath)
 def referenceProject = project(target.referenceProjectPath)
 def referenceRoot = rootProject.layout.projectDirectory.dir(target.referenceProjectPath.substring(1))

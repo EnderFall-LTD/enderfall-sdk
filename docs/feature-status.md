@@ -43,11 +43,13 @@ Manual slot, shift-click, and crafting passes are still required across the comp
 matrix before it is promoted from experimental to stable.
 
 The generated-runtime [gameplay harness](gameplay-testing.md) has additionally passed
-automated native slot input, normal/shift crafting, counted consumption, input return,
+automated registration, config, listener isolation, player actions, live commands,
+native slot input, normal/shift crafting, counted consumption, input return,
 menu-state synchronization, and packet round trips on all nine generated targets
-using identical portable sources. Forge required a diagnostic retry after an
-intermittent login timeout, which remains a reliability issue to investigate.
-This focused matrix is not full foundation-feature or visual acceptance.
+using identical portable sources. The legacy Forge-family harness now performs the
+required status-ping negotiation before login on both loaders; two consecutive Forge
+runs passed after replacing its earlier Quick Play path. Pixel-level visual acceptance
+remains separate.
 
 Instant item workbenches can opt into
 [`recipeBrowser()`](workbench-recipe-browser.md). Every matching data-pack recipe is
@@ -58,13 +60,13 @@ uses the native menu-button path, so portable mods do not provide packets or cli
 registration. Timed/fluid machines, text search and consumer-defined categories are not
 covered by this browser slice.
 
-## Not implemented yet
+## Experimental or not yet stable
 
 | Area | Current status | Why it is not presented as working |
 | --- | --- | --- |
-| Fluids | No stable API or adapter | Requires source/flowing registrations, fluid block and bucket coordination, render handlers, tags, and version-specific behaviour |
+| Fluids | Experimental tank/storage, transfer, bucket interaction, UI gauge and block-entity rendering slices exist across generated targets | General fluid-family registration, arbitrary containers, third-party loader capabilities and complete live acceptance are not stable yet |
 | Custom item/block behaviour | Server-side use/use-on-block callbacks, exact hit position, hand, crouching context, block-state mutation, declared persistent held-stack data, expected-item-checked carried-slot/off-hand reads and updates, and reusable item-editor screen sessions | Stack durability/effects still need broader portable contracts and live acceptance |
-| Block entities and persistent state | No stable API or adapter | Serialization, ticking, update packets, inventory ownership, placement/removal lifecycle, and data migration must be specified together |
+| Block entities and persistent state | Opt-in generated development adapters cover saved inventory/tanks, ticking, menus, automation and rendering on all nine targets | They remain excluded from normal release runtimes until the documented persistence, multiplayer and automation acceptance gates pass |
 
 ## Proposed developer-facing contracts
 

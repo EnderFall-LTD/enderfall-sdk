@@ -103,7 +103,9 @@ The setup is complete only when all of these are true:
 - the Pages workflow has deployed successfully;
 - `sdk.enderfall.co.uk` resolves and HTTPS is enforced;
 - Central shows the parent namespace `uk.co.enderfall` as verified;
-- the Plugin Portal account owns `uk.co.enderfall.sdk`;
+- the Plugin Portal account and API key are ready to submit `uk.co.enderfall.sdk`
+  (the first publication can remain pending while Gradle performs its manual review);
 - the protected release environment contains all six secrets;
-- the release workflow still fails at `verifyRuntimeMatrix` until runtime acceptance
-  is genuinely complete.
+- the release workflow's nine target jobs and `verifyRuntimeMatrix` audit pass for the
+  exact release commit;
+- the manual release-candidate checklist has been completed for that commit.

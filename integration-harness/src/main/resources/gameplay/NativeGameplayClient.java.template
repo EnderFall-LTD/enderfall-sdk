@@ -55,6 +55,11 @@ public final class NativeGameplayClient implements EnderfallClientMod {
             case CONNECT -> {
                 // Wait until terrain loading has finished; its screen would replace an early menu.
                 if (client.player == null || screen() != null) return;
+                client.player.connection.sendCommand("enderfall_contract alpha \"hello world\" 3 true");
+                advance(Phase.COMMAND);
+            }
+            case COMMAND -> {
+                if (!settled("command-complete")) return;
                 request("open-menu");
                 advance(Phase.MENU);
             }
@@ -274,7 +279,7 @@ public final class NativeGameplayClient implements EnderfallClientMod {
         if (!condition) throw new IllegalStateException(message);
     }
 
-    private enum Phase { CONNECT, MENU, CONFIRMED, WORKBENCH, INSUFFICIENT, RESULT, FIRST,
+    private enum Phase { CONNECT, COMMAND, MENU, CONFIRMED, WORKBENCH, INSUFFICIENT, RESULT, FIRST,
         SECOND_RESULT, FULL_INVENTORY, BLOCKED_RESULT, CAPACITY_RESTORED,
         RETURN_ITEMS, RETURN_LOADED, REOPEN, DONE }
 }

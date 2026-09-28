@@ -13,24 +13,30 @@ and loader. Cross-loader pairing is not performed.
 
 ## What the scenario checks
 
-1. The existing three-leg SDK packet exchange completes on both sides.
-2. Once the client has finished terrain loading, the server opens the contract menu.
+1. Portable registration and dependency checks complete, common configuration values
+   are read, and an intentionally failing tick listener cannot suppress the following
+   listener.
+2. A joined player's portable snapshot/action bridge succeeds and the real client sends
+   a portable command containing word, quoted string, integer, boolean, and omitted
+   optional-player arguments. The server validates every decoded value and replies.
+3. The existing three-leg SDK packet exchange completes on both sides.
+4. Once the client has finished terrain loading, the server opens the contract menu.
    The test invokes the actual native button and waits for its displayed text to
    change from the initial state to the state confirmed by the server.
-3. A real container workbench opens with two inputs and an output slot. The client
+5. A real container workbench opens with two inputs and an output slot. The client
    sends Minecraft slot-click packets, first with insufficient counted ingredients.
    After a server acknowledgement and settling interval, no output may be present.
-4. Adding the missing ingredient produces the custom recipe output. Taking it
+6. Adding the missing ingredient produces the custom recipe output. Taking it
    normally must consume the exact ingredient counts, put one result in player
    inventory, and invoke the server craft callback with the expected recipe ID.
-5. Before the second craft, the server fills all 36 player inventory slots with
+7. Before the second craft, the server fills all 36 player inventory slots with
    non-stackable fixture hammers. Two shift-clicks must leave both ingredients,
    the available output, the cursor, and inventory unchanged, without a craft callback.
    The server restores free space, then the second craft uses shift-click. A repeated click on the exhausted output must
    not create another item. The server requires exactly two callbacks and two results.
-6. Closing with unused ingredients must return them to player inventory. Reopening
+8. Closing with unused ingredients must return them to player inventory. Reopening
    must show empty input/output slots, with the returned items still present.
-7. The server confirms the final counts; the client acknowledges completion and
+9. The server confirms the final counts; the client acknowledges completion and
    shuts down. The harness then shuts down the server and requires zero exit codes.
 
 The report requires every individual assertion. Network completion, menu-open logs,
@@ -69,7 +75,7 @@ input methods; it is not an OS mouse/keyboard or pixel-rendering test.
 - Per-side preparation and game logs, plus connection.json, live in
   build/reports/generated-bridge-gameplay.
 
-Each JSON row reports the nine gameplay checks, the connection checks, exit codes,
+Each JSON row reports the seventeen gameplay/foundation checks, the connection checks, exit codes,
 and the portable-source hash. Reports describe the latest invocation only; an
 unselected target has not been tested by that invocation.
 
@@ -119,7 +125,7 @@ oldest-to-newest order (relative to the SDK root or absolute):
 
 The last supplied attempt for a target is authoritative, even when it failed. No
 directory scanning or automatic selection of old successful reports is performed.
-Every target must have all eleven true gameplay checks, completed connection checks,
+Every target must have all seventeen true gameplay checks, completed connection checks,
 clean exits, and the same valid portable-source hash. The audit rereads the selected
 server/client logs, requires their target-specific checkpoints, rejects gameplay
 failure markers, and records SHA-256 hashes for the input reports and selected logs.
@@ -137,14 +143,15 @@ the game runs, or replace rerunning affected targets after a runtime change. Kee
 the referenced logs with each report when archiving; unlabelled reruns replace
 per-target logs. Named runs retain separate report/log paths.
 
-## Expanded inventory coverage
+## Historical expanded inventory coverage
 
-The current harness adds independent `fullInventoryRejected` (server) and
+The September 2026 harness added independent `fullInventoryRejected` (server) and
 `fullInventoryUnchanged` (client) gates to the original nine assertions. It also
 requires a successful craft after capacity is restored. Unexpected craft callbacks
 are counted before phase validation, so runtime listener isolation cannot hide them.
-The historical nine-check reports below do not satisfy the expanded audit; no old
-reports or logs are rewritten to fabricate the new evidence. Full-inventory close/drop
+Those historical eleven-check reports and the earlier nine-check reports no longer
+satisfy the current seventeen-check audit; no old reports or logs are rewritten to
+fabricate new evidence. Full-inventory close/drop
 handling, partial-stack capacity, and disconnect/reconnect remain separate gaps.
 
 On 2026-09-12, the expanded scenario passed on **all nine generated targets**,
@@ -167,8 +174,8 @@ To reproduce the audit of this retained evidence:
 .\gradlew.bat :integration-harness:verifyGameplayMatrix '-Penderfall.gameplayReports=build/reports/generated-bridge-gameplay/runs/full-inventory-20260912/connection.json,build/reports/generated-bridge-gameplay/runs/full-inventory-remaining-20260912/connection.json' --configure-on-demand --no-daemon --console=plain --offline
 ~~~
 
-This establishes the expanded focused scenario, not the remaining edge cases or
-complete SDK release acceptance. Historical nine-check reports remain insufficient.
+This establishes the historical expanded scenario, not the current release contract.
+Historical nine- and eleven-check reports remain insufficient.
 
 ## Historical nine-check acceptance status
 
@@ -180,8 +187,8 @@ Every target used portable-source hash
 `bc8d53c045e0f3ec829afb87a1cdd20a9874360ba670af415d4937392d5ec515`, passed all nine
 gameplay assertions and bidirectional connection checks, and exited cleanly.
 
-This run passed the nine-check audit at the time. The current eleven-check audit
-intentionally rejects it as incomplete for the expanded inventory coverage.
+This run passed the nine-check audit at the time. The current seventeen-check audit
+intentionally rejects it as incomplete for expanded inventory and foundation coverage.
 
 The earlier 2026-09-08 matrix also passed all nine targets. On that run,
 Forge 1.20.1 needed a diagnostic retry with temporary extra logging after an

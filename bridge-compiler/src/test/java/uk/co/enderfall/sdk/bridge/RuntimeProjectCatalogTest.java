@@ -44,6 +44,19 @@ class RuntimeProjectCatalogTest {
         }
     }
 
+    @Test
+    void retiredReferenceProjectsAreExplicitOptInOnly() throws Exception {
+        Path root = sdkRoot();
+        String settings = Files.readString(root.resolve("settings.gradle.kts"));
+        assertTrue(settings.contains("orNull ?: \"false\""));
+        for (String script : List.of("generated-fabric-runtime.gradle.kts",
+                "generated-legacy-fml-runtime.gradle", "generated-neoforge-runtime.gradle")) {
+            String contents = Files.readString(root.resolve("gradle/" + script));
+            assertTrue(contents.contains("referenceRuntimes"));
+            assertTrue(contents.contains("== \"true\"") || contents.contains("== 'true'"), script);
+        }
+    }
+
     private static Path sdkRoot() {
         Path working = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         Path root = List.of(working, working.getParent()).stream()

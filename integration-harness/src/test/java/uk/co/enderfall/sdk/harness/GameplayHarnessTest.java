@@ -15,12 +15,12 @@ class GameplayHarnessTest {
     @Test void refusesGameplaySuccessWithNoAssertions() {
         GameplayEvidence evidence = new GameplayEvidence("1.21.4-fabric");
         assertFalse(evidence.passed());
-        assertEquals(11, evidence.snapshot().size());
+        assertEquals(17, evidence.snapshot().size());
         assertTrue(evidence.snapshot().values().stream().noneMatch(Boolean::booleanValue));
     }
 
     @Test void everyIndependentAssertionIsRequiredEvenAfterCompletionMessages() {
-        for (int omitted = 0; omitted < 11; omitted++) {
+        for (int omitted = 0; omitted < 17; omitted++) {
             GameplayEvidence evidence = new GameplayEvidence("1.21.4-fabric");
             var latches = new ArrayList<>(evidence.serverMarkers().values());
             latches.addAll(evidence.clientMarkers().values());
@@ -62,6 +62,7 @@ class GameplayHarnessTest {
             assertTrue(source.contains("REOPEN_EMPTY"));
             assertTrue(source.contains("FULL_INVENTORY_UNCHANGED"));
             assertTrue(source.contains("inventoryCount(HAMMER) == 36"));
+            assertTrue(source.contains("sendCommand(\"enderfall_contract"));
         }
     }
 

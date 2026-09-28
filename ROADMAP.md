@@ -85,13 +85,12 @@ maintainers and add-on authors. Full furniture parity is not yet achieved.
   rejection on unsupported runtimes. Solid-colour rendering is implemented;
   textured fluid rendering and in-game visual acceptance remain open.
 
-- [x] Add an opt-in reference-free development configuration:
-  `-Penderfall.referenceRuntimes=false` excludes the nine handwritten Gradle projects
-  and their parity tasks while retaining generated targets and coordinate checks.
-  Publishing remains blocked in this mode; reference parity is still required there.
-- [ ] Retire the reference source folders after reference-free builds, remaining
-  validation tooling and release wiring have been verified. No reference files or
-  saved development worlds are deleted by the configuration switch.
+- [x] Make reference-free generated runtimes the default for development and release.
+  `-Penderfall.referenceRuntimes=true` includes the nine stale handwritten projects only
+  for historical investigation; their byte parity is no longer release evidence.
+- [ ] Delete the retired reference source folders in a later cleanup after downstream
+  developers no longer need them for comparison. No reference files or saved development
+  worlds are deleted by the configuration switch.
 
 - [x] Expand generated persistence registration, instant/timed menus, processing and
   client hooks to all seven pre-26 targets; their full development sources compile.
@@ -196,8 +195,8 @@ maintainers and add-on authors. Full furniture parity is not yet achieved.
 - [x] Run the same generated-only client/server lifecycle gates for 26.2 NeoForge.
 - [x] Run the same generated-only client/server lifecycle gates for 1.20.1 Fabric.
 - [x] Run the same generated-only client/server lifecycle gates for 1.20.1 Forge/NeoForge.
-- [ ] Complete the broader generated 1.21.4 Fabric in-game contract (commands,
-  configs, interactions, and edge cases) before retiring its reference sources.
+- [ ] Complete remaining generated 1.21.4 Fabric interaction and edge-case coverage
+  before retiring its reference sources; command and config checks are automated.
 - [ ] Run the same in-game contract gates for generated 1.21.1 Fabric before retiring
   its inherited/reference source layout.
 - [ ] Run the same in-game contract gates for generated 26.2 Fabric before retiring
@@ -273,8 +272,9 @@ maintainers and add-on authors. Full furniture parity is not yet achieved.
   smoke tests for every catalog target.
 - [x] Automate real client startup, resource reload, lifecycle/tick readiness, and clean
   shutdown for every catalog target.
-- [ ] Automate client registration, resources, commands, events, config, and networking
-  assertions for all four initial targets.
+- [x] Automate registration, resource reload/rendering, command arguments, event delivery
+  and listener isolation, config reads, dependency checks, player actions, menus,
+  workbench recipes, inventory capacity, and networking assertions for every target.
 - [x] Run an external same-loader client/server connection and packet round trip on every
   initial target.
 
@@ -287,7 +287,7 @@ maintainers and add-on authors. Full furniture parity is not yet achieved.
 - [x] Run the automated client lifecycle smoke suite for all five added targets.
 - [x] Run an external same-loader client/server connection on all five added targets.
 
-`verifyRuntimeMatrix` remains an unconditional failure until the pending automated
-foundation-feature checks are replaced by machine-readable runtime evidence. The exact
-same-loader connection matrix now has machine-readable evidence, but it is only one part
-of release acceptance.
+`verifyRuntimeMatrix` now audits same-workflow machine-readable server, client/UI, and
+connected foundation evidence for the exact Git revision. Publication still requires a
+successful nine-target workflow run and explicit completion of the manual RC checklist;
+local compilation or historical reports cannot satisfy the gate.

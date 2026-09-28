@@ -5,36 +5,44 @@ does not bypass compatibility, runtime, signing, or credential checks.
 
 ## What the release workflow does
 
-The protected `release` environment runs one coordinated workflow:
+The protected `release` environment runs one coordinated, fail-closed workflow:
 
 1. confirm that the requested version exactly matches `sdkVersion`;
-2. run `checkAll`, `verifyRuntimeMatrix`, checksum generation, and CycloneDX SBOM
-   generation;
-3. require every Central, signing, and Plugin Portal secret;
-4. publish all Maven publications into an isolated local Maven repository and create
+2. build and test the SDK plus fresh consumers on Windows and Linux, then compare their
+   release checksums;
+3. launch a dedicated server, standalone client/UI lane, and connected foundation
+   gameplay lane for every catalog target in isolated Linux/Xvfb jobs;
+4. download those same-workflow artifacts and run `verifyRuntimeMatrix`, which requires
+   all nine targets, the exact workflow Git revision, matching portable-source hashes,
+   all expected assertion keys, clean exit codes, and the underlying log checkpoints;
+5. require explicit confirmation of the manual release-candidate checklist and every
+   Central, signing, and Plugin Portal secret;
+6. publish all Maven publications into an isolated local Maven repository and create
    one reproducible signed archive with `centralBundle`;
-5. upload that archive to the Central Publisher API with automatic publication and
+7. upload that archive to the Central Publisher API with automatic publication and
    wait until Central reports `PUBLISHED`;
-6. publish `uk.co.enderfall.sdk` to the Gradle Plugin Portal;
-7. generate a GitHub build-provenance attestation for the produced JARs;
-8. create the version tag and prerelease with target runtime JARs, checksums, SBOMs,
-   generated release notes, and migration notes.
+8. publish `uk.co.enderfall.sdk` to the Gradle Plugin Portal;
+9. generate a GitHub build-provenance attestation for the produced JARs;
+10. create the version tag and prerelease with target runtime JARs, checksums, SBOMs,
+    generated release notes, migration notes, and the audited runtime matrix.
 
 The Central bundle uses Maven repository layout and contains the coordinated BOM,
 API, runtime core, Gradle implementation and marker, and every generated target
-runtime. Gradle writes MD5, SHA-1, SHA-256, and SHA-512 checksums; the release signing
-key adds detached ASCII-armored signatures. Handwritten reference runtimes have no
+runtime. The Maven repository contains Gradle's MD5 and SHA-1 companions and detached
+ASCII-armored signatures; the GitHub release adds the coordinated SHA-256 manifest.
+Handwritten reference runtimes have no
 working publication tasks and cannot overwrite generated runtime coordinates.
 
-## Release block
+## Runtime release gate
 
-`verifyRuntimeMatrix` currently blocks unconditionally because target runtime
-acceptance is not complete. Removing that block without replacing it with the full
-nine-target automated evidence and manual release-candidate evidence is a release
-policy violation.
+`verifyRuntimeMatrix` cannot be satisfied by old local reports or a boolean workflow
+flag. It requires the evidence directory and full Git SHA supplied by the release
+workflow. Evidence for one target cannot substitute for another, a later failure cannot
+be hidden by an older pass, and report flags cannot substitute for required log markers.
 
-This means repository, DNS, Central, Pages, and Plugin Portal ownership can be set up
-now, but `0.1.0-beta.1` must not be published merely because the build compiles.
+The manual checkbox is not a waiver. It records that the human checks in
+[Release-candidate checklist](release-candidate.md) were performed against the exact
+commit being released.
 
 ## Required contents
 

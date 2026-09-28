@@ -446,7 +446,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                     + legacyVersion
                     + "    validateAccessTransformers = true\n"
                     + "    runs {\n"
-                    + modDevClientRun(!target.loader().equals("neoforge"))
+                    + modDevClientRun(false)
                     + "        server { server(); gameDirectory = file('run/server'); programArgument '--nogui' }\n"
                     + "    }\n"
                     + "    mods {\n"

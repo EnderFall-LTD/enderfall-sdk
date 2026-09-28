@@ -4,9 +4,10 @@ EnderFall SDK is a Java-first, loader-neutral API and build system for producing
 separate Minecraft mod artifacts from one portable source tree.
 
 Portable block-entity development includes shared inventory snapshots, saved-state
-definitions, and a compiled Fabric 1.21.4 native persistence development slice. It is
-not packaged into release runtimes. An [isolated development demo](examples/persistent-preview/README.md)
-now launches on that target; live save/reload validation is still pending.
+definitions, and generated native persistence slices for all nine targets. These remain
+opt-in development artifacts and are not packaged into release runtimes. The
+[isolated development demo](examples/persistent-preview/README.md) exercises that work;
+the remaining live acceptance boundaries are tracked explicitly.
 See [block-entity implementation status](docs/block-entities.md).
 
 The project is in pre-release development. The current implementation contains the
@@ -16,31 +17,28 @@ generated-runtime bridge compiler paths for all nine targets, a portable
 contract test mod, process-level integration harness, publishing safeguards, and a
 separate CC0 starter. All nine artifacts compile from one unchanged portable source tree.
 The reference-runtime dedicated-server, client-lifecycle, and exact same-loader packet
-matrices have passed all nine targets. The expanded eleven-check generated-runtime
-menu/workbench scenario, including full-inventory craft rejection and recovery,
-also passed all nine targets with matching portable sources and clean exits.
-An intermittent legacy login issue is still tracked in
-[the migration status](docs/bridge-migration.md).
-Deeper foundation-feature assertions and the manual
-release-candidate pass remain release gates, so this is still a pre-release baseline.
+matrices have passed all nine targets. Release candidates now run a 17-check generated
+runtime foundation scenario for every target, covering registration, configuration,
+event isolation, commands, player actions, networking, menus, crafting and rejection
+paths from one matching portable source tree. The exact-revision automated matrix and
+the manual release-candidate pass remain mandatory gates, so this is still a pre-release
+baseline.
 
 The generated-runtime compiler now emits every native Java class from shared
 operations and reviewed ABI policies, with no canonical Java copying or contextual
-patching needed for the nine supported targets. The old runtime folders remain
-reference fixtures pending broader acceptance and retirement, with their Maven
-publication disabled. Local starter/demo publishing uses the generated runtimes;
-consumers still write one portable source tree. See [the bridge architecture](docs/bridge-compiler.md).
+patching needed for the nine supported targets. The old runtime folders remain opt-in
+historical fixtures, with their Maven publication disabled; normal builds and releases
+no longer configure them. Local starter/demo publishing uses the generated runtimes,
+and consumers still write one portable source tree. See [the bridge architecture](docs/bridge-compiler.md).
 Generated SDK projects are created from `gradle/runtime-projects.properties` and
 shared build-family scripts; no per-target generated-runtime build entry scripts
 need maintaining. Existing project names and build output paths remain unchanged.
 
-For reference-free development, add `'-Penderfall.referenceRuntimes=false'` to a
-Gradle command such as `generateAllBridges` or `compileGeneratedRuntimes`.
-This excludes the handwritten runtime projects, not just their compilation tasks.
-Reference parity tasks are omitted in this mode and generated runtime publishing
-is blocked except for the isolated repository used by generated-runtime smoke tests.
-The default still includes references until retirement is complete;
-the switch does not delete their files, build outputs or saved worlds.
+Normal development and release builds are reference-free. To inspect the retired
+handwritten fixtures, add `'-Penderfall.referenceRuntimes=true'` to a Gradle command.
+That opt-in mode exists for historical investigation only: the fixtures are stale and
+their old byte-parity checks are not release evidence. The switch does not delete their
+files, build outputs or saved worlds.
 
 ## Coordinates
 
@@ -104,9 +102,9 @@ See `docs/architecture.md`, `docs/bridge-compiler.md`, and `docs/compatibility.m
 the detailed contract.
 
 Public repository, Pages, DNS, Maven Central, and Gradle Plugin Portal ownership are
-documented in [the service setup checklist](docs/repository-and-services.md). Release
-publication remains blocked until the runtime acceptance gate is replaced with complete
-evidence.
+documented in [the service setup checklist](docs/repository-and-services.md). The protected
+release workflow now collects and audits complete, exact-revision runtime evidence before
+it can reach any publication step.
 
 The full showcase lives in `examples/demo-mod`. It keeps item, block, creative-tab,
 configuration, networking, command, event, gameplay, and data registration in separate
@@ -124,6 +122,7 @@ alongside original textures and hand-authored multi-element models. See
 `buildAll` proves the Java and Gradle implementation builds. `serverSmoke` and
 `clientSmoke` write separate machine-readable evidence under
 `build/reports/runtime-smoke`; `sameLoaderSmoke` records external client/server network
-evidence without claiming cross-loader compatibility. Coordinated publication remains
-blocked until the deeper feature matrix and manual
+evidence without claiming cross-loader compatibility. `verifyRuntimeMatrix` binds the
+fresh server, client/UI, and connected-gameplay evidence to the exact release commit.
+Coordinated publication remains blocked until that matrix and the manual
 release-candidate pass are complete.

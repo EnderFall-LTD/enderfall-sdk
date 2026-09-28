@@ -65,7 +65,7 @@ include(
     "test-mod"
 )
 
-val referenceRuntimes = providers.gradleProperty("enderfall.referenceRuntimes").orNull ?: "true"
+val referenceRuntimes = providers.gradleProperty("enderfall.referenceRuntimes").orNull ?: "false"
 require(referenceRuntimes in listOf("true", "false")) { "enderfall.referenceRuntimes must be true or false" }
 if (referenceRuntimes == "true") include(
     "runtime-fabric-1.20.1",

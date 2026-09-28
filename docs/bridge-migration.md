@@ -501,8 +501,10 @@ The assertions cover synchronized menu actions/state, rejection of insufficient
 ingredients, normal crafting, shift-crafting without extra output, returning
 unused inputs, and reopening an empty workbench. This is not full foundation-feature
 acceptance, pixel-level visual review, or production-launcher installation proof.
-The historical intermittent legacy login stall did not recur here; its underlying
-cause and long-term reliability remain open.
+The historical intermittent legacy login stall did not recur in that run. It was later
+traced to 1.20.1 Forge still using vanilla Quick Play, which omitted the Forge status
+metadata negotiated by the multiplayer ping. Forge and NeoForge now share the generated
+ping-then-connect test bridge; two consecutive Forge runs passed all 17 current checks.
 
 ## Catalog-created generated runtime projects (2026-09-12)
 
@@ -567,12 +569,10 @@ partial-stack capacity, disconnect/reconnect, or the broader release acceptance 
 
 ## Next migration work
 
-1. Diagnose the intermittent legacy login stall and establish repeatable launches.
-   Extend inventory coverage to full-inventory close/drop, partial-stack capacity,
-   and disconnect/reconnect, preserving the completed eleven-check evidence.
-   Extend the completed focused matrix to the remaining foundation and edge-case
-   assertions. Keep it separate from startup evidence and resolve the documented
-   player-inventory lookup limitation.
+1. Extend inventory coverage to full-inventory close/drop, partial-stack capacity,
+   and disconnect/reconnect, preserving the completed 17-check evidence. Keep edge-case
+   gameplay separate from startup evidence and resolve the documented player-inventory
+   lookup limitation.
 2. Retire reference source trees only after their complete in-game parity gates pass.
    Generated project entry stubs have been replaced by catalog-created descriptors
    and shared build-family scripts; reference fixture builds remain separate.

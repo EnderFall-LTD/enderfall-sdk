@@ -75,7 +75,7 @@ final class LegacyClientHooksEmitter {
                 static void install(IEventBus modBus, RuntimeModContext context,
                                     Collection<LegacyForgeWorkbenchBinding> workbenches) {
                     AtomicLong tick = new AtomicLong();
-                    LegacyNeoForgeAutomaticConnection automaticConnection = automaticConnection(context);
+                    LegacyFmlAutomaticConnection automaticConnection = automaticConnection(context);
                     modBus.addListener((FMLClientSetupEvent event) -> event.enqueueWork(() -> {
                         workbenches.forEach(binding -> MenuScreens.register(
                                 binding.menuType().get(), LegacyForgeWorkbenchScreen::new));
@@ -157,8 +157,9 @@ final class LegacyClientHooksEmitter {
                     LegacyForgePortableMenuScreen.close(sessionId);
                 }
             
-                private static LegacyNeoForgeAutomaticConnection automaticConnection(RuntimeModContext context) {
-                    if (!context.platform().targetId().equals("1.20.1-neoforge")
+                private static LegacyFmlAutomaticConnection automaticConnection(RuntimeModContext context) {
+                    String target = context.platform().targetId();
+                    if ((!target.equals("1.20.1-forge") && !target.equals("1.20.1-neoforge"))
                             || !"true".equalsIgnoreCase(System.getenv("ENDERFALL_CONNECTION_SMOKE"))) {
                         return null;
                     }
@@ -177,19 +178,19 @@ final class LegacyClientHooksEmitter {
                         if (port < 1 || port > 65_535) {
                             throw new IllegalArgumentException("port is outside 1-65535");
                         }
-                        return new LegacyNeoForgeAutomaticConnection(port);
+                        return new LegacyFmlAutomaticConnection(port);
                     } catch (RuntimeException exception) {
-                        throw new IllegalStateException("Invalid EnderFall legacy NeoForge smoke server port: "
+                        throw new IllegalStateException("Invalid EnderFall legacy Forge-family smoke server port: "
                                 + portValue, exception);
                     }
                 }
             
                 /**
-                 * NeoForge 47.1.x needs the Forge status-ping data before its login handshake.
-                 * Vanilla Quick Play connects without that ping, so the process test performs
-                 * the same ping-then-connect sequence as the multiplayer screen.
+                 * Legacy Forge-family login needs the Forge status-ping data before its handshake.
+                 * Vanilla Quick Play connects without that ping, so the process test performs the
+                 * same ping-then-connect sequence as the multiplayer screen on both loaders.
                  */
-                private static final class LegacyNeoForgeAutomaticConnection {
+                private static final class LegacyFmlAutomaticConnection {
                     private static final long START_TICK = 40L;
                     private final ServerData server;
                     private final ServerAddress address;
@@ -197,11 +198,11 @@ final class LegacyClientHooksEmitter {
                     private boolean pingStarted;
                     private boolean connectionStarted;
             
-                    private LegacyNeoForgeAutomaticConnection(int port) {
+                    private LegacyFmlAutomaticConnection(int port) {
                         String endpoint = SMOKE_LOOPBACK_HOST + ':' + port;
                         server = new ServerData("EnderFall same-loader smoke", endpoint, false);
                         address = new ServerAddress(SMOKE_LOOPBACK_HOST, port);
-                        LOGGER.info("ENDERFALL_LEGACY_NEOFORGE_CONNECTOR_READY {}", address);
+                        LOGGER.info("ENDERFALL_LEGACY_FML_CONNECTOR_READY {}", address);
                     }
             
                     private void tick(long tick) {
@@ -212,7 +213,7 @@ final class LegacyClientHooksEmitter {
                                 // This callback only signals a changed favicon, not a completed ping.
                                 pinger.pingServer(server, () -> { });
                             } catch (UnknownHostException exception) {
-                                throw new IllegalStateException("Cannot resolve EnderFall legacy NeoForge smoke server "
+                                throw new IllegalStateException("Cannot resolve EnderFall legacy Forge-family smoke server "
                                         + server.ip, exception);
                             }
                         }
@@ -223,7 +224,7 @@ final class LegacyClientHooksEmitter {
                         if (pingStarted && !connectionStarted && server.ping >= 0L && server.forgeData != null) {
                             connectionStarted = true;
                             pinger.removeAll();
-                            LOGGER.info("ENDERFALL_LEGACY_NEOFORGE_PING_READY {}", server.ip);
+                            LOGGER.info("ENDERFALL_LEGACY_FML_PING_READY {}", server.ip);
                             ConnectScreen.startConnecting(new TitleScreen(), minecraft, address, server, true);
                         }
                     }

@@ -24,7 +24,7 @@ class LegacyFmlGenerationTest {
     // Independently hashed working 1.20.1 reference sources, shared by both loaders.
     private static final Map<String, String> REFERENCE_JAVA_HASHES = Map.ofEntries(
             Map.entry("EnderfallForgeRuntime.java", "a4208d6dc644248b14f0cd1ee2102dba7c924217933d49e294641c3b04f66a31"),
-            Map.entry("LegacyForgeClientHooks.java", "cf60052ca7b0cea5ed54f35b1a4ed7ba6ea8e8b4b2a4e41124585c8aad1e198e"),
+            Map.entry("LegacyForgeClientHooks.java", "88f4f3a06d922c9f17fa5796f4a49badab1f3e62d268ea69ee184633e7ad2b1a"),
             Map.entry("LegacyForgeClientCommandBridge.java", "a44cee2dcf8e62cdb58a62437392d9e7b94c0cce36af609d591fcb23d012e066"),
             Map.entry("LegacyForgeClientScreenBridge.java", "6dab1bc679ebfb13f2e49de21ba94105c28e5471d5cf786d5637490b0e7d2169"),
             Map.entry("LegacyForgeCommandBridge.java", "a2c0a1b471efc62005537185fbc486bd3623e63e9db415dd2e67ae69d975f6a4"),
@@ -49,8 +49,8 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "93e1f88ab5d16b9176af67b98bba0a2cb5b758c25830edea580c0d8b3b783e02"
-                    : "9bb934f59fd03340e03521191c5e28a5d183e7ef66cc879a5355ff6971e3ca76", result.sha256());
+                    ? "c68cd85d3cfb978763a5263bb26788f82a1314da6d3a99666166f18ecddb05ff"
+                    : "78db8792c0b4b346de72c5c397d3364a0a43306541b89703b3274339a8db6d47", result.sha256());
             assertEquals(18, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());
@@ -96,6 +96,9 @@ class LegacyFmlGenerationTest {
             String source = Files.readString(output.resolve("sources/" + PACKAGE_PATH + "LegacyForgeClientHooks.java"));
             assertTrue(source.contains("pinger.pingServer(server, () -> { });"));
             assertTrue(source.contains("pingStarted && !connectionStarted && server.ping >= 0L && server.forgeData != null"));
+            assertTrue(source.contains("target.equals(\"1.20.1-forge\")"));
+            assertTrue(source.contains("target.equals(\"1.20.1-neoforge\")"));
+            assertTrue(source.contains("ENDERFALL_LEGACY_FML_PING_READY"));
             assertFalse(source.contains("pingComplete"));
         }
     }

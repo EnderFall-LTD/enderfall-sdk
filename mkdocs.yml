@@ -20,6 +20,7 @@ nav:
   - Compatibility: compatibility.md
   - Portable API: portable-api.md
   - General client screens: client-ui.md
+  - Authored inventories: authored-inventories.md
   - Registration: registration.md
   - Portable items: portable-items.md
   - Furniture port: furniture-port.md
@@ -40,6 +41,7 @@ nav:
   - Networking: networking.md
   - Targets: targets.md
   - Testing and releases: testing-and-releases.md
+  - Release-candidate checklist: release-candidate.md
   - Gameplay tests: gameplay-testing.md
   - Repository and services: repository-and-services.md
   - Publishing: publishing.md

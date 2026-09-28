@@ -79,6 +79,19 @@ public final class ContractGameplay {
         require(session.crafts == (session.stage == Stage.FIRST ? 1 : 2), "Unexpected duplicate craft callback");
     }
 
+    public void commandExecuted(uk.co.enderfall.sdk.api.command.CommandContext command) {
+        if (!enabled()) return;
+        UUID player = command.sourcePlayerId().orElseThrow(
+                () -> new IllegalStateException("Contract command was not executed by a player"));
+        require("alpha".equals(command.arguments().get("word")), "Wrong command word argument");
+        require("hello world".equals(command.arguments().get("message")), "Wrong command string argument");
+        require(Integer.valueOf(3).equals(command.arguments().get("count")), "Wrong command integer argument");
+        require(Boolean.TRUE.equals(command.arguments().get("enabled")), "Wrong command boolean argument");
+        require(!command.arguments().containsKey("player"), "Optional player argument should be absent");
+        marker("COMMAND_EXECUTED", player);
+        acknowledge(player, "command-complete");
+    }
+
     private void receive(String message, NetworkContext network) {
         if (!enabled()) return;
         if (network.receivedDirection() == PacketDirection.CLIENTBOUND) {

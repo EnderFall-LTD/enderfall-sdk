@@ -2,6 +2,20 @@
 
 ## 0.1.0-beta.1 - unreleased
 
+- Added a fail-closed release workflow that verifies fresh Windows/Linux consumer
+  builds, reproducible checksums, the starter template, all nine dedicated-server,
+  client/UI, and connected-gameplay targets, signed Maven Central contents, Plugin
+  Portal metadata, SBOMs, provenance, and the protected manual acceptance sign-off.
+- Expanded connected gameplay acceptance to 17 independent checks covering portable
+  registration, dependency detection, config loading, listener isolation, player
+  actions, live command execution, synchronized menus, networking, normal and
+  shift-click crafting, rejection paths, input return, and persistent menu state.
+- Added `verifyReleaseMatrix`, which binds every runtime report and required log
+  checkpoint to the exact release commit and rejects missing, duplicate, stale, or
+  inconsistent target evidence.
+- Fixed intermittent 1.20.1 Forge development-client login stalls by using the same
+  generated Forge status-ping negotiation already required by legacy NeoForge instead
+  of vanilla Quick Play; two consecutive Forge gameplay runs passed after the change.
 - Added `verifyGameplayMatrix` to audit explicitly ordered gameplay reports against
   all nine catalog targets, matching portable-source hashes, and actual log checkpoints.
   Newer failed attempts cannot be masked by older passes; report/log hashes are retained.
@@ -49,5 +63,5 @@
   concurrent native preparation and game launches against the same consumer project.
 - Allow comma-separated target selections in standalone client/server smoke tasks.
 
-This beta is not a runtime release until the remaining in-game foundation assertions and
-manual release-candidate checks pass.
+Publication remains blocked until the automated workflow and the documented manual
+release-candidate checks pass against the exact commit selected for release.

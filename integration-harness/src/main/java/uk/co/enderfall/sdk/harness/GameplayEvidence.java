@@ -11,6 +11,12 @@ final class GameplayEvidence {
     private final Map<String, CountDownLatch> client = new LinkedHashMap<>();
 
     GameplayEvidence(String target) {
+        add(server, target, "registrationReady", "FOUNDATION_REGISTRATION_READY");
+        add(server, target, "dependencyReady", "FOUNDATION_DEPENDENCY_READY");
+        add(server, target, "configReady", "FOUNDATION_CONFIG_READY");
+        add(server, target, "listenerIsolation", "FOUNDATION_LISTENER_ISOLATION_READY");
+        add(server, target, "playerActionsReady", "PLAYER_ACTIONS_READY");
+        add(server, target, "commandExecuted", "COMMAND_EXECUTED");
         add(server, target, "menuAction", "MENU_ACTION");
         add(client, target, "menuStateConfirmed", "MENU_STATE_CONFIRMED");
         add(client, target, "insufficientRejected", "INSUFFICIENT_REJECTED");

@@ -183,3 +183,21 @@ tasks.register<JavaExec>("verifyGameplayMatrix") {
         args(*selection.split(',').map(String::trim).filter(String::isNotEmpty).toTypedArray())
     }
 }
+
+tasks.register<JavaExec>("verifyReleaseMatrix") {
+    group = "verification"
+    description = "Audits fresh server, client/UI, and foundation-gameplay evidence for every release target."
+    dependsOn(tasks.named("classes"))
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "uk.co.enderfall.sdk.harness.ReleaseMatrixMain"
+    val evidenceRoot = providers.gradleProperty("enderfall.releaseEvidenceRoot")
+        .map { rootProject.file(it).absolutePath }
+    val revision = providers.gradleProperty("enderfall.releaseRevision")
+    doFirst {
+        require(evidenceRoot.isPresent) { "Supply -Penderfall.releaseEvidenceRoot=<downloaded evidence directory>" }
+        require(revision.isPresent) { "Supply -Penderfall.releaseRevision=<full Git SHA>" }
+        args(rootProject.layout.projectDirectory.asFile.absolutePath,
+            evidenceRoot.get(), revision.get(),
+            rootProject.layout.buildDirectory.file("reports/release-matrix/matrix.json").get().asFile.absolutePath)
+    }
+}

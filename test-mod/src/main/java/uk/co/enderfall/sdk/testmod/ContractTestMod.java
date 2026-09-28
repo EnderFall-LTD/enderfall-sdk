@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import uk.co.enderfall.sdk.api.EnderfallMod;
 import uk.co.enderfall.sdk.api.ModContext;
 import uk.co.enderfall.sdk.api.command.Arguments;
@@ -167,6 +168,11 @@ public final class ContractTestMod implements EnderfallMod {
                     if (event.side() == uk.co.enderfall.sdk.api.event.TickEvent.Side.SERVER
                             && event.tick() == 1 && config.get(enabled)) {
                         context.logger().debug("Contract fixture active with maximum {}", config.get(maximum));
+                        if (config.get(maximum) != 8) {
+                            throw new IllegalStateException("Portable config did not retain its validated default");
+                        }
+                        context.logger().info("ENDERFALL_GAMEPLAY_FOUNDATION_CONFIG_READY {}",
+                                context.platform().targetId());
                     }
                     if (event.side() == uk.co.enderfall.sdk.api.event.TickEvent.Side.SERVER) {
                         for (UUID playerId : pendingNetworkSmokes) {
@@ -184,6 +190,20 @@ public final class ContractTestMod implements EnderfallMod {
                         }
                     }
                 });
+        AtomicBoolean injectedListenerFailure = new AtomicBoolean();
+        context.events().subscribe(SdkEvents.TICK, event -> {
+            if (event.side() == uk.co.enderfall.sdk.api.event.TickEvent.Side.SERVER
+                    && injectedListenerFailure.compareAndSet(false, true)) {
+                throw new IllegalStateException("Intentional contract listener failure");
+            }
+        });
+        context.events().subscribe(SdkEvents.TICK, event -> {
+            if (event.side() == uk.co.enderfall.sdk.api.event.TickEvent.Side.SERVER
+                    && event.tick() == 1 && injectedListenerFailure.get()) {
+                context.logger().info("ENDERFALL_GAMEPLAY_FOUNDATION_LISTENER_ISOLATION_READY {}",
+                        context.platform().targetId());
+            }
+        });
         context.events().subscribe(SdkEvents.LIFECYCLE,
                 event -> context.logger().info("Lifecycle {} on {}", event.stage(), context.platform().targetId()));
         context.events().subscribe(SdkEvents.PLAYER, event -> {
@@ -195,6 +215,8 @@ public final class ContractTestMod implements EnderfallMod {
                 context.players().actionBar(event.playerId(), "EnderFall SDK player actions ready");
                 context.logger().info("ENDERFALL_PLAYER_ACTIONS_READY {} health={}/{}",
                         context.platform().targetId(), snapshot.health(), snapshot.maximumHealth());
+                context.logger().info("ENDERFALL_GAMEPLAY_PLAYER_ACTIONS_READY {}",
+                        context.platform().targetId());
                 pendingNetworkSmokes.add(event.playerId());
             } else {
                 pendingNetworkSmokes.remove(event.playerId());
@@ -214,10 +236,12 @@ public final class ContractTestMod implements EnderfallMod {
         if (!context.platform().isModLoaded("enderfall_sdk")) {
             throw new IllegalStateException("Required EnderFall SDK runtime was not reported as loaded");
         }
+        context.logger().info("ENDERFALL_GAMEPLAY_FOUNDATION_DEPENDENCY_READY {}",
+                context.platform().targetId());
 
         context.commands().register(CommandSpec.builder("enderfall_contract")
                 .description("Exercises the loader-neutral command bridge.")
-                .permissionLevel(2)
+                .permissionLevel(0)
                 .argument(WORD)
                 .argument(MESSAGE)
                 .argument(COUNT)
@@ -225,6 +249,7 @@ public final class ContractTestMod implements EnderfallMod {
                 .argument(PLAYER)
                 .suggests((command, remaining) -> List.of("alpha", "beta"))
                 .executes(command -> {
+                    gameplay.commandExecuted(command);
                     command.reply("word=" + command.argument(WORD)
                             + ", message=" + command.argument(MESSAGE)
                             + ", count=" + command.argument(COUNT)
@@ -232,6 +257,11 @@ public final class ContractTestMod implements EnderfallMod {
                             + ", player=" + command.arguments().getOrDefault(PLAYER.name(), "none"));
                     return 1;
                 })
+                .build());
+        context.commands().register(CommandSpec.builder("enderfall_admin_contract")
+                .description("Exercises command permission registration.")
+                .permissionLevel(4)
+                .executes(command -> 1)
                 .build());
         context.commands().register(CommandSpec.builder("enderfall_contract_say")
                 .description("Exercises the portable greedy-string argument and translated reply.")
@@ -271,6 +301,8 @@ public final class ContractTestMod implements EnderfallMod {
             data.translation("en_gb", "command.enderfall_sdk_test.say", "%s");
             data.translation("en_us", "tag.item.enderfall_sdk_test.contract_items", "Contract Items");
         });
+        context.logger().info("ENDERFALL_GAMEPLAY_FOUNDATION_REGISTRATION_READY {}",
+                context.platform().targetId());
     }
 
     private enum Mode {

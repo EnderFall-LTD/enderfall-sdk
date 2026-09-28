@@ -231,10 +231,6 @@ subprojects {
                 } else {
                     dependsOn(rootProject.tasks.named("verifyBridgeCoverage"))
                 }
-                if (providers.gradleProperty("enderfall.referenceRuntimes").orNull == "false"
-                    && !isolatedGeneratedBridgeSmokePublication) {
-                    doFirst { error("Publishing requires reference parity until the reference-runtime retirement gate is complete.") }
-                }
             }
         }
         extensions.configure<PublishingExtension> {
@@ -375,6 +371,38 @@ val verifyCentralBundleRepository = tasks.register("verifyCentralBundleRepositor
                     "Missing .$extension companion for ${published.relativeTo(repositoryRoot)}"
                 }
             }
+        }
+        val coordinatedVersion = project.version.toString()
+        expectedComponents.filterNot { it == "enderfall-sdk-bom" || it == "uk.co.enderfall.sdk.gradle.plugin" }
+            .forEach { component ->
+                val versionDirectory = groupRoot.resolve("$component/$coordinatedVersion")
+                val baseName = "$component-$coordinatedVersion"
+                val binary = versionDirectory.resolve("$baseName.jar")
+                check(binary.isFile) { "Missing binary JAR for $component" }
+                check(versionDirectory.resolve("$baseName-sources.jar").isFile) {
+                    "Missing sources JAR for $component"
+                }
+                check(versionDirectory.resolve("$baseName-javadoc.jar").isFile) {
+                    "Missing Javadoc JAR for $component"
+                }
+                java.util.zip.ZipFile(binary).use { zip ->
+                    listOf("META-INF/LICENSE-enderfall-sdk", "META-INF/NOTICE-enderfall-sdk",
+                        "META-INF/THIRD-PARTY-NOTICES-enderfall-sdk.md").forEach { entry ->
+                        check(zip.getEntry(entry) != null) { "Missing $entry in ${binary.name}" }
+                    }
+                }
+            }
+        expectedComponents.forEach { component ->
+            val pom = groupRoot.resolve("$component/$coordinatedVersion/$component-$coordinatedVersion.pom")
+            check(pom.isFile) { "Missing POM for $component" }
+            val contents = pom.readText(Charsets.UTF_8)
+            listOf("<name>", "<description>", "<url>", "<licenses>", "<developers>", "<scm>")
+                .forEach { element ->
+                    // Gradle plugin marker POMs intentionally delegate descriptive metadata to their implementation.
+                    if (component != "uk.co.enderfall.sdk.gradle.plugin") {
+                        check(contents.contains(element)) { "Missing $element in ${pom.name}" }
+                    }
+                }
         }
     }
 }
@@ -593,12 +621,5 @@ tasks.register("releaseChecksums") {
 tasks.register("verifyRuntimeMatrix") {
     group = "verification"
     description = "Release gate for complete real-target foundation-feature acceptance."
-    doLast {
-        throw GradleException(
-            "Release blocked: all target-native adapters compile, lifecycle smoke tests pass, and the " +
-                "exact same-loader connection matrix completes its SDK packet round trip, but the complete " +
-                "in-game foundation-feature matrix has not been accepted yet. Those results are separate " +
-                "from build, launch, and network-smoke proof."
-        )
-    }
+    dependsOn(":integration-harness:verifyReleaseMatrix")
 }

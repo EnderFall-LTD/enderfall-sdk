@@ -73,6 +73,14 @@ audits explicitly ordered reports and their actual logs for every catalog target
 It audits historical focused-scenario evidence, not release readiness or the latest
 edited binaries; newer failures supersede older passes.
 
+The release workflow uses a stricter, fresh-evidence path. Each target job runs the
+generated-only dedicated-server, client/UI, and connected gameplay lanes, stamps its
+artifact with the workflow Git SHA, and uploads its reports plus logs. The downstream
+`verifyRuntimeMatrix` task accepts exactly nine artifacts, rereads all checkpoints,
+requires the same portable-source hash, and rejects stale revisions, missing lanes,
+unknown assertion keys, false checks, failure text, dirty exit codes, and failure markers.
+This task intentionally has no permissive local default.
+
 `sameLoaderSmoke` launches a dedicated server and a separate client for the same exact
 Minecraft/loader target, auto-connects over loopback, requires a three-leg SDK packet
 round trip, opens and renders the synchronized contract screen, and then shuts both
@@ -85,6 +93,7 @@ The release gate additionally requires all nine target contract suites, Linux/Xv
 client and dedicated-server smoke tests, every same-loader external connection test,
 Windows/Linux fresh-template builds, reproducibility comparison, signature/checksum/SBOM
 inspection, and a manual launcher/dedicated-server release-candidate pass.
+The exact manual steps are recorded in the [release-candidate checklist](release-candidate.md).
 
 A green Java/Gradle build is not evidence that Minecraft started or that a real client
 exchanged packets with a dedicated server. The process-level server report, client report,

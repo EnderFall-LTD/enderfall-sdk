@@ -31,6 +31,10 @@ final class LegacyClientHooksEmitter {
             
             import java.net.UnknownHostException;
             import java.util.Collection;
+            import java.util.LinkedHashMap;
+            import java.util.Map;
+            import java.util.concurrent.CompletableFuture;
+            import java.util.concurrent.CompletionStage;
             import java.util.concurrent.atomic.AtomicBoolean;
             import java.util.concurrent.atomic.AtomicLong;
             import java.util.function.Consumer;
@@ -44,11 +48,13 @@ final class LegacyClientHooksEmitter {
             import net.minecraft.client.multiplayer.resolver.ServerAddress;
             import net.minecraftforge.common.MinecraftForge;
             import net.minecraftforge.event.GameShuttingDownEvent;
+            import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
             import net.minecraftforge.event.TickEvent;
             import net.minecraftforge.eventbus.api.IEventBus;
             import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
             import net.minecraftforge.network.simple.SimpleChannel;
             import org.slf4j.Logger;
+            import uk.co.enderfall.sdk.api.ResourceId;
             import uk.co.enderfall.sdk.api.event.LifecycleEvent;
             import uk.co.enderfall.sdk.api.event.SdkEvents;
             import uk.co.enderfall.sdk.runtime.IntegrationTestControl;
@@ -61,6 +67,7 @@ final class LegacyClientHooksEmitter {
                 private static final Logger LOGGER = LogUtils.getLogger();
                 private static final String SMOKE_LOOPBACK_HOST = "127.0.0.1";
                 private static final AtomicBoolean AUTOMATIC_CONNECTION_INSTALLED = new AtomicBoolean();
+                private static final Map<ResourceId, Runnable> RESOURCE_RELOAD_LISTENERS = new LinkedHashMap<>();
             
                 private LegacyForgeClientHooks() {
                 }
@@ -75,6 +82,17 @@ final class LegacyClientHooksEmitter {
                         context.runtimeEvents().publish(
                                 SdkEvents.LIFECYCLE, new LifecycleEvent(LifecycleEvent.Stage.CLIENT_STARTED));
                     }));
+                    modBus.addListener((RegisterClientReloadListenersEvent event) -> {
+                        synchronized (RESOURCE_RELOAD_LISTENERS) {
+                            RESOURCE_RELOAD_LISTENERS.forEach((id, listener) -> {
+                                if (id.namespace().equals(context.modId())) {
+                                    event.registerReloadListener(
+                                            (net.minecraft.server.packs.resources.ResourceManagerReloadListener)
+                                                    manager -> listener.run());
+                                }
+                            });
+                        }
+                    });
                     MinecraftForge.EVENT_BUS.addListener((GameShuttingDownEvent event) -> context.runtimeEvents().publish(
                             SdkEvents.LIFECYCLE, new LifecycleEvent(LifecycleEvent.Stage.CLIENT_STOPPING)));
                     MinecraftForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent event) -> {
@@ -95,6 +113,24 @@ final class LegacyClientHooksEmitter {
                             }
                         }
                     });
+                }
+
+                static void registerResourceReloadListener(ResourceId id, Runnable listener) {
+                    synchronized (RESOURCE_RELOAD_LISTENERS) {
+                        if (RESOURCE_RELOAD_LISTENERS.putIfAbsent(id, listener) != null) {
+                            throw new IllegalStateException("Duplicate client resource reload listener " + id);
+                        }
+                    }
+                }
+
+                static CompletionStage<Void> reloadResources() {
+                    Minecraft client = Minecraft.getInstance();
+                    CompletableFuture<Void> completion = new CompletableFuture<>();
+                    client.execute(() -> client.reloadResourcePacks().whenComplete((unused, failure) -> {
+                        if (failure == null) completion.complete(null);
+                        else completion.completeExceptionally(failure);
+                    }));
+                    return completion;
                 }
             
                 static void sendToServer(SimpleChannel channel, byte[] payload) {

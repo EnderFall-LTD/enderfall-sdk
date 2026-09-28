@@ -29,7 +29,7 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "EnderfallFabricRuntime.java",
                     "d373ffde76a07543b99d7da37e9ec3ab7da7d8d862eac426b23ebd0785cdb94e"),
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
-                    "b8e1694418bf577c8c71c1a8654d62f7cbfa7dc22ec40d55b6b2e67b2140404d"),
+                    "e434ddcb643d0a8d3a7fd69602b7ef35f82f7e04475ad8f210051664ee0ff721"),
             Map.entry(PACKAGE_PATH + "FabricClientScreenBridge.java",
                     "dbf30acd770ce6a47f46875b552260163d1fa7769c0eb346e1989633aaa55eb5"),
             Map.entry(PACKAGE_PATH + "Fabric26CommandBridge.java",
@@ -37,7 +37,7 @@ class Fabric262GenerationTest {
             Map.entry(PACKAGE_PATH + "FabricConsumerBootstrap.java",
                     "c3414e23f0805220fbeb7cde9baef4a96b564dab43dd050c7c0773d82722b0b5"),
             Map.entry(PACKAGE_PATH + "Fabric26PlatformAdapter.java",
-                    "04b86b9756cc66e6259e0efafde53b57d51709b04c67397ef5f6b66a7258288d"),
+                    "7bb0832afc49b0605580250abd0aece9dead9d9efe269b3e343ed63d7157984b"),
             Map.entry(PACKAGE_PATH + "FabricPlatformInfo.java",
                     "097a350ff5517bc58ef656db4c606b516ef8631c8313a1a7674c7b40beaa0424"),
             Map.entry(PACKAGE_PATH + "Fabric26PortableMenuScreen.java",
@@ -81,7 +81,7 @@ class Fabric262GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("3e314d2116861abff43cbee528e52a2eeabeede546f7d18652e0a449ec9ccaf0",
+        assertEquals("4e1560a4c44dd453d2b61004df1ac6885092dfd7c168eb03ac329a202055e61c",
                 first.sha256());
         assertEquals(18, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));

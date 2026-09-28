@@ -23,7 +23,13 @@ final class FabricClientHooksEmitter {
             throw new BridgeGenerationException(target.id() + " requires client hook menu, screen, and payload declarations");
         }
         String content = HOOKS.formatted((legacy ? LEGACY_IMPORTS : MODERN_IMPORTS).stripTrailing() + "\n",
-                legacy ? LEGACY_TRANSPORT : MODERN_TRANSPORT, legacy ? "Fabric1201" : "Fabric");
+                legacy ? LEGACY_TRANSPORT : MODERN_TRANSPORT, legacy ? "Fabric1201" : "Fabric",
+                target.minecraftVersion() == uk.co.enderfall.sdk.bridge.model.MinecraftVersion.V26_2
+                        ? "net.minecraft.resources.Identifier" : "net.minecraft.resources.ResourceLocation",
+                legacy ? "new net.minecraft.resources.ResourceLocation(id.namespace(), id.path())"
+                        : target.minecraftVersion() == uk.co.enderfall.sdk.bridge.model.MinecraftVersion.V26_2
+                                ? "net.minecraft.resources.Identifier.fromNamespaceAndPath(id.namespace(), id.path())"
+                                : "net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path())");
         return List.of(new RuntimeSource(canonical, root + (legacy ? "Fabric1201" : "Fabric") + "ClientHooks.java",
                 content.getBytes(StandardCharsets.UTF_8)));
     }
@@ -31,14 +37,22 @@ final class FabricClientHooksEmitter {
     private static final String MODERN_IMPORTS = """
             import java.util.Optional;
             import java.util.concurrent.atomic.AtomicLong;
+            import java.util.concurrent.CompletableFuture;
+            import java.util.concurrent.CompletionStage;
             import java.util.function.Consumer;
             import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
             import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
             import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+            import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+            import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
+            import net.minecraft.client.Minecraft;
             import net.minecraft.client.gui.screens.MenuScreens;
             import net.minecraft.network.chat.Component;
             import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
             import net.minecraft.world.inventory.MenuType;
+            import net.minecraft.server.packs.PackType;
+            import net.minecraft.server.packs.resources.ResourceManager;
+            import uk.co.enderfall.sdk.api.ResourceId;
             import uk.co.enderfall.sdk.api.event.LifecycleEvent;
             import uk.co.enderfall.sdk.api.event.SdkEvents;
             import uk.co.enderfall.sdk.api.event.TickEvent;
@@ -54,15 +68,23 @@ final class FabricClientHooksEmitter {
     private static final String LEGACY_IMPORTS = """
             import java.util.Optional;
             import java.util.concurrent.atomic.AtomicLong;
+            import java.util.concurrent.CompletableFuture;
+            import java.util.concurrent.CompletionStage;
             import java.util.function.Consumer;
             import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
             import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
             import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
             import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+            import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+            import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
+            import net.minecraft.client.Minecraft;
             import net.minecraft.network.chat.Component;
             import net.minecraft.client.gui.screens.MenuScreens;
             import net.minecraft.world.inventory.MenuType;
             import net.minecraft.resources.ResourceLocation;
+            import net.minecraft.server.packs.PackType;
+            import net.minecraft.server.packs.resources.ResourceManager;
+            import uk.co.enderfall.sdk.api.ResourceId;
             import uk.co.enderfall.sdk.api.event.LifecycleEvent;
             import uk.co.enderfall.sdk.api.event.SdkEvents;
             import uk.co.enderfall.sdk.api.event.TickEvent;
@@ -145,6 +167,25 @@ final class FabricClientHooksEmitter {
                             client.stop();
                         }
                     });
+                }
+
+                @SuppressWarnings("deprecation")
+                static void registerResourceReloadListener(ResourceId id, Runnable listener) {
+                    ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(
+                            new SimpleSynchronousResourceReloadListener() {
+                                @Override public %4$s getFabricId() { return %5$s; }
+                                @Override public void onResourceManagerReload(ResourceManager manager) { listener.run(); }
+                            });
+                }
+
+                static CompletionStage<Void> reloadResources() {
+                    Minecraft client = Minecraft.getInstance();
+                    CompletableFuture<Void> completion = new CompletableFuture<>();
+                    client.execute(() -> client.reloadResourcePacks().whenComplete((unused, failure) -> {
+                        if (failure == null) completion.complete(null);
+                        else completion.completeExceptionally(failure);
+                    }));
+                    return completion;
                 }
             
             %2$s    static void registerWorkbench(MenuType<%3$sWorkbenchMenu> menuType) {

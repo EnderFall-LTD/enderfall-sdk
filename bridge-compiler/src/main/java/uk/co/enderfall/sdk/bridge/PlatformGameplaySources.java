@@ -152,6 +152,20 @@ final class PlatformGameplaySources {
                         }
                     
                     """;
+            case REGISTER_CLIENT_RESOURCE_RELOAD_LISTENER -> """
+                        @Override
+                        public void registerClientResourceReloadListener(ResourceId id, Runnable listener) {
+                            ${ClientHooks}.registerResourceReloadListener(id, listener);
+                        }
+
+                    """;
+            case RELOAD_CLIENT_RESOURCES -> """
+                        @Override
+                        public java.util.concurrent.CompletionStage<Void> reloadClientResources() {
+                            return ${ClientHooks}.reloadResources();
+                        }
+
+                    """;
             case REGISTER_CLIENT_SCREEN -> """
                         @Override
                         public void registerClientScreen(ResourceId id,

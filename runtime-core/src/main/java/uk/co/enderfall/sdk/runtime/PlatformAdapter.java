@@ -22,6 +22,14 @@ import uk.co.enderfall.sdk.api.ui.MenuState;
 
 /** Internal boundary implemented once by each Minecraft/loader target. */
 public interface PlatformAdapter {
+    default void registerClientResourceReloadListener(ResourceId id, Runnable listener) {
+        throw new UnsupportedOperationException("Portable client resources are unavailable");
+    }
+
+    default java.util.concurrent.CompletionStage<Void> reloadClientResources() {
+        throw new UnsupportedOperationException("Portable client resources are unavailable");
+    }
+
     default void registerClientScreen(ResourceId id,
             uk.co.enderfall.sdk.api.client.ui.ClientScreenSpec spec,
             java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.client.ui.PortableClientScreen> factory) {

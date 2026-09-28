@@ -23,6 +23,8 @@ final class ClientHooksEmitter {
             throw new BridgeGenerationException(target.id() + " requires client hook screen, binding, and payload declarations");
         }
         boolean extracted = target.menuAbi() == MenuAbi.V26_2;
+        boolean legacyReloadEvent = target.minecraftVersion()
+                == uk.co.enderfall.sdk.bridge.model.MinecraftVersion.V1_21_1;
         String setup = extracted
                 ? "        modBus.addListener((FMLClientSetupEvent event) -> event.enqueueWork(() -> {\n            context.runtimeEvents().publish(\n                    SdkEvents.LIFECYCLE, new LifecycleEvent(LifecycleEvent.Stage.CLIENT_STARTED));\n        }));\n"
                 : "        modBus.addListener((FMLClientSetupEvent event) -> event.enqueueWork(() -> context.runtimeEvents().publish(\n                SdkEvents.LIFECYCLE, new LifecycleEvent(LifecycleEvent.Stage.CLIENT_STARTED))));\n";
@@ -30,7 +32,37 @@ final class ClientHooksEmitter {
                 extracted ? "import net.neoforged.neoforge.client.network.ClientPacketDistributor;\n" : "",
                 extracted ? "" : "import net.neoforged.neoforge.network.PacketDistributor;\n",
                 extracted ? "NeoForge26" : "NeoForge", setup,
-                extracted ? "ClientPacketDistributor" : "PacketDistributor");
+                extracted ? "ClientPacketDistributor" : "PacketDistributor",
+                legacyReloadEvent
+                        ? "import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;\n"
+                        : "import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;\n",
+                legacyReloadEvent ? """
+                    modBus.addListener((RegisterClientReloadListenersEvent event) -> {
+                        synchronized (RESOURCE_RELOAD_LISTENERS) {
+                            RESOURCE_RELOAD_LISTENERS.forEach((id, listener) -> {
+                                if (id.namespace().equals(context.modId())) {
+                                    event.registerReloadListener(
+                                            (net.minecraft.server.packs.resources.ResourceManagerReloadListener)
+                                                    manager -> listener.run());
+                                }
+                            });
+                        }
+                    });
+""" : """
+                    modBus.addListener((AddClientReloadListenersEvent event) -> {
+                        synchronized (RESOURCE_RELOAD_LISTENERS) {
+                            RESOURCE_RELOAD_LISTENERS.forEach((id, listener) -> {
+                                if (id.namespace().equals(context.modId())) {
+                                    event.addListener(%s,
+                                            (net.minecraft.server.packs.resources.ResourceManagerReloadListener)
+                                                    manager -> listener.run());
+                                }
+                            });
+                        }
+                    });
+""".formatted(extracted
+                        ? "net.minecraft.resources.Identifier.fromNamespaceAndPath(id.namespace(), id.path())"
+                        : "net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path())"));
         return List.of(new RuntimeSource(canonical, root + (extracted ? "NeoForge26" : "NeoForge") + "ClientHooks.java",
                 content.getBytes(StandardCharsets.UTF_8)));
     }
@@ -40,16 +72,22 @@ final class ClientHooksEmitter {
             package uk.co.enderfall.sdk.runtime.neoforge.v1_21_4;
             
             import java.util.Collection;
+            import java.util.LinkedHashMap;
+            import java.util.Map;
+            import java.util.concurrent.CompletableFuture;
+            import java.util.concurrent.CompletionStage;
             import java.util.concurrent.atomic.AtomicLong;
             import java.util.function.Consumer;
             import net.minecraft.client.Minecraft;
             import net.neoforged.bus.api.IEventBus;
             import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
             import net.neoforged.neoforge.client.event.ClientTickEvent;
+            %6$s
             import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
             %1$simport net.neoforged.neoforge.common.NeoForge;
             import net.neoforged.neoforge.event.GameShuttingDownEvent;
             %2$simport uk.co.enderfall.sdk.api.event.LifecycleEvent;
+            import uk.co.enderfall.sdk.api.ResourceId;
             import uk.co.enderfall.sdk.api.event.SdkEvents;
             import uk.co.enderfall.sdk.api.event.TickEvent;
             import uk.co.enderfall.sdk.runtime.IntegrationTestControl;
@@ -59,6 +97,8 @@ final class ClientHooksEmitter {
             import uk.co.enderfall.sdk.api.ui.MenuState;
             
             final class NeoForgeClientHooks {
+                private static final Map<ResourceId, Runnable> RESOURCE_RELOAD_LISTENERS = new LinkedHashMap<>();
+
                 private NeoForgeClientHooks() {
                 }
             
@@ -67,6 +107,7 @@ final class ClientHooksEmitter {
                     AtomicLong tick = new AtomicLong();
                     modBus.addListener((RegisterMenuScreensEvent event) -> workbenches.forEach(binding ->
                             event.register(binding.menuType().get(), %3$sWorkbenchScreen::new)));
+            %7$s
             %4$s        NeoForge.EVENT_BUS.addListener((GameShuttingDownEvent event) -> context.runtimeEvents().publish(
                             SdkEvents.LIFECYCLE, new LifecycleEvent(LifecycleEvent.Stage.CLIENT_STOPPING)));
                     NeoForge.EVENT_BUS.addListener((ClientTickEvent.Pre event) -> context.runtimeEvents().publish(
@@ -78,6 +119,24 @@ final class ClientHooksEmitter {
                             Minecraft.getInstance().stop();
                         }
                     });
+                }
+
+                static void registerResourceReloadListener(ResourceId id, Runnable listener) {
+                    synchronized (RESOURCE_RELOAD_LISTENERS) {
+                        if (RESOURCE_RELOAD_LISTENERS.putIfAbsent(id, listener) != null) {
+                            throw new IllegalStateException("Duplicate client resource reload listener " + id);
+                        }
+                    }
+                }
+
+                static CompletionStage<Void> reloadResources() {
+                    Minecraft client = Minecraft.getInstance();
+                    CompletableFuture<Void> completion = new CompletableFuture<>();
+                    client.execute(() -> client.reloadResourcePacks().whenComplete((unused, failure) -> {
+                        if (failure == null) completion.complete(null);
+                        else completion.completeExceptionally(failure);
+                    }));
+                    return completion;
                 }
             
                 static void sendToServer(NeoForgeRawPayload payload) {

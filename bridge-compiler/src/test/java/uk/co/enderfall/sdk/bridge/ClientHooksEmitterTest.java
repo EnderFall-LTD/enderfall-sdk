@@ -22,7 +22,9 @@ class ClientHooksEmitterTest {
             if (output.isEmpty()) continue;
             assertArrayEquals(output.get(0).content(), ClientHooksEmitter.emitIfPresent(target, PATHS).get(0).content());
         }
-        assertEquals(text("1.21.1-neoforge"), text("1.21.4-neoforge"));
+        assertNotEquals(text("1.21.1-neoforge"), text("1.21.4-neoforge"));
+        assertTrue(text("1.21.1-neoforge").contains("RegisterClientReloadListenersEvent"));
+        assertTrue(text("1.21.4-neoforge").contains("AddClientReloadListenersEvent"));
     }
 
     @Test void rejectsPartialDependenciesWithoutCreatingUnrequestedHooks() throws Exception {
@@ -54,6 +56,8 @@ class ClientHooksEmitterTest {
             assertTrue(source.contains(newer ? "NeoForge26WorkbenchScreen::new" : "NeoForgeWorkbenchScreen::new"));
             assertEquals(newer, source.contains("ClientPacketDistributor.sendToServer(payload);"));
             assertTrue(source.contains("NeoForgePortableMenuScreen.close(sessionId);"));
+            assertTrue(source.contains("reloadResourcePacks()"));
+            assertTrue(source.contains("registerResourceReloadListener"));
         }
     }
 

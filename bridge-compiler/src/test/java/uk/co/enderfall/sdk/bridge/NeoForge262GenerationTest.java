@@ -30,12 +30,12 @@ class NeoForge262GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("54e6809f126a27554e6f2edc7ec8e777f11e3961d3a2e77c42e4de80d778f10a", first.sha256());
+        assertEquals("38b9de067f77eecea7c678f16b29864827ff1a7a02637cdc7d89203adcfc35b4", first.sha256());
         assertEquals(16, first.files().size());
         assertEquals(hashes(firstOutput), hashes(secondOutput));
 
         // Independent hashes of the working reference, not expectations derived from emitted output.
-        assertEquals("21a80fe6660eebe63212de84380778627d4b27948c7ecaea13ebc3f52308af11",
+        assertEquals("1d603685ec63b056928f7b60311aebc0fddf64d27440686fe86ed9b9909ea614",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "NeoForge26PlatformAdapter.java")));
         assertEquals("1f747c9359b431854218b76fdbf4f2c629c5fa551d55adb65723e286e191c2be",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "NeoForgeClientScreenBridge.java")));

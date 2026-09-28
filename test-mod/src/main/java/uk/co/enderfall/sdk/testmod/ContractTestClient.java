@@ -34,13 +34,21 @@ public final class ContractTestClient implements EnderfallClientMod {
         }
         AtomicBoolean clientStarted = new AtomicBoolean();
         AtomicBoolean screenRendered = new AtomicBoolean();
+        AtomicBoolean reloadRequested = new AtomicBoolean();
+        AtomicBoolean reloadCompleted = new AtomicBoolean();
         AtomicBoolean smokeCompleted = new AtomicBoolean();
         AtomicInteger smokeTicks = new AtomicInteger();
+        AtomicInteger resourceReloads = new AtomicInteger();
         ClientScreenRef smokeScreen = context.capabilities().supports(Capability.GENERAL_CLIENT_SCREENS)
                 ? context.screens().register(context.id("client_contract"),
                         ClientScreenSpec.of("EnderFall Client Contract"),
                         () -> new ContractScreen(screenRendered))
                 : null;
+        context.resources().onReload(context.id("client_resources"), () -> {
+            int count = resourceReloads.incrementAndGet();
+            context.logger().info("ENDERFALL_CLIENT_RESOURCES_RELOADED {} {}",
+                    context.platform().targetId(), count);
+        });
         ConfigSpec.Builder clientConfig = ConfigSpec.builder();
         clientConfig.booleanValue("show_diagnostics", true, "Show client contract diagnostics.");
         context.configs().register("client", ConfigScope.CLIENT, clientConfig.build());
@@ -61,11 +69,21 @@ public final class ContractTestClient implements EnderfallClientMod {
                 return;
             }
             int elapsedTicks = smokeTicks.incrementAndGet();
+            if (resourceReloads.get() >= 1 && reloadRequested.compareAndSet(false, true)) {
+                context.resources().reload().whenComplete((unused, failure) -> {
+                    if (failure != null) {
+                        context.logger().error("ENDERFALL_CLIENT_RESOURCES_RELOAD_FAILED", failure);
+                    } else {
+                        reloadCompleted.set(true);
+                    }
+                });
+            }
             if (smokeScreen != null && !screenRendered.get() && elapsedTicks >= 20 && elapsedTicks % 20 == 0) {
                 // Quick-play test worlds can replace a screen opened during CLIENT_STARTED before its first frame.
                 context.screens().open(smokeScreen);
             }
-            if (elapsedTicks >= 20 && (smokeScreen == null || screenRendered.get())
+            if (elapsedTicks >= 20 && resourceReloads.get() >= 2 && reloadCompleted.get()
+                    && (smokeScreen == null || screenRendered.get())
                     && smokeCompleted.compareAndSet(false, true)) {
                 context.logger().info("ENDERFALL_CLIENT_SMOKE_COMPLETE {}", context.platform().targetId());
                 System.out.flush();

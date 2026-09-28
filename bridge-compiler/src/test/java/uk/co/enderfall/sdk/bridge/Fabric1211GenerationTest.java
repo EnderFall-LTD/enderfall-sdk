@@ -33,13 +33,13 @@ class Fabric1211GenerationTest {
             Map.entry(PACKAGE_PATH + "EnderfallFabricRuntime.java",
                     "d373ffde76a07543b99d7da37e9ec3ab7da7d8d862eac426b23ebd0785cdb94e"),
             Map.entry(PACKAGE_PATH + "Fabric1211PlatformAdapter.java",
-                    "3b1c205e5762a5be4a690f5fb09a114003e4e711082b517e1c5aa0e27eec9da2"),
+                    "9a578f973cd5682d382f3eea0c5aa4fbb06fca087f0531cf5b33fb5b65a72143"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchMenu.java",
                     "1b70f6ecc2c9aeaeb31ee8890dd0f62d64ea1ec7106b2ce8185740af5aa54839"),
             Map.entry(PACKAGE_PATH + "Fabric1211WorkbenchRecipe.java",
                     "d5e12ee40bd8c35226a1cf9eb3f49887f8e28e053fe7e86e40ad1b6b1a611798"),
             Map.entry(PACKAGE_PATH + "FabricClientHooks.java",
-                    "b8e1694418bf577c8c71c1a8654d62f7cbfa7dc22ec40d55b6b2e67b2140404d"),
+                    "aa33dfdac650bb9da43594fea3477bf133ecf7314b958a917cf6aa14ecee9a79"),
             Map.entry(PACKAGE_PATH + "FabricClientScreenBridge.java",
                     "4e3110058daf116304fa88c278cdadbde324b36cd5b9ff71cbd10e9bcd622eed"),
             Map.entry(PACKAGE_PATH + "FabricCommandBridge.java",
@@ -108,7 +108,7 @@ class Fabric1211GenerationTest {
         GenerationResult second = generate(canonical, secondOutput);
 
         assertEquals(first, second);
-        assertEquals("ed7b0e9c1144c4940efe4a8b1f2e186162bf0437686ef60db9b2f5edec6af766",
+        assertEquals("0719111cf1682592ec23dbad53b97eda5ae0e6297817f805cf9066abe5f65412",
                 first.sha256());
         assertEquals(18, first.files().size());
         assertEquals(new TreeMap<>(EXPECTED_SOURCE_HASHES), hashes(firstOutput.resolve("sources")));
@@ -199,7 +199,7 @@ class Fabric1211GenerationTest {
         Path menu = canonical.resolve("src/canonical/java").resolve(CANONICAL_MENU);
         Files.writeString(menu, "// Feature declaration only; no Java template required.\n");
         writeManifest(canonical);
-        assertEquals("ed7b0e9c1144c4940efe4a8b1f2e186162bf0437686ef60db9b2f5edec6af766",
+        assertEquals("0719111cf1682592ec23dbad53b97eda5ae0e6297817f805cf9066abe5f65412",
                 generate(canonical, temporaryDirectory.resolve("independent-output")).sha256());
     }
 

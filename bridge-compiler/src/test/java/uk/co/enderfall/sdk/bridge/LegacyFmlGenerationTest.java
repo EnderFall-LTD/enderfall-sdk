@@ -24,11 +24,11 @@ class LegacyFmlGenerationTest {
     // Independently hashed working 1.20.1 reference sources, shared by both loaders.
     private static final Map<String, String> REFERENCE_JAVA_HASHES = Map.ofEntries(
             Map.entry("EnderfallForgeRuntime.java", "a4208d6dc644248b14f0cd1ee2102dba7c924217933d49e294641c3b04f66a31"),
-            Map.entry("LegacyForgeClientHooks.java", "a1cad5ad80302e67129dcf29b519f08ab9b7cc45d364982958e035a5ee2859a9"),
+            Map.entry("LegacyForgeClientHooks.java", "cf60052ca7b0cea5ed54f35b1a4ed7ba6ea8e8b4b2a4e41124585c8aad1e198e"),
             Map.entry("LegacyForgeClientScreenBridge.java", "24443f8596007da94c50ea83563f1d626ff9e4b6e167fa9d779dd5982744bc9d"),
             Map.entry("LegacyForgeCommandBridge.java", "a2c0a1b471efc62005537185fbc486bd3623e63e9db415dd2e67ae69d975f6a4"),
             Map.entry("LegacyForgeConsumerBootstrap.java", "c558ac1712ba96c4d54e0f78a425d3c1a135089a8f8797621e0292002c32431b"),
-            Map.entry("LegacyForgePlatformAdapter.java", "db99ad4c5825686f074428a28038bbe3b0ac9b82cf424ca4e03962d50644fede"),
+            Map.entry("LegacyForgePlatformAdapter.java", "d303e73bf10636c530a960293f979825eb39a2ce37483229a8a83ee4ad72e02d"),
             Map.entry("LegacyForgePlatformInfo.java", "47718fe428c4c2782cd519424933cbac9ea85e98cf1bdc47d48e772db7024f42"),
             Map.entry("LegacyForgePortableMenuScreen.java", "c4218970a6796f3565dd86c92ea55ba9e52243db5793e570aa5edd01d9547e41"),
             Map.entry("LegacyForgeRecipeBinding.java", "6d53b08752ab48ca26e051c6bf8681f85c3ce87aefeebd3833535bdc301db66d"),
@@ -48,8 +48,8 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "ad25d00bfc469525458a94d76d42b0154385320d696ad49be2a513948151681f"
-                    : "23eacfbeca5a7bea85db971c6184a5be57421d5d60177513b663768f4f05801a", result.sha256());
+                    ? "88cb802566ba13988525539d21f69dd6adf54d2d299bfb0d3ab40448043ed6c7"
+                    : "5a5ffbd6472ee870ae351b9a56192470f92ed97d25c5a91cac55aa0e928da621", result.sha256());
             assertEquals(17, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());

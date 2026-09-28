@@ -6,9 +6,9 @@ Target-aware library dependencies and the first general EnderUI rendering founda
 now implemented. The settings DSL separates a Java 17 portable API coordinate from the
 Minecraft/loader runtime coordinate and generates required/optional loader metadata.
 Generated runtimes now host arbitrary portable client screens with lifecycle/input, text,
-sprites, nine-slicing, tiling, clipping and transforms across all nine targets. Item/entity
-previews, focus widgets, resource reload/hot reload, non-block session inventory layouts
-and separate library API publication remain open.
+sprites, nine-slicing, tiling, clipping, transforms, item/entity previews and portable
+resource reload/hot reload across all nine targets. Focus widgets, non-block session
+inventory layouts and separate library API publication remain open.
 
 Use [the furniture-port milestone](docs/furniture-port.md) as the concrete feature
 checklist. Custom block factories/configuration/server-use hooks, static cuboid

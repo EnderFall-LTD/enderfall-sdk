@@ -30,7 +30,7 @@ class Fabric1201GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("99ca2d936d03f37d030d8990c5187a66dac52922c0c8e61069ec6b139c288b6b", first.sha256());
+        assertEquals("61b424493dd079a7caa4314b64c1669f49248d31300eef880c0f8917968e49d2", first.sha256());
         assertEquals(15, first.files().size());
         try (var files = Files.walk(firstOutput)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
@@ -40,9 +40,9 @@ class Fabric1201GenerationTest {
         }
 
         // Independent working-reference hashes lock the legacy transport and recipe/menu ABI.
-        assertEquals("a789915467224dc9f1a3776e432b66d5f2b0b8bf411e926c312bfdb9d84a1504",
+        assertEquals("3b5bd171db1c0b9700f80ced14656be4ab74c892ebc041c4fa986ae5fdc04b0a",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201ClientHooks.java")));
-        assertEquals("0cdda86aa6a8b24246ea57055c1442c593a2e256b52b6e0e81b11c738acf136a",
+        assertEquals("72768d07de16b18a157fbcff3158e44ec3fb9d1ee72497eccc1e13e77c348335",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "Fabric1201PlatformAdapter.java")));
         assertEquals("8120b2e19a07899caa769449babcea0dc34379a0b524c70755caf4f260bae447",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "FabricClientScreenBridge.java")));

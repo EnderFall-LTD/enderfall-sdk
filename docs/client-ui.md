@@ -35,6 +35,19 @@ drag and two-axis scroll callbacks. Its `UiRenderContext` currently bridges:
 - bounded text tooltips and native item-name tooltips;
 - automatic native-stack cleanup if consumer rendering throws.
 
+Client libraries can subscribe to resource reloads without importing loader classes:
+
+```java
+context.resources().onReload(context.id("ui_assets"), assets::reload);
+context.resources().reload().whenComplete((unused, failure) -> {
+    if (failure != null) context.logger().error("UI resource reload failed", failure);
+});
+```
+
+Listeners run on the Minecraft client thread after resources have been applied, including
+the initial client load. Listener failures are logged and isolated, while `reload()`
+completes only after the requested reload finishes.
+
 The bridge compiles against all nine supported targets, including the extraction renderer
 used by 26.2. `GENERAL_CLIENT_SCREENS` is advertised only by generated runtimes containing
 this bridge.
@@ -42,8 +55,8 @@ this bridge.
 ## Current boundary
 
 This is the first renderer slice, not the complete EnderUI backend. Sprite tint and stacked
-opacity and living-entity previews are supported consistently, while focus widgets,
-resource reload and hot reload are still being added. Block-owned arbitrary inventory menus are available
+opacity, living-entity previews, resource reload listeners and requested hot reloads are
+supported consistently, while focus widgets are still being added. Block-owned arbitrary inventory menus are available
 through [`StorageContainerSpec`](authored-inventories.md). Item rendering uses
 `ItemStackRef`, so portable screens never import a native `ItemStack`; recipe and entity
 identities likewise use `RecipeRef` and `EntityTypeRef` while their runtime conversions are

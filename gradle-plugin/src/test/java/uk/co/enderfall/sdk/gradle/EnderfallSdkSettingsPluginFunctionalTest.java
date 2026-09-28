@@ -115,6 +115,14 @@ class EnderfallSdkSettingsPluginFunctionalTest {
             assertTrue(java.util.Arrays.equals(fabricHash, neoForgeHash));
         }
 
+        write("src/main/resources/assets/functional_mod/models/item/example.json", "{\"development\":true}\n");
+        BuildResult assetSync = runner("syncDevelopmentAssets", "--configuration-cache").build();
+        assertEquals(TaskOutcome.SUCCESS, assetSync.task(":syncDevelopmentAssets").getOutcome());
+        assertTrue(assetSync.getOutput().contains("development assets ready for 1.21.4-fabric"));
+        assertEquals("{\"development\":true}\n", Files.readString(temporaryDirectory.resolve(
+                ".gradle/enderfall-sdk/projects/1_21_4_fabric/build/resources/main/"
+                        + "assets/functional_mod/models/item/example.json")));
+
         // The first repeat records newly created generated source/resource directories as stable inputs.
         runner("buildAll", "enderfallDoctor", "--configuration-cache").build();
         BuildResult cached = runner("buildAll", "enderfallDoctor", "--configuration-cache").build();

@@ -121,6 +121,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         registerProxy(project, "runClient", development, "runClient");
         registerProxy(project, "runServer", development, "runServer");
         registerProxy(project, "generateData", development, "generateData");
+        registerProxy(project, "syncDevelopmentAssets", development, "syncDevelopmentAssets");
         if (development.loader().equals("neoforge") || development.loader().equals("forge")) {
             registerProxy(project, "prepareClient", development,
                     "createMinecraftArtifacts", "prepareClientRun");
@@ -183,7 +184,8 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         }
         boolean runtimeInvocation = requested.stream()
                 .anyMatch(java.util.Set.of(
-                        "runClient", "runServer", "generateData", "prepareClient", "prepareServer")::contains);
+                        "runClient", "runServer", "generateData", "syncDevelopmentAssets",
+                        "prepareClient", "prepareServer")::contains);
         boolean aggregateInvocation = requested.stream()
                 .anyMatch(java.util.Set.of("buildAll", "checkAll")::contains);
         if (!runtimeInvocation) {
@@ -191,7 +193,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         }
         if (aggregateInvocation) {
             throw new GradleException(
-                    "Run runClient, runServer, generateData, prepareClient, or prepareServer "
+                    "Run runClient, runServer, generateData, syncDevelopmentAssets, prepareClient, or prepareServer "
                             + "separately from buildAll/checkAll");
         }
         String selectedTarget = settings.getProviders().gradleProperty("enderfall.target")

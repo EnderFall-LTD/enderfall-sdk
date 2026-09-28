@@ -89,6 +89,21 @@ Client commands deliberately reject permission levels and server-only player arg
 This keeps their authority boundary explicit: they may change local UI state, but cannot
 perform gameplay actions on behalf of the server.
 
+## Development asset loop
+
+While the selected development client is running, edit resources under `src/main/resources`,
+`src/client/resources`, or the selected loader/version/target resource root. In a second
+terminal run:
+
+```powershell
+.\gradlew.bat syncDevelopmentAssets -Penderfall.target=1.21.4-fabric
+```
+
+The settings plugin materializes only that target, validates duplicate resources, regenerates
+metadata/data where required, and updates the exact resource output used by the development
+run. Then execute the library's portable client command (for example `/enderui reload`) to
+request Minecraft's resource reload. No loader-specific run-directory copying is required.
+
 The bridge compiles against all nine supported targets, including the extraction renderer
 used by 26.2. `GENERAL_CLIENT_SCREENS` is advertised only by generated runtimes containing
 this bridge.

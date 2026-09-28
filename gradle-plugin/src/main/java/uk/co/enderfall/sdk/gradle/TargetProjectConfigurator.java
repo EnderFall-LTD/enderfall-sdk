@@ -188,6 +188,14 @@ final class TargetProjectConfigurator {
             task.dependsOn(metadata, portableHash, duplicateCheck);
             task.setDuplicatesStrategy(DuplicatesStrategy.FAIL);
         });
+        String assetSyncMessage = "EnderFall development assets ready for " + target.id()
+                + ". Run the mod's portable reload command in the client.";
+        project.getTasks().register("syncDevelopmentAssets", task -> {
+            task.setGroup("enderfall sdk");
+            task.setDescription("Synchronizes portable and target-native assets into the active development run");
+            task.dependsOn(project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME));
+            task.doLast(completed -> completed.getLogger().lifecycle(assetSyncMessage));
+        });
         project.getTasks().named(JavaPlugin.JAR_TASK_NAME, Jar.class, task -> {
             task.getArchiveFileName().set(artifactName(mod, target));
             task.from(portable.getOutput());

@@ -28,7 +28,11 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class SameLoaderSmokeMain {
     private static final Duration SERVER_READY_TIMEOUT = Duration.ofMinutes(8);
     private static final Duration PREPARATION_TIMEOUT = Duration.ofMinutes(20);
-    private static final Duration CONNECTION_TIMEOUT = Duration.ofMinutes(4);
+    // Cold GitHub-hosted runners can spend more than four minutes inside the first
+    // client launch while Minecraft creates caches under concurrent matrix load.
+    // Asset and Gradle preparation remain outside this deadline; this window is
+    // only for the bounded live connection/gameplay scenario.
+    private static final Duration CONNECTION_TIMEOUT = Duration.ofMinutes(8);
     private static final Duration EXIT_TIMEOUT = Duration.ofMinutes(2);
     private static final List<Target> TARGETS = List.of(
             new Target("1.20.1-fabric"),
@@ -86,9 +90,18 @@ public final class SameLoaderSmokeMain {
             writeReport(reportRoot.resolve("connection.json"), results);
         }
         if (failed) {
+            System.err.println("ENDERFALL_CONNECTION_MATRIX_FAILURES");
+            results.stream().filter(result -> !result.passed()).forEach(result -> System.err.println(
+                    result.target() + ": " + result.failure()
+                            + " (serverLog=" + result.serverLog()
+                            + ", clientLog=" + result.clientLog() + ")"));
             throw new IllegalStateException("One or more same-loader connection tests failed; see "
                     + reportRoot.resolve("connection.json"));
         }
+    }
+
+    static Duration connectionTimeout() {
+        return CONNECTION_TIMEOUT;
     }
 
     static void prepareReportDirectory(Path sdkRoot, Path reportRoot) throws IOException {
@@ -308,14 +321,9 @@ public final class SameLoaderSmokeMain {
         Path runDirectory = workspace.resolve(".gradle/enderfall-sdk/projects")
                 .resolve(target.id().replace('.', '_').replace('-', '_')).resolve("run/server");
         Files.createDirectories(runDirectory);
-        // NeoForge 47.1's dual-stack status pinger can resolve the local endpoint through the
-        // machine's IPv6 address even when given 127.0.0.1. Let that one test server listen on
-        // all local interfaces so its required status negotiation can complete; the subsequent
-        // play connection still uses the explicit IPv4 loopback address.
-        String serverIp = target.id().equals("1.20.1-neoforge") ? "" : "127.0.0.1";
         Files.writeString(runDirectory.resolve("eula.txt"), "eula=true\n", StandardCharsets.UTF_8);
         Files.writeString(runDirectory.resolve("server.properties"),
-                "online-mode=false\nserver-ip=" + serverIp + "\nserver-port=" + port
+                "online-mode=false\nserver-ip=127.0.0.1\nserver-port=" + port
                         + "\nmotd=EnderFall same-loader smoke\n",
                 StandardCharsets.UTF_8);
     }

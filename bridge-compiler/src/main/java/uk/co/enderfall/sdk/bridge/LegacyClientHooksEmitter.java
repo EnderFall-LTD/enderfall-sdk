@@ -192,6 +192,7 @@ final class LegacyClientHooksEmitter {
                  */
                 private static final class LegacyFmlAutomaticConnection {
                     private static final long START_TICK = 40L;
+                    private static final long DIRECT_CONNECT_FALLBACK_TICK = 800L;
                     private final ServerData server;
                     private final ServerAddress address;
                     private final ServerStatusPinger pinger = new ServerStatusPinger();
@@ -222,11 +223,23 @@ final class LegacyClientHooksEmitter {
                         }
                         // Pong is processed after Forge's status data; neither depends on a server icon.
                         if (pingStarted && !connectionStarted && server.ping >= 0L && server.forgeData != null) {
-                            connectionStarted = true;
-                            pinger.removeAll();
                             LOGGER.info("ENDERFALL_LEGACY_FML_PING_READY {}", server.ip);
-                            ConnectScreen.startConnecting(new TitleScreen(), minecraft, address, server, true);
+                            connect(minecraft);
+                        } else if (pingStarted && !connectionStarted && tick >= DIRECT_CONNECT_FALLBACK_TICK) {
+                            // A status request can sporadically time out on cold Windows and hosted runners even
+                            // though the dedicated server is already accepting play connections. Forge's
+                            // ExtendedServerListData is used for multiplayer-list compatibility display; its
+                            // login handshake does not require that optional status result. Keep the normal
+                            // ping-first route, then fall back to the same explicit local play endpoint.
+                            LOGGER.warn("ENDERFALL_LEGACY_FML_PING_FALLBACK {}", server.ip);
+                            connect(minecraft);
                         }
+                    }
+
+                    private void connect(Minecraft minecraft) {
+                        connectionStarted = true;
+                        pinger.removeAll();
+                        ConnectScreen.startConnecting(new TitleScreen(), minecraft, address, server, true);
                     }
                 }
             }

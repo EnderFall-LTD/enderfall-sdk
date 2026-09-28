@@ -116,6 +116,10 @@ class GameplayHarnessTest {
                 () -> SameLoaderSmokeMain.gameplayPreparationTasks("../outside", true));
     }
 
+    @Test void liveScenarioAllowsColdRunnerClientStartupWithoutBecomingUnbounded() {
+        assertEquals(java.time.Duration.ofMinutes(8), SameLoaderSmokeMain.connectionTimeout());
+    }
+
     @Test void connectionObserverIsSharedByAllLegacyLoadersAndNeverGeneratedForModernTargets() throws Exception {
         String legacyObserver = null;
         for (String target : TargetCatalog.standard().targetIds()) {

@@ -48,6 +48,11 @@ public interface PlatformAdapter {
         throw new UnsupportedOperationException("Portable client screens are unavailable");
     }
 
+    default void registerInventoryScreen(uk.co.enderfall.sdk.api.ui.StorageContainerRef container,
+            java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.client.ui.PortableInventoryScreen> factory) {
+        throw new UnsupportedOperationException("Portable inventory screens are unavailable");
+    }
+
     /** Must validate native persistent-block existence and inventory slot bounds before registering. */
     default void registerBlockEntityRenderer(uk.co.enderfall.sdk.api.registry.BlockRef block,
             uk.co.enderfall.sdk.api.render.BlockEntityRenderSpec spec) {

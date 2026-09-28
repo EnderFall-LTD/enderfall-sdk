@@ -196,6 +196,14 @@ final class PlatformGameplaySources {
                         }
 
                     """;
+            case REGISTER_INVENTORY_SCREEN -> """
+                        @Override
+                        public void registerInventoryScreen(uk.co.enderfall.sdk.api.ui.StorageContainerRef container,
+                                java.util.function.Supplier<? extends uk.co.enderfall.sdk.api.client.ui.PortableInventoryScreen> factory) {
+                            ${InventoryClient}.registerPortableView(container.id(), factory);
+                        }
+
+                    """;
             case SHOW_MENU -> """
                         @Override
                         public void showMenuWithInputs(uk.co.enderfall.sdk.runtime.PortableMenuView view,

@@ -17,6 +17,7 @@ import uk.co.enderfall.sdk.api.client.ui.ClientScreenSpec;
 import uk.co.enderfall.sdk.api.client.ui.PortableClientScreen;
 import uk.co.enderfall.sdk.api.client.ui.UiFocusManager;
 import uk.co.enderfall.sdk.api.client.ui.UiFocusTarget;
+import uk.co.enderfall.sdk.api.client.ui.UiInsets;
 import uk.co.enderfall.sdk.api.client.ui.UiRect;
 import uk.co.enderfall.sdk.api.client.ui.UiRenderContext;
 import uk.co.enderfall.sdk.api.client.ui.UiTextAlign;
@@ -124,7 +125,6 @@ public final class ContractTestClient implements EnderfallClientMod {
         }
 
         @Override public void render(UiRenderContext graphics) {
-            rendered.set(true);
             int panelWidth = 220;
             int panelHeight = 100;
             int left = (graphics.frame().width() - panelWidth) / 2;
@@ -153,6 +153,28 @@ public final class ContractTestClient implements EnderfallClientMod {
             graphics.livingEntity(new EntityTypeRef(ResourceId.of("minecraft", "pig")),
                     new UiRect(left + 154, top + 30, 54, 62),
                     (float) graphics.frame().mouseX(), (float) graphics.frame().mouseY());
+
+            // Exercise every portable renderer family in the real-client smoke lane. A failure in
+            // any operation prevents the completion marker instead of producing a false pass.
+            ResourceId stone = ResourceId.of("minecraft", "textures/block/stone.png");
+            graphics.pushDepth(2);
+            graphics.pushOpacity(0.8f);
+            graphics.sprite(stone, new UiRect(left + 36, top + 50, 16, 16),
+                    16, 16, 0, 0, 16, 16, 0xFFFFFFFF);
+            graphics.tile(stone, new UiRect(left + 58, top + 50, 32, 16),
+                    16, 16, 8, 8, 0, 0, 0xFFFFFFFF);
+            graphics.nineSlice(stone, new UiRect(left + 96, top + 50, 42, 20),
+                    16, 16, UiInsets.uniform(3), 0xFFFFFFFF);
+            graphics.popOpacity();
+            graphics.popDepth();
+
+            graphics.pushPose();
+            graphics.translate(left + 143, top + 54, 0);
+            graphics.scale(0.8f, 0.8f);
+            graphics.rotate(8);
+            graphics.fill(new UiRect(0, 0, 10, 10), 0xFF6FE7DD);
+            graphics.popPose();
+            rendered.set(true);
         }
 
         @Override public boolean mouseClicked(double x, double y, int button) {

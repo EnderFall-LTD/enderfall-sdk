@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.block.BlockProperty;
 import uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec;
+import uk.co.enderfall.sdk.api.blockentity.BlockEntityInt;
 import uk.co.enderfall.sdk.api.registry.BlockRef;
 
 class StorageContainerSpecTest {
@@ -76,5 +77,21 @@ class StorageContainerSpecTest {
                 .quickMove("inputs", "missing").build());
         assertThrows(IllegalArgumentException.class, () -> InventorySlotSpec.output(0, 0, 0, "output")
                 .maximumCount(0));
+    }
+
+    @Test void exposesOnlyDeclaredBoundedFieldsForMenuSynchronization() {
+        var progress = new BlockEntityInt("progress", 0, 0, 10_000);
+        var stored = BlockEntitySpec.builder(new BlockRef(ResourceId.of("test", "machine")))
+                .inventorySlots(1).field(progress).build();
+        var spec = StorageContainerSpec.builder("Machine", stored)
+                .slot(InventorySlotSpec.input(0, 10, 10, "input"))
+                .synchronize(progress).build();
+        assertEquals(java.util.List.of(progress), spec.synchronizedFields());
+        assertThrows(IllegalArgumentException.class, () -> StorageContainerSpec.builder("Machine", stored)
+                .slot(InventorySlotSpec.input(0, 10, 10, "input"))
+                .synchronize(progress).synchronize(progress));
+        assertThrows(IllegalArgumentException.class, () -> StorageContainerSpec.builder("Machine", stored)
+                .slot(InventorySlotSpec.input(0, 10, 10, "input"))
+                .synchronize(new BlockEntityInt("missing", 0, 0, 1)).build());
     }
 }

@@ -32,6 +32,7 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     private final DefaultEventBus events;
     private final DefaultBlockEntityRendererRegistrar blockEntityRenderers;
     private final DefaultClientScreenManager screens;
+    private final DefaultInventoryScreenManager inventoryScreens;
     private final DefaultClientResourceManager resources;
     private final DefaultClientCommandManager clientCommands;
     private final DefaultPlayerManager players;
@@ -56,6 +57,7 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
         String target = adapter.platformInfo().targetId();
         blockEntityRenderers = new DefaultBlockEntityRendererRegistrar(modId, target, adapter, gate);
         screens = new DefaultClientScreenManager(modId, target, adapter, gate);
+        inventoryScreens = new DefaultInventoryScreenManager(modId, target, adapter, gate);
         resources = new DefaultClientResourceManager(modId, target, adapter, gate, logger);
         clientCommands = new DefaultClientCommandManager(modId, target, adapter, gate);
         players = new DefaultPlayerManager(modId, target, adapter);
@@ -82,6 +84,10 @@ public final class RuntimeModContext implements ModContext, ClientModContext {
     }
 
     @Override public uk.co.enderfall.sdk.api.client.ui.ClientScreenManager screens() { return screens; }
+
+    @Override public uk.co.enderfall.sdk.api.client.ui.InventoryScreenManager inventoryScreens() {
+        return inventoryScreens;
+    }
 
     @Override public uk.co.enderfall.sdk.api.client.resource.ClientResourceManager resources() { return resources; }
 

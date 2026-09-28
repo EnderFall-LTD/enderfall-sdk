@@ -33,7 +33,40 @@ are ordered and explicit; the SDK does not guess where a machine should send an 
 The original call with no authored slots remains a vanilla one-to-six-row chest menu, so
 existing cabinets, crates and barrels retain their prior appearance and behavior.
 
+## Portable custom presentation
+
+A client entrypoint can replace the generated fallback panel without registering a native
+screen or importing Minecraft classes:
+
+```java
+context.inventoryScreens().register(ModContainers.WASHER, WasherScreen::new);
+```
+
+`WasherScreen` implements `PortableInventoryScreen`. `renderBackground` runs before native
+slots and carried stacks; `renderForeground` runs afterwards. Both receive the same
+`UiRenderContext` used by general portable screens plus an `InventoryScreenContext` containing
+the menu identity, title, screen origin and dimensions. Mouse, scroll, keyboard, character,
+tick, resize and removal callbacks are forwarded across all targets. Returning `false` from
+an input callback leaves ordinary slot handling to Minecraft.
+
+This split is intentional: EnderUI can own the complete element tree and visual presentation,
+while the generated native menu continues to own synchronized items, drag splitting,
+shift-clicking and server validation. If no client view is registered, the SDK's simple
+fallback inventory screen remains available.
+
+Machine progress and similar server-owned integers can be opted into the same menu channel:
+
+```java
+menu.synchronize(ModStorage.PROGRESS);
+```
+
+The portable view reads the current value with `screen.value(ModStorage.PROGRESS)`. Only
+`BlockEntityInt` fields declared by the owning storage may be exposed, duplicates are rejected,
+and each full signed 32-bit value is split over bounded vanilla data slots internally so the
+portable API behaves identically on legacy and modern targets.
+
 The same authored menu generator is compiled for all nine supported targets. The
-persistent preview cabinet exercises custom coordinates, player inventory binding and
-bidirectional quick-move routes from unchanged Java 17 source. Live visual and interaction
-passes are still required before this experimental API is promoted to stable.
+persistent preview cabinet exercises custom coordinates, player inventory binding,
+bidirectional quick-move routes and a custom portable presentation from unchanged Java 17
+source. Live visual and interaction passes are still required before this experimental API
+is promoted to stable.

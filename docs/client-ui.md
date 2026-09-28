@@ -112,8 +112,10 @@ this bridge.
 
 This is the first renderer slice, not the complete EnderUI backend. Sprite tint and stacked
 opacity, living-entity previews, reusable focus navigation, resource reload listeners and
-requested hot reloads are supported consistently. Block-owned arbitrary inventory menus are available
-through [`StorageContainerSpec`](authored-inventories.md). Item rendering uses
+requested hot reloads are supported consistently. Block-owned arbitrary inventory menus and
+client-authored synchronized presentations are available through
+[`StorageContainerSpec`](authored-inventories.md) and `ClientModContext.inventoryScreens()`.
+Item rendering uses
 `ItemStackRef`, so portable screens never import a native `ItemStack`; recipe and entity
 identities likewise use `RecipeRef` and `EntityTypeRef` while their runtime conversions are
 implemented feature by feature.

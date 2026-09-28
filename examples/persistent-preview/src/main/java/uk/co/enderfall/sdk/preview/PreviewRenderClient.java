@@ -11,6 +11,7 @@ import uk.co.enderfall.sdk.api.render.RenderTransform;
 /** Portable client entrypoint; no native client classes or server-owned inventory reads. */
 public final class PreviewRenderClient implements EnderfallClientMod {
     @Override public void initialize(ClientModContext context) {
+        context.inventoryScreens().register(PreviewContainers.CABINET, PreviewCabinetScreen::new);
         try {
             var closed = RenderTransform.at(0, 1.02f, 0).pivot(.5f, 0, 15f / 16f);
             var opened = closed.rotate(75, 0, 0);

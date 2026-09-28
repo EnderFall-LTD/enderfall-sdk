@@ -37,12 +37,14 @@ final class PortableInventoryMenuSources {
                 import net.minecraft.world.entity.player.Inventory;
                 import net.minecraft.world.entity.player.Player;
                 import net.minecraft.world.inventory.AbstractContainerMenu;
+                import net.minecraft.world.inventory.DataSlot;
                 import net.minecraft.world.inventory.MenuType;
                 import net.minecraft.world.inventory.Slot;
                 import net.minecraft.world.item.ItemStack;
                 import uk.co.enderfall.sdk.api.ui.InventoryQuickMoveRule;
                 import uk.co.enderfall.sdk.api.ui.InventorySlotRole;
                 import uk.co.enderfall.sdk.api.ui.InventorySlotSpec;
+                import uk.co.enderfall.sdk.api.blockentity.BlockEntityInt;
                 import uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition;
 
                 /** Vanilla-synchronized authored inventory layout with server-enforced slot rules. */
@@ -58,6 +60,8 @@ final class PortableInventoryMenuSources {
                     private final Binding binding;
                     private final Container owner;
                     private final Map<String, List<Integer>> groups = new LinkedHashMap<>();
+                    private final List<BlockEntityInt> synchronizedFields;
+                    private final DataSlot[] synchronizedData;
 
                     ${PREFIX}InventoryMenu(int containerId, Inventory playerInventory,
                             Binding binding, Container owner) {
@@ -67,6 +71,23 @@ final class PortableInventoryMenuSources {
                         this.owner = owner == null ? new SimpleContainer(spec.storage().inventorySlots()) : owner;
                         checkContainerSize(this.owner, spec.storage().inventorySlots());
                         this.owner.startOpen(playerInventory.player);
+                        synchronizedFields = spec.synchronizedFields();
+                        synchronizedData = new DataSlot[synchronizedFields.size() * 2];
+                        var persistentOwner = owner instanceof
+                                uk.co.enderfall.sdk.runtime.blockentity.nativebridge.StoredBlockEntity stored
+                                ? stored : null;
+                        for (int index = 0; index < synchronizedFields.size(); index++) {
+                            BlockEntityInt field = synchronizedFields.get(index);
+                            for (int half = 0; half < 2; half++) {
+                                final int shift = half * 16;
+                                DataSlot data = persistentOwner == null ? DataSlot.standalone() : new DataSlot() {
+                                    @Override public int get() { return (persistentOwner.value(field) >>> shift) & 0xFFFF; }
+                                    @Override public void set(int ignored) { }
+                                };
+                                synchronizedData[index * 2 + half] = data;
+                                addDataSlot(data);
+                            }
+                        }
 
                         for (InventorySlotSpec slot : spec.slots()) {
                             addGrouped(slot.group(), addSlot(new PortableSlot(this.owner, slot)));
@@ -87,6 +108,14 @@ final class PortableInventoryMenuSources {
                     }
 
                     PortableStorageContainerDefinition definition() { return binding.definition(); }
+
+                    int synchronizedValue(BlockEntityInt field) {
+                        int index = synchronizedFields.indexOf(Objects.requireNonNull(field, "field"));
+                        if (index < 0) throw new IllegalArgumentException(
+                                "Field is not synchronized by this inventory: " + field.name());
+                        return (synchronizedData[index * 2].get() & 0xFFFF)
+                                | ((synchronizedData[index * 2 + 1].get() & 0xFFFF) << 16);
+                    }
 
                     private void addGrouped(String group, Slot slot) {
                         groups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(slots.indexOf(slot));
@@ -181,28 +210,34 @@ final class PortableInventoryMenuSources {
         String renderBg = extracted ? """
                     @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
                         graphics.fill(0, 0, width, height, 0xB0100D18);
-                        drawPanel(graphics);
+                        if (portable == null) drawPanel(graphics);
+                        else renderPortable(graphics, mouseX, mouseY, partialTick, false);
                         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+                        if (portable != null) renderPortable(graphics, mouseX, mouseY, partialTick, true);
                     }
                 """ : """
                     @Override protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-                        drawPanel(graphics);
+                        if (portable == null) drawPanel(graphics);
+                        else renderPortable(graphics, mouseX, mouseY, partialTick, false);
                     }
 
                     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
                         renderBackground(graphics${BACKGROUND_ARGS});
                         super.render(graphics, mouseX, mouseY, partialTick);
+                        if (portable != null) renderPortable(graphics, mouseX, mouseY, partialTick, true);
                         renderTooltip(graphics, mouseX, mouseY);
                     }
                 """.replace("${BACKGROUND_ARGS}", legacy ? "" : ", mouseX, mouseY, partialTick");
         String labels = extracted ? """
                     @Override protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+                        if (portable != null) return;
                         graphics.text(font, title, titleLabelX, titleLabelY, 0xFFEADFFF, false);
                         if (menu.definition().spec().playerInventory())
                             graphics.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFFD8CCE8, false);
                     }
                 """ : """
                     @Override protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+                        if (portable != null) return;
                         graphics.drawString(font, title, titleLabelX, titleLabelY, 0xFFEADFFF, false);
                         if (menu.definition().spec().playerInventory())
                             graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFFD8CCE8, false);
@@ -216,16 +251,70 @@ final class PortableInventoryMenuSources {
                 import net.minecraft.network.chat.Component;
                 import net.minecraft.world.entity.player.Inventory;
                 import net.minecraft.world.inventory.Slot;
+                import java.util.LinkedHashMap;
+                import java.util.Map;
+                import uk.co.enderfall.sdk.api.ResourceId;
+                import uk.co.enderfall.sdk.api.blockentity.BlockEntityInt;
+                import uk.co.enderfall.sdk.api.client.ui.ClientScreenRef;
+                import uk.co.enderfall.sdk.api.client.ui.InventoryScreenContext;
+                import uk.co.enderfall.sdk.api.client.ui.PortableInventoryScreen;
+                import uk.co.enderfall.sdk.api.client.ui.UiRenderFrame;
+                import uk.co.enderfall.sdk.api.ui.StorageContainerRef;
 
                 /** Texture-independent screen for an authored portable inventory. */
                 final class ${PREFIX}InventoryScreen extends AbstractContainerScreen<${PREFIX}InventoryMenu> {
+                    private final PortableInventoryScreen portable;
+                    private final Map<ResourceId, net.minecraft.world.entity.LivingEntity> entityPreviews =
+                            new LinkedHashMap<>();
+                    private final InventoryScreenContext portableContext = new PortableContext();
+                    private boolean portableInitialized;
+                    private boolean portableRemoved;
+
                     ${PREFIX}InventoryScreen(${PREFIX}InventoryMenu menu, Inventory inventory, Component title) {
                         ${CONSTRUCTOR}
+                        portable = ${PREFIX}InventoryClient.createPortableView(menu.definition());
                         inventoryLabelX = menu.definition().spec().playerInventoryX();
                         inventoryLabelY = Math.max(6, menu.definition().spec().playerInventoryY() - 12);
                     }
 
+                    @Override protected void init() {
+                        super.init();
+                        if (portable == null) return;
+                        if (portableInitialized) portable.resized(portableContext);
+                        else {
+                            portableInitialized = true;
+                            portable.initialize(portableContext);
+                        }
+                    }
+
+                    @Override protected void containerTick() {
+                        super.containerTick();
+                        if (portable != null) portable.tick(portableContext);
+                    }
+
+                    @Override public void removed() {
+                        if (portable != null && !portableRemoved) {
+                            portableRemoved = true;
+                            entityPreviews.clear();
+                            portable.removed();
+                        }
+                        super.removed();
+                    }
+
                 ${RENDER_BG}
+                    private void renderPortable(${GRAPHICS} graphics, int mouseX, int mouseY,
+                            float partialTick, boolean foreground) {
+                        var context = new ${PREFIX}ClientScreenBridge.NativeRenderContext(graphics, entityPreviews,
+                                new UiRenderFrame(width, height, mouseX, mouseY, partialTick,
+                                        Math.max(0L, System.nanoTime())));
+                        try {
+                            if (foreground) portable.renderForeground(context, portableContext);
+                            else portable.renderBackground(context, portableContext);
+                        } finally {
+                            context.finish();
+                        }
+                    }
+
                     private void drawPanel(${GRAPHICS} graphics) {
                         int color = 0xEE15111F;
                         graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, color);
@@ -239,6 +328,24 @@ final class PortableInventoryMenuSources {
                     }
 
                 ${LABELS}
+
+                    ${INPUT}
+
+                    private final class PortableContext implements InventoryScreenContext {
+                        @Override public StorageContainerRef container() { return menu.definition().reference(); }
+                        @Override public String title() { return ${PREFIX}InventoryScreen.this.title.getString(); }
+                        @Override public int width() { return ${PREFIX}InventoryScreen.this.width; }
+                        @Override public int height() { return ${PREFIX}InventoryScreen.this.height; }
+                        @Override public int left() { return leftPos; }
+                        @Override public int top() { return topPos; }
+                        @Override public int menuWidth() { return imageWidth; }
+                        @Override public int menuHeight() { return imageHeight; }
+                        @Override public int value(BlockEntityInt field) { return menu.synchronizedValue(field); }
+                        @Override public void close() { ${PREFIX}InventoryScreen.this.onClose(); }
+                        @Override public void open(ClientScreenRef screen) {
+                            ${PREFIX}ClientScreenBridge.open(screen.id());
+                        }
+                    }
                 }
                 """
                 .replace("${PACKAGE}", policy.runtimePackage())
@@ -246,17 +353,37 @@ final class PortableInventoryMenuSources {
                 .replace("${GRAPHICS}", graphics)
                 .replace("${CONSTRUCTOR}", constructor)
                 .replace("${RENDER_BG}", indent(renderBg, 0))
-                .replace("${LABELS}", indent(labels, 0));
+                .replace("${LABELS}", indent(labels, 0))
+                .replace("${INPUT}", inventoryInput(extracted, legacy));
     }
 
     private static String client(BlockEntityNativePolicy policy) {
         if (policy.fabric()) {
             return """
                     package uk.co.enderfall.sdk.runtime.${PACKAGE};
+                    import java.util.LinkedHashMap;
+                    import java.util.Map;
+                    import java.util.function.Supplier;
                     import net.minecraft.client.gui.screens.MenuScreens;
                     import net.minecraft.world.inventory.MenuType;
+                    import uk.co.enderfall.sdk.api.ResourceId;
+                    import uk.co.enderfall.sdk.api.client.ui.PortableInventoryScreen;
+                    import uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition;
                     final class ${PREFIX}InventoryClient {
+                        private static final Map<ResourceId, Supplier<? extends PortableInventoryScreen>> VIEWS =
+                                new LinkedHashMap<>();
                         private ${PREFIX}InventoryClient() { }
+                        static synchronized void registerPortableView(ResourceId id,
+                                Supplier<? extends PortableInventoryScreen> factory) {
+                            if (VIEWS.putIfAbsent(id, factory) != null)
+                                throw new IllegalStateException("Duplicate portable inventory screen " + id);
+                        }
+                        static synchronized PortableInventoryScreen createPortableView(
+                                PortableStorageContainerDefinition definition) {
+                            var factory = VIEWS.get(definition.reference().id());
+                            return factory == null ? null : java.util.Objects.requireNonNull(factory.get(),
+                                    "Portable inventory screen factory returned null for " + definition.reference().id());
+                        }
                         static void register(MenuType<${PREFIX}InventoryMenu> type) {
                             MenuScreens.register(type, ${PREFIX}InventoryScreen::new);
                         }
@@ -271,12 +398,30 @@ final class PortableInventoryMenuSources {
                 : "modBus.addListener((RegisterMenuScreensEvent event) -> event.register(type.get(), ${PREFIX}InventoryScreen::new));";
         return """
                 package uk.co.enderfall.sdk.runtime.${PACKAGE};
+                import java.util.LinkedHashMap;
+                import java.util.Map;
                 import java.util.function.Supplier;
                 import net.minecraft.client.gui.screens.MenuScreens;
                 import net.minecraft.world.inventory.MenuType;
+                import uk.co.enderfall.sdk.api.ResourceId;
+                import uk.co.enderfall.sdk.api.client.ui.PortableInventoryScreen;
+                import uk.co.enderfall.sdk.runtime.PortableStorageContainerDefinition;
                 ${IMPORTS}
                 final class ${PREFIX}InventoryClient {
+                    private static final Map<ResourceId, Supplier<? extends PortableInventoryScreen>> VIEWS =
+                            new LinkedHashMap<>();
                     private ${PREFIX}InventoryClient() { }
+                    static synchronized void registerPortableView(ResourceId id,
+                            Supplier<? extends PortableInventoryScreen> factory) {
+                        if (VIEWS.putIfAbsent(id, factory) != null)
+                            throw new IllegalStateException("Duplicate portable inventory screen " + id);
+                    }
+                    static synchronized PortableInventoryScreen createPortableView(
+                            PortableStorageContainerDefinition definition) {
+                        var factory = VIEWS.get(definition.reference().id());
+                        return factory == null ? null : java.util.Objects.requireNonNull(factory.get(),
+                                "Portable inventory screen factory returned null for " + definition.reference().id());
+                    }
                     static void register(IEventBus modBus, Supplier<MenuType<${PREFIX}InventoryMenu>> type) {
                         ${BODY}
                     }
@@ -288,4 +433,67 @@ final class PortableInventoryMenuSources {
     }
 
     private static String indent(String value, int ignored) { return value.stripTrailing(); }
+
+    private static String inventoryInput(boolean extracted, boolean legacy) {
+        if (extracted) return """
+                    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
+                        return portable != null && portable.mouseClicked(event.x(), event.y(), event.button())
+                                || super.mouseClicked(event, doubled);
+                    }
+                    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+                        return portable != null && portable.mouseReleased(event.x(), event.y(), event.button())
+                                || super.mouseReleased(event);
+                    }
+                    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event,
+                            double dragX, double dragY) {
+                        return portable != null && portable.mouseDragged(event.x(), event.y(), event.button(), dragX, dragY)
+                                || super.mouseDragged(event, dragX, dragY);
+                    }
+                    @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+                        return portable != null && portable.mouseScrolled(x, y, horizontal, vertical)
+                                || super.mouseScrolled(x, y, horizontal, vertical);
+                    }
+                    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+                        return portable != null && portable.keyPressed(event.key(), event.scancode(), event.modifiers())
+                                || super.keyPressed(event);
+                    }
+                    @Override public boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
+                        return portable != null && portable.keyReleased(event.key(), event.scancode(), event.modifiers())
+                                || super.keyReleased(event);
+                    }
+                    @Override public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+                        return portable != null && portable.characterTyped(event.codepoint(), 0) || super.charTyped(event);
+                    }
+                """;
+        String scroll = legacy
+                ? "@Override public boolean mouseScrolled(double x, double y, double amount) {\n"
+                    + "        return portable != null && portable.mouseScrolled(x, y, 0, amount) || super.mouseScrolled(x, y, amount);\n    }"
+                : "@Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {\n"
+                    + "        return portable != null && portable.mouseScrolled(x, y, horizontal, vertical) || super.mouseScrolled(x, y, horizontal, vertical);\n    }";
+        return """
+                    @Override public boolean mouseClicked(double x, double y, int button) {
+                        return portable != null && portable.mouseClicked(x, y, button) || super.mouseClicked(x, y, button);
+                    }
+                    @Override public boolean mouseReleased(double x, double y, int button) {
+                        return portable != null && portable.mouseReleased(x, y, button) || super.mouseReleased(x, y, button);
+                    }
+                    @Override public boolean mouseDragged(double x, double y, int button, double dragX, double dragY) {
+                        return portable != null && portable.mouseDragged(x, y, button, dragX, dragY)
+                                || super.mouseDragged(x, y, button, dragX, dragY);
+                    }
+                    ${SCROLL}
+                    @Override public boolean keyPressed(int key, int scanCode, int modifiers) {
+                        return portable != null && portable.keyPressed(key, scanCode, modifiers)
+                                || super.keyPressed(key, scanCode, modifiers);
+                    }
+                    @Override public boolean keyReleased(int key, int scanCode, int modifiers) {
+                        return portable != null && portable.keyReleased(key, scanCode, modifiers)
+                                || super.keyReleased(key, scanCode, modifiers);
+                    }
+                    @Override public boolean charTyped(char character, int modifiers) {
+                        return portable != null && portable.characterTyped(character, modifiers)
+                                || super.charTyped(character, modifiers);
+                    }
+                """.replace("${SCROLL}", scroll);
+    }
 }

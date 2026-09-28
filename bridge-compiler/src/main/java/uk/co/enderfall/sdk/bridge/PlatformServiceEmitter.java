@@ -64,6 +64,7 @@ final class PlatformServiceEmitter {
                 Map.entry("ClientCommandBridge", prefix + "ClientCommandBridge"),
                 Map.entry("ClientHooks", prefix + "ClientHooks"),
                 Map.entry("ClientScreenBridge", prefix + "ClientScreenBridge"),
+                Map.entry("InventoryClient", BlockEntityNativePolicy.require(target.id()).prefix() + "InventoryClient"),
                 Map.entry("RawPayload", prefix + "RawPayload"),
                 Map.entry("RecipeBinding", workbenchPrefix + "RecipeBinding"),
                 Map.entry("WorkbenchBinding", workbenchPrefix + "WorkbenchBinding"),
@@ -74,6 +75,7 @@ final class PlatformServiceEmitter {
             source.append(persistent && (operation == PlatformOperation.REGISTER_BLOCK || operation == PlatformOperation.BLOCK_PROPERTIES)
                     ? PlatformRegistrationSources.emitWithPropertyCopy(operation, policy) : fragment(operation, policy));
         }
+        if (persistent) source.append(fragment(REGISTER_INVENTORY_SCREEN, policy));
         if (persistent) source.append(BlockPropertyCopySources.operations(BlockEntityNativePolicy.require(target.id())));
         if (persistent) source.append(PersistentPlatformSources.operations(BlockEntityNativePolicy.require(target.id())));
         source.append("}\n");
@@ -81,7 +83,7 @@ final class PlatformServiceEmitter {
         rendered = rendered.replace("Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS",
                 "Capability.CUSTOM_RECIPES, Capability.CONTAINER_MENUS, Capability.GENERAL_CLIENT_SCREENS, Capability.CLIENT_COMMANDS");
         if (persistent) rendered = rendered.replace("Capability.CONTAINER_MENUS, Capability.GENERAL_CLIENT_SCREENS, Capability.CLIENT_COMMANDS",
-                "Capability.CONTAINER_MENUS, Capability.GENERAL_CLIENT_SCREENS, Capability.CLIENT_COMMANDS, Capability.STORAGE_CONTAINERS, Capability.BLOCK_STATES, "
+                "Capability.CONTAINER_MENUS, Capability.GENERAL_CLIENT_SCREENS, Capability.AUTHORED_INVENTORY_SCREENS, Capability.CLIENT_COMMANDS, Capability.STORAGE_CONTAINERS, Capability.BLOCK_STATES, "
                         + "Capability.SCHEDULED_BLOCK_TICKS, Capability.WATERLOGGED_BLOCKS");
         if (persistent && BlockEntityNativePolicy.require(target.id()).unobfuscated()) rendered = BlockEntity26Sources.names(rendered);
         String filePrefix = switch (policy) {
@@ -141,7 +143,7 @@ final class PlatformServiceEmitter {
                     PLAYER_ITEM_DATA, UPDATE_PLAYER_ITEM_DATA, PLAYER_ITEM_STACK, SEND_PLAYER_MESSAGE,
                     HEAL_PLAYER, ADD_PLAYER_EXPERIENCE, REGISTER_CLIENT_COMMAND, REGISTER_CLIENT_RESOURCE_RELOAD_LISTENER,
                     RELOAD_CLIENT_RESOURCES, REGISTER_CLIENT_SCREEN, OPEN_CLIENT_SCREEN,
-                    CLOSE_CLIENT_SCREEN, SHOW_MENU, UPDATE_MENU, CLOSE_MENU, REQUIRE_ITEM,
+                    CLOSE_CLIENT_SCREEN, REGISTER_INVENTORY_SCREEN, SHOW_MENU, UPDATE_MENU, CLOSE_MENU, REQUIRE_ITEM,
                     REQUIRE_SERVER, ONLINE_PLAYER, REQUIRE_ONLINE_PLAYER, LOCATION, IDENTIFIER -> PlatformGameplaySources.emit(operation, policy);
             case INSTALL_EVENTS, INTERACTION, PUBLISH_LIFECYCLE, PUBLISH_PLAYER -> PlatformEventSources.emit(operation, policy);
         };

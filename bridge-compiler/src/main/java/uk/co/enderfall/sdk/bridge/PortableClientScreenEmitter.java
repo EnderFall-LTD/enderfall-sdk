@@ -358,7 +358,7 @@ final class PortableClientScreenEmitter {
                     ${INPUT}
                 }
 
-                private static final class NativeRenderContext implements UiRenderContext {
+                static final class NativeRenderContext implements UiRenderContext {
                     private final ${GRAPHICS} graphics;
                     private final Font font = Minecraft.getInstance().font;
                     private final UiRenderFrame frame;
@@ -370,7 +370,7 @@ final class PortableClientScreenEmitter {
                     private float opacity = 1;
                     private int depth;
 
-                    private NativeRenderContext(${GRAPHICS} graphics,
+                    NativeRenderContext(${GRAPHICS} graphics,
                             Map<ResourceId, net.minecraft.world.entity.LivingEntity> entityPreviews,
                             UiRenderFrame frame) {
                         this.graphics = graphics;
@@ -624,7 +624,7 @@ final class PortableClientScreenEmitter {
                         if (size == 0) throw new IllegalStateException("Portable UI " + name + " stack underflow");
                     }
 
-                    private void finish() {
+                    void finish() {
                         while (!clips.isEmpty()) popClip();
                         while (poseDepth > 0) popPose();
                         opacities.clear(); opacity = 1;

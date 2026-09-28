@@ -49,6 +49,19 @@ and run artifacts before the timed game phase. All nine catalog targets, includi
 process-smoke lanes. These are lifecycle/resource checks, not interactive feature or
 connection tests.
 
+`uiAcceptanceMatrix` is the named automated UI lane. It uses the generated-runtime client
+smoke on all selected targets and only emits its completion marker after the portable screen
+has successfully invoked fills, aligned text, clipping, sprites, tiling, nine-slicing,
+opacity/depth stacks, pose transforms, item/tooltips and a living-entity preview. It also
+requires initial and requested resource reloads. Use
+`-Penderfall.smokeTarget=1.20.1-forge,26.2-neoforge` for a focused legacy/extraction pair.
+
+Automated completion proves that the native callbacks executed without an exception; it does
+not prove pixel-perfect composition or human input feel. Release-candidate UI acceptance must
+still manually open a standard screen and authored inventory screen on the oldest and newest
+rendering ABIs and verify pointer input, keyboard focus/typing, scrolling, clipping, slot
+interaction, entity rendering, resource reload and GUI scales 2/3/4.
+
 For connected generated-runtime menu actions and workbench slot crafting, run
 `generatedBridgeGameplaySmoke`; see the [scenario and evidence gates](gameplay-testing.md).
 `verifyGameplayMatrix -Penderfall.gameplayReports=<oldest.json>,<newer.json>,...`

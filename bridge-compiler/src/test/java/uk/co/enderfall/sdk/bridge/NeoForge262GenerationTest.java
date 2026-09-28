@@ -30,14 +30,14 @@ class NeoForge262GenerationTest {
         Path secondOutput = temporaryDirectory.resolve("second");
         GenerationResult first = generate(firstOutput);
         assertEquals(first, generate(secondOutput));
-        assertEquals("d30fb6138238ae6b2ad41a97a8c9ccffe179dc2139328ccaf81e6422ddef3e7a", first.sha256());
+        assertEquals("21b15e084de60c3fd5bf4b07051cfef861b5426ade83971452b7f1f44eb4def5", first.sha256());
         assertEquals(17, first.files().size());
         assertEquals(hashes(firstOutput), hashes(secondOutput));
 
         // Independent hashes of the working reference, not expectations derived from emitted output.
         assertEquals("1a0149c2c82fbfe05202726ded145d84feb02be19d4f8d13016c311b57b14121",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "NeoForge26PlatformAdapter.java")));
-        assertEquals("1f747c9359b431854218b76fdbf4f2c629c5fa551d55adb65723e286e191c2be",
+        assertEquals("af545b4be795dfe8d2e39338e7377e33db4830e0bca8e1db62bd6424ca3a7ac2",
                 sha256(firstOutput.resolve("sources/" + PACKAGE_PATH + "NeoForgeClientScreenBridge.java")));
         assertEquals("a0f24be0c2aa02e88c616cc0c77d1f837d4faa015d9607e1df40e932f6954610",
                 sha256(firstOutput.resolve("sources/uk/co/enderfall/sdk/runtime/item/nativebridge/PortableSdkItem.java")));

@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import uk.co.enderfall.sdk.api.block.BlockProperty;
 import uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec;
+import uk.co.enderfall.sdk.api.blockentity.BlockEntityInt;
 
 /**
  * A block-owned 9-wide storage inventory using vanilla slot synchronization.
@@ -24,6 +25,7 @@ public final class StorageContainerSpec {
     private final int playerInventoryX;
     private final int playerInventoryY;
     private final List<InventoryQuickMoveRule> quickMoveRules;
+    private final List<BlockEntityInt> synchronizedFields;
 
     private StorageContainerSpec(Builder builder) {
         title = builder.title;
@@ -37,6 +39,7 @@ public final class StorageContainerSpec {
         playerInventoryX = builder.playerInventoryX;
         playerInventoryY = builder.playerInventoryY;
         quickMoveRules = List.copyOf(builder.quickMoveRules);
+        synchronizedFields = List.copyOf(builder.synchronizedFields);
         if (slots.isEmpty() && (storage.inventorySlots() < 9 || storage.inventorySlots() > 54
                 || storage.inventorySlots() % 9 != 0)) {
             throw new IllegalArgumentException("Storage containers require 9, 18, 27, 36, 45, or 54 slots");
@@ -52,6 +55,12 @@ public final class StorageContainerSpec {
             }
         }
         validateLayout();
+        for (BlockEntityInt field : synchronizedFields) {
+            if (!field.equals(storage.fields().get(field.name()))) {
+                throw new IllegalArgumentException("Synchronized menu field is not declared by this storage: "
+                        + field.name());
+            }
+        }
     }
 
     public static Builder builder(String title, BlockEntitySpec storage) {
@@ -76,6 +85,7 @@ public final class StorageContainerSpec {
     public int playerInventoryX() { return playerInventoryX; }
     public int playerInventoryY() { return playerInventoryY; }
     public List<InventoryQuickMoveRule> quickMoveRules() { return quickMoveRules; }
+    public List<BlockEntityInt> synchronizedFields() { return synchronizedFields; }
 
     private void validateLayout() {
         if (slots.isEmpty()) {
@@ -134,6 +144,7 @@ public final class StorageContainerSpec {
         private int playerInventoryX = 7;
         private int playerInventoryY = 83;
         private final List<InventoryQuickMoveRule> quickMoveRules = new ArrayList<>();
+        private final List<BlockEntityInt> synchronizedFields = new ArrayList<>();
 
         private Builder(String title, BlockEntitySpec storage) {
             this.title = Objects.requireNonNull(title, "title");
@@ -190,6 +201,19 @@ public final class StorageContainerSpec {
 
         public Builder quickMove(String sourceGroup, String... targetGroups) {
             quickMoveRules.add(new InventoryQuickMoveRule(sourceGroup, targetGroups));
+            return this;
+        }
+
+        /** Exposes one saved integer to the open client menu using vanilla menu synchronization. */
+        public Builder synchronize(BlockEntityInt field) {
+            Objects.requireNonNull(field, "field");
+            if (synchronizedFields.contains(field)) {
+                throw new IllegalArgumentException("Duplicate synchronized menu field: " + field.name());
+            }
+            if (synchronizedFields.size() >= 16) {
+                throw new IllegalArgumentException("An authored inventory supports at most 16 synchronized fields");
+            }
+            synchronizedFields.add(field);
             return this;
         }
 

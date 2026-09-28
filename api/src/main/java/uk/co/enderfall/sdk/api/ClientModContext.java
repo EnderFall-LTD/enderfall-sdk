@@ -17,6 +17,11 @@ public interface ClientModContext extends ModContext {
         throw new UnsupportedOperationException("Portable client screens are unavailable");
     }
 
+    @uk.co.enderfall.sdk.api.annotation.Experimental("Authored portable inventory screens")
+    default uk.co.enderfall.sdk.api.client.ui.InventoryScreenManager inventoryScreens() {
+        throw new UnsupportedOperationException("Portable inventory screens are unavailable");
+    }
+
     @uk.co.enderfall.sdk.api.annotation.Experimental("Portable client resource reloads")
     default uk.co.enderfall.sdk.api.client.resource.ClientResourceManager resources() {
         throw new UnsupportedOperationException("Portable client resources are unavailable");

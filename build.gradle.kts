@@ -55,6 +55,7 @@ tasks.register("verifyPersistenceFixtures") {
                     listOf("PersistentDemo", "PreviewBlocks", "PreviewConnectingTableBlock", "PreviewStorageCabinetBlock",
                         "PreviewOrientationBlock", "PreviewAxisBlock",
                         "PreviewContainers", "PreviewRecipes", "PreviewFluids", "PreviewGauge", "PreviewRenderClient",
+                        "PreviewCabinetScreen",
                         "PreviewItems", "PreviewToolItem", "PreviewLetterItem", "PreviewLetterCommands",
                         "PreviewLetterEditor", "PreviewRecipeBrowser").forEach { name ->
                         val path = "uk/co/enderfall/sdk/preview/$name.class"
@@ -462,6 +463,12 @@ tasks.register("generatedBridgeServerSmoke") {
 tasks.register("generatedBridgeClientSmoke") {
     group = "verification"
     description = "Starts contract-test clients using only centrally generated runtime artifacts."
+    dependsOn(":integration-harness:generatedBridgeClientSmoke")
+}
+
+tasks.register("uiAcceptanceMatrix") {
+    group = "verification"
+    description = "Runs the portable UI render/lifecycle acceptance lane on generated runtimes."
     dependsOn(":integration-harness:generatedBridgeClientSmoke")
 }
 

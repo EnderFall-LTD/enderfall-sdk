@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import uk.co.enderfall.sdk.api.ResourceId;
+import uk.co.enderfall.sdk.api.item.ItemStackRef;
+import uk.co.enderfall.sdk.api.registry.ItemRef;
 
 class UiPrimitivesTest {
     @Test
@@ -26,5 +29,8 @@ class UiPrimitivesTest {
                 () -> new UiRenderFrame(1920, 1080, 0, 0, Float.NaN, 1));
         assertThrows(IllegalArgumentException.class, () -> ClientScreenSpec.of("two\nlines"));
         assertEquals(new UiInsets(4, 4, 4, 4), UiInsets.uniform(4));
+        ItemRef item = new ItemRef(ResourceId.of("minecraft", "diamond"));
+        assertEquals(64, ItemStackRef.of(item, 64).count());
+        assertThrows(IllegalArgumentException.class, () -> ItemStackRef.of(item, 0));
     }
 }

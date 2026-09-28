@@ -23,6 +23,9 @@ class PortableClientScreenEmitterTest {
             assertTrue(source.contains("implements UiRenderContext"), target.id());
             assertTrue(source.contains("void nineSlice("), target.id());
             assertTrue(source.contains("void tile("), target.id());
+            assertTrue(source.contains("void item(ItemStackRef"), target.id());
+            assertTrue(source.contains("void itemTooltip(ItemStackRef"), target.id());
+            assertTrue(source.contains("Portable tooltip exceeds 64 lines"), target.id());
             if (target.minecraftVersion().id().equals("26.2")) {
                 assertTrue(source.contains("GuiGraphicsExtractor"), target.id());
                 assertTrue(source.contains("extractRenderState"), target.id());

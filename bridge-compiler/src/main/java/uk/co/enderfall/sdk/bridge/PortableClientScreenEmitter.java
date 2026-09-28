@@ -40,6 +40,17 @@ final class PortableClientScreenEmitter {
         String input = extracted ? EXTRACTED_INPUT : legacy ? LEGACY_INPUT : MODERN_INPUT;
         String pose = extracted ? EXTRACTED_POSE : IMMEDIATE_POSE;
         String blit = extracted ? EXTRACTED_BLIT : keyed ? KEYED_BLIT : IMMEDIATE_BLIT;
+        String itemRegistry = legacyFml ? "net.minecraftforge.registries.ForgeRegistries.ITEMS"
+                : "net.minecraft.core.registries.BuiltInRegistries.ITEM";
+        String itemId = extracted
+                ? "net.minecraft.resources.Identifier.parse(stack.item().id().toString())"
+                : legacy ? "java.util.Objects.requireNonNull(net.minecraft.resources.ResourceLocation.tryParse(stack.item().id().toString()))"
+                : "net.minecraft.resources.ResourceLocation.parse(stack.item().id().toString())";
+        String itemLookup = legacyFml || keyed || extracted
+                ? itemRegistry + ".getValue(id)" : itemRegistry + ".get(id)";
+        String itemDraw = extracted
+                ? "graphics.item(nativeStack, x, y);\n                        if (decorations) graphics.itemDecorations(font, nativeStack, x, y);"
+                : "graphics.renderItem(nativeStack, x, y);\n                        if (decorations) graphics.renderItemDecorations(font, nativeStack, x, y);";
         String source = SOURCE
                 .replace("${PACKAGE}", packageName)
                 .replace("${CLASS}", className)
@@ -52,6 +63,10 @@ final class PortableClientScreenEmitter {
                 .replace("${INPUT}", input)
                 .replace("${POSE}", pose)
                 .replace("${BLIT}", blit)
+                .replace("${ITEM_ID}", itemId)
+                .replace("${ITEM_REGISTRY}", itemRegistry)
+                .replace("${ITEM_LOOKUP}", itemLookup)
+                .replace("${ITEM_DRAW}", itemDraw)
                 .replace("${TEXT_DRAW}", extracted
                         ? "graphics.text(font, text, Math.round(x), Math.round(y), color(argb), shadow);"
                         : "graphics.drawString(font, text, Math.round(x), Math.round(y), color(argb), shadow);");
@@ -218,6 +233,7 @@ final class PortableClientScreenEmitter {
             import uk.co.enderfall.sdk.api.client.ui.UiRenderFrame;
             import uk.co.enderfall.sdk.api.client.ui.UiTextAlign;
             import uk.co.enderfall.sdk.api.client.ui.UiTextMetrics;
+            import uk.co.enderfall.sdk.api.item.ItemStackRef;
 
             /** Generated target-native host for arbitrary portable client screens. */
             final class ${CLASS} {
@@ -435,6 +451,51 @@ final class PortableClientScreenEmitter {
                             case RIGHT -> anchorX - width;
                         };
                         ${TEXT_DRAW}
+                    }
+
+                    @Override public void item(ItemStackRef stack, int x, int y, boolean decorations) {
+                        net.minecraft.world.item.ItemStack nativeStack = nativeStack(stack);
+                        ${ITEM_DRAW}
+                    }
+
+                    @Override public void tooltip(List<String> lines, int mouseX, int mouseY) {
+                        java.util.Objects.requireNonNull(lines, "lines");
+                        if (lines.isEmpty()) return;
+                        if (lines.size() > 64) throw new IllegalArgumentException("Portable tooltip exceeds 64 lines");
+                        int maximumWidth = 0;
+                        for (String line : lines) {
+                            java.util.Objects.requireNonNull(line, "tooltip line");
+                            if (line.length() > 1024) {
+                                throw new IllegalArgumentException("Portable tooltip line exceeds 1024 characters");
+                            }
+                            maximumWidth = Math.max(maximumWidth, font.width(line));
+                        }
+                        int width = maximumWidth + 8;
+                        int height = lines.size() * font.lineHeight + 6;
+                        int left = Math.max(2, Math.min(mouseX + 12, Math.max(2, frame.width() - width - 2)));
+                        int top = Math.max(2, Math.min(mouseY - 12, Math.max(2, frame.height() - height - 2)));
+                        fill(new UiRect(left, top, width, height), 0xF0100010);
+                        fill(new UiRect(left, top, width, 1), 0xFF5000A0);
+                        fill(new UiRect(left, top + height - 1, width, 1), 0xFF280050);
+                        for (int index = 0; index < lines.size(); index++) {
+                            text(lines.get(index), left + 4, top + 3 + index * font.lineHeight,
+                                    0xFFFFFFFF, true, UiTextAlign.LEFT);
+                        }
+                    }
+
+                    @Override public void itemTooltip(ItemStackRef stack, int x, int y) {
+                        tooltip(List.of(nativeStack(stack).getHoverName().getString()), x, y);
+                    }
+
+                    private net.minecraft.world.item.ItemStack nativeStack(ItemStackRef stack) {
+                        java.util.Objects.requireNonNull(stack, "stack");
+                        var id = ${ITEM_ID};
+                        if (!${ITEM_REGISTRY}.containsKey(id)) {
+                            throw new IllegalArgumentException("Unknown portable UI item " + stack.item().id());
+                        }
+                        var item = ${ITEM_LOOKUP};
+                        if (item == null) throw new IllegalArgumentException("Unknown portable UI item " + stack.item().id());
+                        return new net.minecraft.world.item.ItemStack(item, stack.count());
                     }
 
                     @Override public void pushClip(UiRect bounds) {

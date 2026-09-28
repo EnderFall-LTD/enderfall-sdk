@@ -3,6 +3,7 @@ package uk.co.enderfall.sdk.api.client.ui;
 import java.util.List;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.annotation.Experimental;
+import uk.co.enderfall.sdk.api.item.ItemStackRef;
 
 /**
  * Version-neutral immediate drawing backend for portable client screens.
@@ -30,6 +31,19 @@ public interface UiRenderContext {
     List<String> wrapText(String text, int maximumWidth);
 
     void text(String text, float anchorX, float y, int argb, boolean shadow, UiTextAlign alignment);
+
+    /** Draws a native item icon. Decorations include the count and durability bar. */
+    void item(ItemStackRef stack, int x, int y, boolean decorations);
+
+    default void item(ItemStackRef stack, int x, int y) { item(stack, x, y, true); }
+
+    /** Draws portable tooltip lines above ordinary screen content. */
+    void tooltip(List<String> lines, int x, int y);
+
+    default void tooltip(String line, int x, int y) { tooltip(List.of(line), x, y); }
+
+    /** Draws the target-native display name for a portable stack. */
+    void itemTooltip(ItemStackRef stack, int x, int y);
 
     void pushClip(UiRect bounds);
 

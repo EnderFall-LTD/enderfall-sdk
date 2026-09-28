@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import uk.co.enderfall.sdk.api.ClientModContext;
 import uk.co.enderfall.sdk.api.EnderfallClientMod;
+import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.config.ConfigScope;
 import uk.co.enderfall.sdk.api.config.ConfigSpec;
 import uk.co.enderfall.sdk.api.event.LifecycleEvent;
@@ -15,7 +16,9 @@ import uk.co.enderfall.sdk.api.client.ui.PortableClientScreen;
 import uk.co.enderfall.sdk.api.client.ui.UiRect;
 import uk.co.enderfall.sdk.api.client.ui.UiRenderContext;
 import uk.co.enderfall.sdk.api.client.ui.UiTextAlign;
+import uk.co.enderfall.sdk.api.item.ItemStackRef;
 import uk.co.enderfall.sdk.api.platform.Capability;
+import uk.co.enderfall.sdk.api.registry.ItemRef;
 
 public final class ContractTestClient implements EnderfallClientMod {
     private static final String CLIENT_COMPLETE_PROPERTY =
@@ -91,6 +94,13 @@ public final class ContractTestClient implements EnderfallClientMod {
             graphics.text("fill + text + clipping + lifecycle", left + panelWidth / 2f, top + 38,
                     0xFFB998FF, false, UiTextAlign.CENTER);
             graphics.popClip();
+            ItemStackRef diamond = ItemStackRef.of(new ItemRef(ResourceId.of("minecraft", "diamond")), 12);
+            graphics.item(diamond, left + 12, top + 50);
+            if (new UiRect(left + 12, top + 50, 16, 16).contains(
+                    graphics.frame().mouseX(), graphics.frame().mouseY())) {
+                graphics.itemTooltip(diamond, (int) graphics.frame().mouseX(),
+                        (int) graphics.frame().mouseY());
+            }
         }
     }
 }

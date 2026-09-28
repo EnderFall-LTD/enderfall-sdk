@@ -30,6 +30,8 @@ drag and two-axis scroll callbacks. Its `UiRenderContext` currently bridges:
 - nested rectangular clipping;
 - translation, scaling and rotation;
 - scoped opacity for fills/text and scoped logical depth;
+- loader-neutral item-stack icons and count/durability decorations;
+- bounded text tooltips and native item-name tooltips;
 - automatic native-stack cleanup if consumer rendering throws.
 
 The bridge compiles against all nine supported targets, including the extraction renderer
@@ -39,8 +41,11 @@ this bridge.
 ## Current boundary
 
 This is the first renderer slice, not the complete EnderUI backend. Texture tint/opacity is
-currently restricted to opaque white, and item stacks, entity previews, tooltips, focus
-widgets, resource reload, hot reload and arbitrary inventory menus are still being added.
+currently restricted to opaque white, and entity previews, focus widgets, resource reload,
+hot reload and arbitrary inventory menus are still being added. Item rendering uses
+`ItemStackRef`, so portable screens never import a native `ItemStack`; recipe and entity
+identities likewise use `RecipeRef` and `EntityTypeRef` while their runtime conversions are
+implemented feature by feature.
 Calling an unfinished operation fails clearly instead of silently rendering differently on
 one target.
 

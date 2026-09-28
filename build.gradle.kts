@@ -222,9 +222,15 @@ subprojects {
                 }
             }
             tasks.withType<org.gradle.api.publish.maven.tasks.AbstractPublishToMaven>().configureEach {
-                dependsOn(rootProject.tasks.named("verifyBridgeCoverage"))
                 val isolatedGeneratedBridgeSmokePublication =
                     name.endsWith("ToGeneratedBridgeWorkspaceRepository")
+                if (isolatedGeneratedBridgeSmokePublication) {
+                    // Generated-only smoke deliberately proves the compiler output without making
+                    // obsolete handwritten reference runtimes a prerequisite for launching Minecraft.
+                    dependsOn(rootProject.project(":bridge-compiler").tasks.named("test"))
+                } else {
+                    dependsOn(rootProject.tasks.named("verifyBridgeCoverage"))
+                }
                 if (providers.gradleProperty("enderfall.referenceRuntimes").orNull == "false"
                     && !isolatedGeneratedBridgeSmokePublication) {
                     doFirst { error("Publishing requires reference parity until the reference-runtime retirement gate is complete.") }

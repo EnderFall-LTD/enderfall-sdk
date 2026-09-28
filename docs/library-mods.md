@@ -42,6 +42,60 @@ portable source does not import that library. A required dependency defaults to 
 present in development runs; an optional dependency defaults to compile-only unless
 `developmentRuntime` is enabled.
 
-This contract handles consumption and generated loader metadata. Publishing a consumer's
-separate API artifact and all target runtime artifacts is a later library-authoring slice;
-ordinary target JAR collection continues to work as before.
+## Authoring a library mod
+
+A reusable library opts into coordinated publication in the settings DSL:
+
+```kotlin
+enderfallSdk {
+    mod {
+        id = "enderui"
+        name = "EnderUI"
+        group = "uk.co.enderfall"
+        version = "2.0.0"
+        entrypoint = "uk.co.enderfall.enderui.EnderUi"
+        clientEntrypoint = "uk.co.enderfall.enderui.EnderUiClient"
+    }
+
+    library {
+        apiArtifact = "enderui-api"
+        targetArtifact = "enderui-{minecraft}-{loader}"
+    }
+}
+```
+
+Place the public, loader-neutral Java 17 contract under `src/api/java`. Library
+implementation stays in `src/main/java` and `src/client/java`. API sources are part of each
+runtime mod JAR so the classes are present in-game, but the separately published API JAR
+contains only `src/api`; it cannot accidentally expose implementation, Minecraft or loader
+classes. All portable roots may import the API classes normally.
+
+The plugin exposes:
+
+- `publishLibraryWorkspace`, which publishes the API and every selected runtime beneath
+  `build/library-repository` for local multi-repository development;
+- `publishLibraryToMavenLocal`, which publishes the same coordinated set to Maven local;
+- `publishLibrary`, when `repositoryUrl` is configured, which publishes the coordinated set
+  to that Maven repository.
+
+For an authenticated release repository, set standard Gradle credentials without committing
+them:
+
+```kotlin
+library {
+    apiArtifact = "enderui-api"
+    targetArtifact = "enderui-{minecraft}-{loader}"
+    repositoryUrl = "https://maven.example.com/releases"
+}
+```
+
+```properties
+# ~/.gradle/gradle.properties or protected CI variables
+enderfallLibraryReleaseUsername=...
+enderfallLibraryReleasePassword=...
+```
+
+The artifact pattern must contain both placeholders. This prevents publication from silently
+overwriting one loader/version with another. `buildAll` and `checkAll` include the API project
+when library mode is enabled, while ordinary non-library mods retain their existing tasks and
+layout.

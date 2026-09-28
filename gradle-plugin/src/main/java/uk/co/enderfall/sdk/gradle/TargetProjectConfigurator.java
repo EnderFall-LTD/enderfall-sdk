@@ -10,8 +10,12 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ExternalModuleDependency;
 import org.gradle.api.file.DuplicatesStrategy;
+import org.gradle.api.credentials.PasswordCredentials;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.publish.PublishingExtension;
+import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.Copy;
@@ -23,6 +27,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 import org.gradle.language.jvm.tasks.ProcessResources;
 import uk.co.enderfall.sdk.gradle.model.ModDefinition;
+import uk.co.enderfall.sdk.gradle.model.LibraryDefinition;
 import uk.co.enderfall.sdk.gradle.model.ModDependencyDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetCatalog;
 import uk.co.enderfall.sdk.gradle.model.TargetDefinition;
@@ -36,10 +41,14 @@ final class TargetProjectConfigurator {
     private TargetProjectConfigurator() {
     }
 
-    static void configure(Project project, File consumerRoot, ModDefinition mod, TargetDefinition target,
+    static void configure(Project project, File consumerRoot, ModDefinition mod, LibraryDefinition library,
+                          TargetDefinition target,
                           List<ModDependencyDefinition> modDependencies,
                           List<URI> dependencyRepositories, boolean workspaceDevelopment) {
         project.getPluginManager().apply(JavaPlugin.class);
+        if (library.isEnabled()) {
+            project.getPluginManager().apply(MavenPublishPlugin.class);
+        }
         configureWorkspaceDevelopmentDependencies(project, workspaceDevelopment);
         dependencyRepositories.forEach(repositoryUrl -> project.getRepositories().maven(repository -> {
             repository.setUrl(repositoryUrl);
@@ -239,6 +248,10 @@ final class TargetProjectConfigurator {
             task.into(new File(consumerRoot, "build/releases"));
         });
 
+        if (library.isEnabled()) {
+            configureLibraryPublication(project, consumerRoot, mod, library, target, allJavaRoots);
+        }
+
         if (!TargetCatalog.hasRuntimeAdapter(target)) {
             registerUnavailableRuntimeTask(project, "runClient", target);
             registerUnavailableRuntimeTask(project, "runServer", target);
@@ -283,6 +296,58 @@ final class TargetProjectConfigurator {
                     }
                 }
             }
+        });
+    }
+
+    private static void configureLibraryPublication(Project project, File consumerRoot, ModDefinition mod,
+                                                     LibraryDefinition library, TargetDefinition target,
+                                                     List<File> sourceRoots) {
+        var sources = project.getTasks().register("librarySourcesJar", Jar.class, task -> {
+            task.getArchiveBaseName().set(library.resolvedTargetArtifact(mod, target));
+            task.getArchiveClassifier().set("sources");
+            task.setPreserveFileTimestamps(false);
+            task.setReproducibleFileOrder(true);
+            sourceRoots.forEach(task::from);
+        });
+        project.afterEvaluate(ignored -> {
+            AbstractArchiveTask productionArchive = null;
+            var reobf = project.getTasks().findByName("reobfJar");
+            if (reobf instanceof AbstractArchiveTask archive) {
+                productionArchive = archive;
+            } else {
+                var remap = project.getTasks().findByName("remapJar");
+                if (remap instanceof AbstractArchiveTask archive) {
+                    productionArchive = archive;
+                }
+            }
+            if (productionArchive == null) {
+                productionArchive = project.getTasks().named(JavaPlugin.JAR_TASK_NAME, Jar.class).get();
+            }
+            AbstractArchiveTask selectedArchive = productionArchive;
+            project.getExtensions().configure(PublishingExtension.class, publishing -> {
+                publishing.getRepositories().maven(repository -> {
+                    repository.setName("EnderfallLibraryWorkspace");
+                    repository.setUrl(new File(consumerRoot, "build/library-repository"));
+                });
+                if (!library.getRepositoryUrl().isBlank()) {
+                    publishing.getRepositories().maven(repository -> {
+                        repository.setName("EnderfallLibraryRelease");
+                        repository.setUrl(library.getRepositoryUrl());
+                        repository.credentials(PasswordCredentials.class);
+                    });
+                }
+                publishing.getPublications().create("enderfallLibraryTarget", MavenPublication.class, publication -> {
+                    publication.setGroupId(mod.getGroup());
+                    publication.setArtifactId(library.resolvedTargetArtifact(mod, target));
+                    publication.setVersion(mod.getVersion());
+                    publication.artifact(selectedArchive);
+                    publication.artifact(sources);
+                    publication.getPom().getName().set(mod.getName() + " " + target.id());
+                    publication.getPom().getDescription().set(
+                            mod.getName() + " runtime mod for Minecraft " + target.minecraftVersion()
+                                    + " on " + target.loader());
+                });
+            });
         });
     }
 
@@ -343,6 +408,7 @@ final class TargetProjectConfigurator {
 
     private static List<File> portableJavaRoots(File root) {
         List<File> roots = new ArrayList<>();
+        roots.add(new File(root, "src/api/java"));
         roots.add(new File(root, "src/main/java"));
         roots.add(new File(root, "src/client/java"));
         roots.add(new File(root, "src/datagen/java"));
@@ -359,6 +425,7 @@ final class TargetProjectConfigurator {
 
     private static List<File> portableResourceRoots(File root) {
         List<File> roots = new ArrayList<>();
+        roots.add(new File(root, "src/api/resources"));
         roots.add(new File(root, "src/main/resources"));
         roots.add(new File(root, "src/client/resources"));
         roots.add(new File(root, "src/datagen/resources"));

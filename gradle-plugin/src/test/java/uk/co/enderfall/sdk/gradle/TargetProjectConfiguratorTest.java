@@ -16,6 +16,7 @@ import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.co.enderfall.sdk.gradle.model.ModDefinition;
+import uk.co.enderfall.sdk.gradle.model.LibraryDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetDefinition;
 
 class TargetProjectConfiguratorTest {
@@ -36,7 +37,7 @@ class TargetProjectConfiguratorTest {
         mod.setEntrypoint("dev.example.PortableMod");
         TargetDefinition target = new TargetDefinition("1.20.1", "forge", 17, "47.4.23", "");
 
-        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, target,
+        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, new LibraryDefinition(), target,
                 List.of(), List.of(), false);
         Jar reobfJar = project.getTasks().register("reobfJar", Jar.class).get();
         Files.createDirectories(reobfJar.getArchiveFile().get().getAsFile().toPath().getParent());
@@ -61,7 +62,7 @@ class TargetProjectConfiguratorTest {
         mod.setEntrypoint("dev.example.PortableMod");
         TargetDefinition target = new TargetDefinition("1.20.1", "forge", 17, "47.4.23", "");
 
-        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, target,
+        TargetProjectConfigurator.configure(project, temporaryDirectory.toFile(), mod, new LibraryDefinition(), target,
                 List.of(), List.of(), true);
         ExternalModuleDependency thirdParty = (ExternalModuleDependency) project.getDependencies()
                 .add("implementation", "dev.example:immutable-library:1.0.0");

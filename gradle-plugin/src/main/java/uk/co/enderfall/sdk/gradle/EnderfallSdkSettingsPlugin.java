@@ -16,6 +16,7 @@ import org.gradle.api.initialization.Settings;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import uk.co.enderfall.sdk.gradle.model.EnderfallSdkExtension;
+import uk.co.enderfall.sdk.gradle.model.LibraryDefinition;
 import uk.co.enderfall.sdk.gradle.model.ModDependencyDefinition;
 import uk.co.enderfall.sdk.gradle.model.ModDefinition;
 import uk.co.enderfall.sdk.gradle.model.TargetCatalog;
@@ -26,6 +27,7 @@ import uk.co.enderfall.sdk.gradle.task.EnderfallDoctorTask;
 /** Settings plugin that materializes one isolated target project per selected matrix entry. */
 public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
     private static final String TARGET_PARENT = ":enderfallTargets";
+    private static final String LIBRARY_API_PROJECT = ":enderfallLibraryApi";
 
     @Override
     public void apply(Settings settings) {
@@ -39,6 +41,7 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
 
     private static void createProjects(Settings settings, EnderfallSdkExtension extension) {
         validateMod(extension.modDefinition());
+        validateLibrary(extension.modDefinition(), extension.libraryDefinition());
         validateDependencies(extension.dependenciesDefinition().all());
         Map<String, TargetDefinition> selected = selectTargets(extension);
         if (!selected.containsKey(extension.getDevelopmentTarget())) {
@@ -53,6 +56,14 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         ProjectDescriptor parent = settings.project(TARGET_PARENT);
         parent.setProjectDir(new File(generatedRoot, "container"));
         createDirectory(parent.getProjectDir());
+
+        if (extension.libraryDefinition().isEnabled()) {
+            settings.include(LIBRARY_API_PROJECT);
+            ProjectDescriptor api = settings.project(LIBRARY_API_PROJECT);
+            api.setProjectDir(new File(generatedRoot, "library-api"));
+            createDirectory(api.getProjectDir());
+            writeEmptyBuild(api.getProjectDir());
+        }
 
         Map<String, TargetDefinition> byProjectPath = new LinkedHashMap<>();
         java.util.List<URI> dependencyRepositories = new ArrayList<>();
@@ -74,8 +85,12 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             if (target != null) {
                 boolean workspaceDevelopment = settings.getProviders()
                         .gradleProperty("enderfall.workspaceRepository").isPresent();
-                TargetProjectConfigurator.configure(project, settings.getRootDir(), extension.modDefinition(), target,
+                TargetProjectConfigurator.configure(project, settings.getRootDir(), extension.modDefinition(),
+                        extension.libraryDefinition(), target,
                         extension.dependenciesDefinition().all(), dependencyRepositories, workspaceDevelopment);
+            } else if (project.getPath().equals(LIBRARY_API_PROJECT)) {
+                LibraryApiProjectConfigurator.configure(project, settings.getRootDir(), extension.modDefinition(),
+                        extension.libraryDefinition());
             } else if (project == project.getRootProject()) {
                 configureRoot(project, extension, selected);
             }
@@ -110,6 +125,26 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         registerAggregate(project, "buildAll", "Builds and collects every selected target.", selected,
                 "collectArtifact");
         registerAggregate(project, "checkAll", "Checks every selected target.", selected, "check");
+        if (extension.libraryDefinition().isEnabled()) {
+            project.getTasks().named("buildAll").configure(task ->
+                    task.dependsOn(LIBRARY_API_PROJECT + ":build"));
+            project.getTasks().named("checkAll").configure(task ->
+                    task.dependsOn(LIBRARY_API_PROJECT + ":check"));
+            registerLibraryPublicationAggregate(project, "publishLibraryWorkspace",
+                    "Publishes the portable API and every selected runtime to build/library-repository.",
+                    selected, "publishEnderfallLibraryApiPublicationToEnderfallLibraryWorkspaceRepository",
+                    "publishEnderfallLibraryTargetPublicationToEnderfallLibraryWorkspaceRepository");
+            registerLibraryPublicationAggregate(project, "publishLibraryToMavenLocal",
+                    "Publishes the portable API and every selected runtime to Maven local.",
+                    selected, "publishEnderfallLibraryApiPublicationToMavenLocal",
+                    "publishEnderfallLibraryTargetPublicationToMavenLocal");
+            if (!extension.libraryDefinition().getRepositoryUrl().isBlank()) {
+                registerLibraryPublicationAggregate(project, "publishLibrary",
+                        "Publishes the portable API and every selected runtime to the configured Maven repository.",
+                        selected, "publishEnderfallLibraryApiPublicationToEnderfallLibraryReleaseRepository",
+                        "publishEnderfallLibraryTargetPublicationToEnderfallLibraryReleaseRepository");
+            }
+        }
 
         String selectedTarget = Objects.toString(project.findProperty("enderfall.target"),
                 extension.getDevelopmentTarget());
@@ -134,6 +169,11 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         doctorLines.add("Mod: " + extension.modDefinition().getName()
                 + " (" + extension.modDefinition().getId() + ')');
         doctorLines.add("Development target: " + development.id());
+        if (extension.libraryDefinition().isEnabled()) {
+            doctorLines.add("Library API: " + extension.modDefinition().getGroup() + ':'
+                    + extension.libraryDefinition().resolvedApiArtifact(extension.modDefinition()) + ':'
+                    + extension.modDefinition().getVersion());
+        }
         for (ModDependencyDefinition dependency : extension.dependenciesDefinition().all()) {
             doctorLines.add("Dependency: " + dependency.getId() + " " + dependency.getVersion()
                     + " | " + dependency.getRequirement().name().toLowerCase(java.util.Locale.ROOT)
@@ -170,6 +210,17 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             for (String targetTask : targetTasks) {
                 task.dependsOn(projectPath(target) + ':' + targetTask);
             }
+        });
+    }
+
+    private static void registerLibraryPublicationAggregate(Project root, String name, String description,
+                                                             Map<String, TargetDefinition> targets,
+                                                             String apiTask, String targetTask) {
+        root.getTasks().register(name, task -> {
+            task.setGroup("publishing");
+            task.setDescription(description);
+            task.dependsOn(LIBRARY_API_PROJECT + ':' + apiTask);
+            targets.values().forEach(target -> task.dependsOn(projectPath(target) + ':' + targetTask));
         });
     }
 
@@ -243,6 +294,34 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
             }
             validateCoordinate(dependency.getId(), "api", dependency.getApi(), false);
             validateCoordinate(dependency.getId(), "target", dependency.getTarget(), true);
+        }
+    }
+
+    private static void validateLibrary(ModDefinition mod, LibraryDefinition library) {
+        if (!library.isEnabled()) return;
+        String apiArtifact = library.resolvedApiArtifact(mod);
+        if (!apiArtifact.matches("[0-9A-Za-z_.-]+")) {
+            throw new GradleException("Invalid library apiArtifact " + apiArtifact);
+        }
+        String targetPattern = library.getTargetArtifact().isBlank()
+                ? mod.getId() + "-{minecraft}-{loader}"
+                : library.getTargetArtifact();
+        if (!targetPattern.matches("[0-9A-Za-z_.{}-]+")) {
+            throw new GradleException("Invalid library targetArtifact " + targetPattern);
+        }
+        if (!targetPattern.contains("{minecraft}") || !targetPattern.contains("{loader}")) {
+            throw new GradleException("Library targetArtifact must contain both {minecraft} and {loader}: "
+                    + targetPattern);
+        }
+        if (!library.getRepositoryUrl().isBlank()) {
+            try {
+                URI uri = URI.create(library.getRepositoryUrl());
+                if (!uri.isAbsolute()) {
+                    throw new IllegalArgumentException("repository URL is not absolute");
+                }
+            } catch (IllegalArgumentException exception) {
+                throw new GradleException("Invalid library repositoryUrl " + library.getRepositoryUrl(), exception);
+            }
         }
     }
 
@@ -414,6 +493,16 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
                     java.nio.charset.StandardCharsets.UTF_8);
         } catch (IOException exception) {
             throw new GradleException("Cannot write generated target build for " + target.id(), exception);
+        }
+    }
+
+    private static void writeEmptyBuild(File directory) {
+        try {
+            Files.writeString(directory.toPath().resolve("build.gradle"),
+                    "// Configured by the EnderFall SDK settings plugin.\n",
+                    java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new GradleException("Cannot write generated library API build", exception);
         }
     }
 

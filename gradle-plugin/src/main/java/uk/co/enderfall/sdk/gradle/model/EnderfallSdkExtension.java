@@ -5,6 +5,7 @@ import org.gradle.api.Action;
 
 public class EnderfallSdkExtension {
     private final ModDefinition mod = new ModDefinition();
+    private final LibraryDefinition library = new LibraryDefinition();
     private final ModDependenciesDefinition dependencies = new ModDependenciesDefinition();
     private final TargetsDefinition targets = new TargetsDefinition();
     private String developmentTarget = "26.2-fabric";
@@ -17,6 +18,11 @@ public class EnderfallSdkExtension {
         action.execute(targets);
     }
 
+    public void library(Action<? super LibraryDefinition> action) {
+        library.enable();
+        action.execute(library);
+    }
+
     public void dependencies(Action<? super ModDependenciesDefinition> action) {
         action.execute(dependencies);
     }
@@ -27,6 +33,10 @@ public class EnderfallSdkExtension {
 
     public TargetsDefinition targetsDefinition() {
         return targets;
+    }
+
+    public LibraryDefinition libraryDefinition() {
+        return library;
     }
 
     public ModDependenciesDefinition dependenciesDefinition() {

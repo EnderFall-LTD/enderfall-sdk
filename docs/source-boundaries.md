@@ -2,6 +2,7 @@
 
 | Root | Purpose | Classpath guarantee |
 |---|---|---|
+| `src/api` | optional reusable library API/resources | EnderFall API only; Java 17 publication |
 | `src/main` | portable common code/resources | EnderFall API only |
 | `src/client` | portable client-only code/resources | EnderFall API only |
 | `src/datagen` | portable data definitions | EnderFall API only |
@@ -16,6 +17,10 @@ the failure message points directly at the portability breach.
 Portable dependencies follow the same rule. A library mod supplies a Java 17 API
 coordinate for portable compilation and a `{minecraft}`/`{loader}` target coordinate for
 native runtime loading. See [Library-mod dependencies](library-mods.md).
+
+When library mode is enabled, `src/api/java` is published as the standalone API artifact and
+is also packaged into every target runtime. Implementation stays in the normal portable roots,
+so API consumers never compile against the library's implementation details.
 
 Native roots are escape hatches, not portable code. If two active roots contribute the
 same resource path, the build fails instead of selecting an undocumented precedence.

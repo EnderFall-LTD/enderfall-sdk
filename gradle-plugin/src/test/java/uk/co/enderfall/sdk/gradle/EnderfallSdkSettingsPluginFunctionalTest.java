@@ -53,6 +53,10 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                         author = "EnderFall"
                         license = "CC0-1.0"
                     }
+                    library {
+                        apiArtifact = "functional-api"
+                        targetArtifact = "functional-runtime-{minecraft}-{loader}"
+                    }
                     dependencies {
                         required("enderui", "2.0.0") {
                             api = "dev.enderui:enderui-api:2.0.0"
@@ -69,10 +73,15 @@ class EnderfallSdkSettingsPluginFunctionalTest {
                 import dev.enderui.api.EnderUiApi;
                 public final class FunctionalMod { EnderUiApi api; }
                 """);
+        write("src/api/java/dev/example/api/FunctionalApi.java", """
+                package dev.example.api;
+                public interface FunctionalApi { String VERSION = "1.2.3"; }
+                """);
         write("src/main/resources/assets/functional_mod/models/item/example.json", "{}\n");
         write("LICENSE", "CC0 test fixture\n");
 
-        BuildResult result = runner("buildAll", "enderfallDoctor", "--configuration-cache").build();
+        BuildResult result = runner("buildAll", "publishLibraryWorkspace", "enderfallDoctor",
+                "--configuration-cache").build();
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":buildAll").getOutcome());
         assertTrue(result.getOutput().contains("Development target: 1.21.4-fabric"));
@@ -80,6 +89,19 @@ class EnderfallSdkSettingsPluginFunctionalTest {
         Path neoForge = temporaryDirectory.resolve("build/releases/functional_mod-1.2.3+mc1.21.4-neoforge.jar");
         assertTrue(Files.isRegularFile(fabric));
         assertTrue(Files.isRegularFile(neoForge));
+        assertTrue(Files.isRegularFile(temporaryDirectory.resolve(
+                "build/library-repository/dev/example/functional-api/1.2.3/functional-api-1.2.3.jar")));
+        assertTrue(Files.isRegularFile(temporaryDirectory.resolve(
+                "build/library-repository/dev/example/functional-runtime-1.21.4-fabric/1.2.3/"
+                        + "functional-runtime-1.21.4-fabric-1.2.3.jar")));
+        assertTrue(Files.isRegularFile(temporaryDirectory.resolve(
+                "build/library-repository/dev/example/functional-runtime-1.21.4-neoforge/1.2.3/"
+                        + "functional-runtime-1.21.4-neoforge-1.2.3.jar")));
+        try (JarFile api = new JarFile(temporaryDirectory.resolve(
+                "build/library-repository/dev/example/functional-api/1.2.3/functional-api-1.2.3.jar").toFile())) {
+            assertTrue(api.getEntry("dev/example/api/FunctionalApi.class") != null);
+            assertTrue(api.getEntry("dev/example/FunctionalMod.class") == null);
+        }
         assertTrue(Files.isRegularFile(temporaryDirectory.resolve(
                 ".gradle/enderfall-sdk/projects/1_21_4_fabric/build/resources/main/"
                         + "assets/functional_mod/models/item/example.json")));

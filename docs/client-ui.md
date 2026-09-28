@@ -110,17 +110,17 @@ this bridge.
 
 ## Current boundary
 
-This is the first renderer slice, not the complete EnderUI backend. Sprite tint and stacked
-opacity, living-entity previews, reusable focus navigation, resource reload listeners and
-requested hot reloads are supported consistently. Block-owned arbitrary inventory menus and
-client-authored synchronized presentations are available through
+The general renderer bridge now covers the primitives required by an EnderUI-style element
+tree. Sprite tint and stacked opacity, living-entity previews, reusable focus navigation,
+resource reload listeners and requested hot reloads are supported consistently. Block-owned
+arbitrary inventory menus and client-authored synchronized presentations are available through
 [`StorageContainerSpec`](authored-inventories.md) and `ClientModContext.inventoryScreens()`.
 Item rendering uses
 `ItemStackRef`, so portable screens never import a native `ItemStack`; recipe and entity
 identities likewise use `RecipeRef` and `EntityTypeRef` while their runtime conversions are
 implemented feature by feature.
-Calling an unfinished operation fails clearly instead of silently rendering differently on
-one target.
+Each native-object conversion is admitted alongside the portable feature that consumes it;
+the SDK does not expose an untyped escape hatch or silently render differently on one target.
 
 General client screens are local client UI. Any state that affects gameplay must still be
 owned and validated by the logical server through networking or a synchronized inventory

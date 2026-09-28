@@ -35,6 +35,27 @@ drag and two-axis scroll callbacks. Its `UiRenderContext` currently bridges:
 - bounded text tooltips and native item-name tooltips;
 - automatic native-stack cleanup if consumer rendering throws.
 
+Authored element trees can use `UiFocusManager` without adopting native Minecraft widgets.
+Update it with the current `UiFocusTarget` list after layout, forward primary clicks and
+key presses, and query `UiWidgetState` while drawing:
+
+```java
+private final UiFocusManager focus = new UiFocusManager();
+
+focus.updateTargets(List.of(
+        UiFocusTarget.enabled("search", searchBounds),
+        new UiFocusTarget("accept", acceptBounds, canAccept)));
+
+@Override
+public boolean keyPressed(int key, int scanCode, int modifiers) {
+    return focus.keyPressed(key, modifiers);
+}
+```
+
+Target list order is Tab order, Shift-Tab traverses backwards, disabled targets are skipped,
+and pointer hit-testing chooses the last (visually topmost) overlapping target. `UiKeys` and
+`UiModifiers` name the normalized values delivered by all generated screen bridges.
+
 Client libraries can subscribe to resource reloads without importing loader classes:
 
 ```java
@@ -55,8 +76,8 @@ this bridge.
 ## Current boundary
 
 This is the first renderer slice, not the complete EnderUI backend. Sprite tint and stacked
-opacity, living-entity previews, resource reload listeners and requested hot reloads are
-supported consistently, while focus widgets are still being added. Block-owned arbitrary inventory menus are available
+opacity, living-entity previews, reusable focus navigation, resource reload listeners and
+requested hot reloads are supported consistently. Block-owned arbitrary inventory menus are available
 through [`StorageContainerSpec`](authored-inventories.md). Item rendering uses
 `ItemStackRef`, so portable screens never import a native `ItemStack`; recipe and entity
 identities likewise use `RecipeRef` and `EntityTypeRef` while their runtime conversions are

@@ -13,6 +13,8 @@ import uk.co.enderfall.sdk.api.event.TickEvent;
 import uk.co.enderfall.sdk.api.client.ui.ClientScreenRef;
 import uk.co.enderfall.sdk.api.client.ui.ClientScreenSpec;
 import uk.co.enderfall.sdk.api.client.ui.PortableClientScreen;
+import uk.co.enderfall.sdk.api.client.ui.UiFocusManager;
+import uk.co.enderfall.sdk.api.client.ui.UiFocusTarget;
 import uk.co.enderfall.sdk.api.client.ui.UiRect;
 import uk.co.enderfall.sdk.api.client.ui.UiRenderContext;
 import uk.co.enderfall.sdk.api.client.ui.UiTextAlign;
@@ -95,6 +97,7 @@ public final class ContractTestClient implements EnderfallClientMod {
 
     private static final class ContractScreen implements PortableClientScreen {
         private final AtomicBoolean rendered;
+        private final UiFocusManager focus = new UiFocusManager();
 
         private ContractScreen(AtomicBoolean rendered) {
             this.rendered = rendered;
@@ -106,7 +109,14 @@ public final class ContractTestClient implements EnderfallClientMod {
             int panelHeight = 100;
             int left = (graphics.frame().width() - panelWidth) / 2;
             int top = (graphics.frame().height() - panelHeight) / 2;
+            UiRect itemTarget = new UiRect(left + 10, top + 48, 20, 20);
+            UiRect entityTarget = new UiRect(left + 152, top + 28, 58, 66);
+            focus.updateTargets(java.util.List.of(
+                    UiFocusTarget.enabled("item", itemTarget),
+                    UiFocusTarget.enabled("entity", entityTarget)));
             graphics.fill(new UiRect(left, top, panelWidth, panelHeight), 0xE815111D);
+            focus.focusedId().ifPresent(id -> graphics.fill(
+                    "item".equals(id) ? itemTarget : entityTarget, 0xFFB998FF));
             graphics.text("EnderFall portable UI", left + panelWidth / 2f, top + 18,
                     0xFFFFFFFF, true, UiTextAlign.CENTER);
             graphics.pushClip(new UiRect(left + 8, top + 34, panelWidth - 16, 18));
@@ -123,6 +133,14 @@ public final class ContractTestClient implements EnderfallClientMod {
             graphics.livingEntity(new EntityTypeRef(ResourceId.of("minecraft", "pig")),
                     new UiRect(left + 154, top + 30, 54, 62),
                     (float) graphics.frame().mouseX(), (float) graphics.frame().mouseY());
+        }
+
+        @Override public boolean mouseClicked(double x, double y, int button) {
+            return focus.mouseClicked(x, y, button);
+        }
+
+        @Override public boolean keyPressed(int key, int scanCode, int modifiers) {
+            return focus.keyPressed(key, modifiers);
         }
     }
 }

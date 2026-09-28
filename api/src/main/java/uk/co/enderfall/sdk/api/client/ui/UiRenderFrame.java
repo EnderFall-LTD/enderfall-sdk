@@ -8,8 +8,7 @@ public record UiRenderFrame(int width, int height, double mouseX, double mouseY,
             throw new IllegalArgumentException("Invalid UI viewport dimensions");
         }
         if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)
-                || !Float.isFinite(partialTick) || partialTick < 0 || partialTick > 1
-                || frameNanos < 0) {
+                || !Float.isFinite(partialTick)) {
             throw new IllegalArgumentException("Invalid UI frame values");
         }
     }

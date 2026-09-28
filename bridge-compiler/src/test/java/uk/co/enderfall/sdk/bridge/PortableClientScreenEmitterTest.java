@@ -25,6 +25,8 @@ class PortableClientScreenEmitterTest {
             assertTrue(source.contains("void tile("), target.id());
             assertTrue(source.contains("void item(ItemStackRef"), target.id());
             assertTrue(source.contains("void itemTooltip(ItemStackRef"), target.id());
+            assertTrue(source.contains("void livingEntity(EntityTypeRef"), target.id());
+            assertTrue(source.contains("Portable UI entity is not living"), target.id());
             assertTrue(source.contains("Portable tooltip exceeds 64 lines"), target.id());
             assertFalse(source.contains("Tinted portable sprites are not implemented"), target.id());
             if (target.minecraftVersion().id().equals("26.2")) {

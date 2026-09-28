@@ -4,6 +4,7 @@ import java.util.List;
 import uk.co.enderfall.sdk.api.ResourceId;
 import uk.co.enderfall.sdk.api.annotation.Experimental;
 import uk.co.enderfall.sdk.api.item.ItemStackRef;
+import uk.co.enderfall.sdk.api.entity.EntityTypeRef;
 
 /**
  * Version-neutral immediate drawing backend for portable client screens.
@@ -44,6 +45,12 @@ public interface UiRenderContext {
 
     /** Draws the target-native display name for a portable stack. */
     void itemTooltip(ItemStackRef stack, int x, int y);
+
+    /**
+     * Draws a living entity within the supplied rectangle. Pointer coordinates control
+     * the familiar inventory-screen look direction and are expressed in GUI pixels.
+     */
+    void livingEntity(EntityTypeRef type, UiRect bounds, float pointerX, float pointerY);
 
     void pushClip(UiRect bounds);
 

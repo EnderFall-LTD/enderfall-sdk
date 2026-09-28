@@ -31,6 +31,7 @@ drag and two-axis scroll callbacks. Its `UiRenderContext` currently bridges:
 - translation, scaling and rotation;
 - scoped opacity for fills/text and scoped logical depth;
 - loader-neutral item-stack icons and count/durability decorations;
+- cached living-entity previews addressed through `EntityTypeRef`;
 - bounded text tooltips and native item-name tooltips;
 - automatic native-stack cleanup if consumer rendering throws.
 
@@ -41,8 +42,8 @@ this bridge.
 ## Current boundary
 
 This is the first renderer slice, not the complete EnderUI backend. Sprite tint and stacked
-opacity are supported consistently, while entity previews, focus widgets, resource reload
-and hot reload are still being added. Block-owned arbitrary inventory menus are available
+opacity and living-entity previews are supported consistently, while focus widgets,
+resource reload and hot reload are still being added. Block-owned arbitrary inventory menus are available
 through [`StorageContainerSpec`](authored-inventories.md). Item rendering uses
 `ItemStackRef`, so portable screens never import a native `ItemStack`; recipe and entity
 identities likewise use `RecipeRef` and `EntityTypeRef` while their runtime conversions are

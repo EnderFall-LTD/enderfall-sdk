@@ -17,6 +17,7 @@ import uk.co.enderfall.sdk.api.client.ui.UiRect;
 import uk.co.enderfall.sdk.api.client.ui.UiRenderContext;
 import uk.co.enderfall.sdk.api.client.ui.UiTextAlign;
 import uk.co.enderfall.sdk.api.item.ItemStackRef;
+import uk.co.enderfall.sdk.api.entity.EntityTypeRef;
 import uk.co.enderfall.sdk.api.platform.Capability;
 import uk.co.enderfall.sdk.api.registry.ItemRef;
 
@@ -84,7 +85,7 @@ public final class ContractTestClient implements EnderfallClientMod {
         @Override public void render(UiRenderContext graphics) {
             rendered.set(true);
             int panelWidth = 220;
-            int panelHeight = 72;
+            int panelHeight = 100;
             int left = (graphics.frame().width() - panelWidth) / 2;
             int top = (graphics.frame().height() - panelHeight) / 2;
             graphics.fill(new UiRect(left, top, panelWidth, panelHeight), 0xE815111D);
@@ -101,6 +102,9 @@ public final class ContractTestClient implements EnderfallClientMod {
                 graphics.itemTooltip(diamond, (int) graphics.frame().mouseX(),
                         (int) graphics.frame().mouseY());
             }
+            graphics.livingEntity(new EntityTypeRef(ResourceId.of("minecraft", "pig")),
+                    new UiRect(left + 154, top + 30, 54, 62),
+                    (float) graphics.frame().mouseX(), (float) graphics.frame().mouseY());
         }
     }
 }

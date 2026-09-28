@@ -48,9 +48,39 @@ final class PortableClientScreenEmitter {
                 : "net.minecraft.resources.ResourceLocation.parse(stack.item().id().toString())";
         String itemLookup = legacyFml || keyed || extracted
                 ? itemRegistry + ".getValue(id)" : itemRegistry + ".get(id)";
+        String nativeStack = extracted
+                ? "var holder = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(id).orElse(null);\n"
+                        + "                        if (holder == null) throw new IllegalArgumentException(\"Unknown portable UI item \" + stack.item().id());\n"
+                        + "                        if (!holder.areComponentsBound()) return net.minecraft.world.item.ItemStack.EMPTY;\n"
+                        + "                        return new net.minecraft.world.item.ItemStack(holder, stack.count());"
+                : "var item = " + itemLookup + ";\n"
+                        + "                        if (item == null) throw new IllegalArgumentException(\"Unknown portable UI item \" + stack.item().id());\n"
+                        + "                        return new net.minecraft.world.item.ItemStack(item, stack.count());";
         String itemDraw = extracted
                 ? "graphics.item(nativeStack, x, y);\n                        if (decorations) graphics.itemDecorations(font, nativeStack, x, y);"
                 : "graphics.renderItem(nativeStack, x, y);\n                        if (decorations) graphics.renderItemDecorations(font, nativeStack, x, y);";
+        String entityRegistry = legacyFml ? "net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES"
+                : "net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE";
+        String entityId = extracted
+                ? "net.minecraft.resources.Identifier.parse(type.id().toString())"
+                : legacy ? "java.util.Objects.requireNonNull(net.minecraft.resources.ResourceLocation.tryParse(type.id().toString()))"
+                : "net.minecraft.resources.ResourceLocation.parse(type.id().toString())";
+        String entityLookup = legacyFml || keyed || extracted
+                ? entityRegistry + ".getValue(id)" : entityRegistry + ".get(id)";
+        String entityCreate = keyed || extracted
+                ? "nativeType.create(client.level, net.minecraft.world.entity.EntitySpawnReason.COMMAND)"
+                : "nativeType.create(client.level)";
+        String entityDraw = extracted
+                ? "net.minecraft.client.gui.screens.inventory.InventoryScreen.extractEntityInInventoryFollowsMouse(\n"
+                        + "                                graphics, bounds.x(), bounds.y(), bounds.right(), bounds.bottom(), scale, 0.0625F,\n"
+                        + "                                pointerX, pointerY, preview);"
+                : legacy
+                    ? "net.minecraft.client.gui.screens.inventory.InventoryScreen.renderEntityInInventoryFollowsMouse(\n"
+                            + "                                graphics, bounds.x() + bounds.width() / 2, bounds.bottom() - 2, scale,\n"
+                            + "                                pointerX, pointerY, preview);"
+                    : "net.minecraft.client.gui.screens.inventory.InventoryScreen.renderEntityInInventoryFollowsMouse(\n"
+                            + "                                graphics, bounds.x(), bounds.y(), bounds.right(), bounds.bottom(), scale, 0.0625F,\n"
+                            + "                                pointerX, pointerY, preview);";
         String source = SOURCE
                 .replace("${PACKAGE}", packageName)
                 .replace("${CLASS}", className)
@@ -66,7 +96,13 @@ final class PortableClientScreenEmitter {
                 .replace("${ITEM_ID}", itemId)
                 .replace("${ITEM_REGISTRY}", itemRegistry)
                 .replace("${ITEM_LOOKUP}", itemLookup)
+                .replace("${NATIVE_STACK}", nativeStack)
                 .replace("${ITEM_DRAW}", itemDraw)
+                .replace("${ENTITY_ID}", entityId)
+                .replace("${ENTITY_REGISTRY}", entityRegistry)
+                .replace("${ENTITY_LOOKUP}", entityLookup)
+                .replace("${ENTITY_CREATE}", entityCreate)
+                .replace("${ENTITY_DRAW}", entityDraw)
                 .replace("${TEXT_DRAW}", extracted
                         ? "graphics.text(font, text, Math.round(x), Math.round(y), color(argb), shadow);"
                         : "graphics.drawString(font, text, Math.round(x), Math.round(y), color(argb), shadow);");
@@ -77,7 +113,7 @@ final class PortableClientScreenEmitter {
     private static final String IMMEDIATE_RENDER = """
             @Override
             public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-                NativeRenderContext context = new NativeRenderContext(graphics,
+                NativeRenderContext context = new NativeRenderContext(graphics, entityPreviews,
                         new UiRenderFrame(width, height, mouseX, mouseY, partialTick,
                                 Math.max(0L, System.nanoTime())));
                 try {
@@ -91,7 +127,7 @@ final class PortableClientScreenEmitter {
     private static final String EXTRACTED_RENDER = """
             @Override
             public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-                NativeRenderContext context = new NativeRenderContext(graphics,
+                NativeRenderContext context = new NativeRenderContext(graphics, entityPreviews,
                         new UiRenderFrame(width, height, mouseX, mouseY, partialTick,
                                 Math.max(0L, System.nanoTime())));
                 try {
@@ -241,6 +277,7 @@ final class PortableClientScreenEmitter {
             import uk.co.enderfall.sdk.api.client.ui.UiRenderFrame;
             import uk.co.enderfall.sdk.api.client.ui.UiTextAlign;
             import uk.co.enderfall.sdk.api.client.ui.UiTextMetrics;
+            import uk.co.enderfall.sdk.api.entity.EntityTypeRef;
             import uk.co.enderfall.sdk.api.item.ItemStackRef;
 
             /** Generated target-native host for arbitrary portable client screens. */
@@ -281,6 +318,8 @@ final class PortableClientScreenEmitter {
                     private final ResourceId id;
                     private final ClientScreenSpec spec;
                     private final PortableClientScreen portable;
+                    private final Map<ResourceId, net.minecraft.world.entity.LivingEntity> entityPreviews =
+                            new LinkedHashMap<>();
                     private boolean initialized;
                     private boolean removed;
 
@@ -309,6 +348,7 @@ final class PortableClientScreenEmitter {
                     @Override public void removed() {
                         if (!removed) {
                             removed = true;
+                            entityPreviews.clear();
                             portable.removed();
                         }
                         super.removed();
@@ -322,6 +362,7 @@ final class PortableClientScreenEmitter {
                     private final ${GRAPHICS} graphics;
                     private final Font font = Minecraft.getInstance().font;
                     private final UiRenderFrame frame;
+                    private final Map<ResourceId, net.minecraft.world.entity.LivingEntity> entityPreviews;
                     private final Deque<UiRect> clips = new ArrayDeque<>();
                     private final Deque<Float> opacities = new ArrayDeque<>();
                     private final Deque<Integer> depths = new ArrayDeque<>();
@@ -329,8 +370,11 @@ final class PortableClientScreenEmitter {
                     private float opacity = 1;
                     private int depth;
 
-                    private NativeRenderContext(${GRAPHICS} graphics, UiRenderFrame frame) {
+                    private NativeRenderContext(${GRAPHICS} graphics,
+                            Map<ResourceId, net.minecraft.world.entity.LivingEntity> entityPreviews,
+                            UiRenderFrame frame) {
                         this.graphics = graphics;
+                        this.entityPreviews = entityPreviews;
                         this.frame = frame;
                     }
 
@@ -459,6 +503,7 @@ final class PortableClientScreenEmitter {
 
                     @Override public void item(ItemStackRef stack, int x, int y, boolean decorations) {
                         net.minecraft.world.item.ItemStack nativeStack = nativeStack(stack);
+                        if (nativeStack.isEmpty()) return;
                         ${ITEM_DRAW}
                     }
 
@@ -488,7 +533,37 @@ final class PortableClientScreenEmitter {
                     }
 
                     @Override public void itemTooltip(ItemStackRef stack, int x, int y) {
-                        tooltip(List.of(nativeStack(stack).getHoverName().getString()), x, y);
+                        net.minecraft.world.item.ItemStack nativeStack = nativeStack(stack);
+                        tooltip(List.of(nativeStack.isEmpty()
+                                ? stack.item().id().toString() : nativeStack.getHoverName().getString()), x, y);
+                    }
+
+                    @Override public void livingEntity(EntityTypeRef type, UiRect bounds,
+                            float pointerX, float pointerY) {
+                        java.util.Objects.requireNonNull(type, "type");
+                        java.util.Objects.requireNonNull(bounds, "bounds");
+                        if (!Float.isFinite(pointerX) || !Float.isFinite(pointerY)) {
+                            throw new IllegalArgumentException("Entity-preview pointer coordinates must be finite");
+                        }
+                        if (bounds.width() < 1 || bounds.height() < 1) return;
+                        Minecraft client = Minecraft.getInstance();
+                        if (client.level == null) return;
+                        net.minecraft.world.entity.LivingEntity preview = entityPreviews.get(type.id());
+                        if (preview == null || preview.level() != client.level) {
+                            var id = ${ENTITY_ID};
+                            if (!${ENTITY_REGISTRY}.containsKey(id)) {
+                                throw new IllegalArgumentException("Unknown portable UI entity " + type.id());
+                            }
+                            var nativeType = ${ENTITY_LOOKUP};
+                            var created = nativeType == null ? null : ${ENTITY_CREATE};
+                            if (!(created instanceof net.minecraft.world.entity.LivingEntity living)) {
+                                throw new IllegalArgumentException("Portable UI entity is not living: " + type.id());
+                            }
+                            preview = living;
+                            entityPreviews.put(type.id(), preview);
+                        }
+                        int scale = Math.max(1, Math.min(bounds.width(), bounds.height()) / 2);
+                        ${ENTITY_DRAW}
                     }
 
                     private net.minecraft.world.item.ItemStack nativeStack(ItemStackRef stack) {
@@ -497,9 +572,7 @@ final class PortableClientScreenEmitter {
                         if (!${ITEM_REGISTRY}.containsKey(id)) {
                             throw new IllegalArgumentException("Unknown portable UI item " + stack.item().id());
                         }
-                        var item = ${ITEM_LOOKUP};
-                        if (item == null) throw new IllegalArgumentException("Unknown portable UI item " + stack.item().id());
-                        return new net.minecraft.world.item.ItemStack(item, stack.count());
+                        ${NATIVE_STACK}
                     }
 
                     @Override public void pushClip(UiRect bounds) {

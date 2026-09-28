@@ -24,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 class NeoForge1211GenerationTest {
     private static final String TARGET = "1.21.1-neoforge";
     private static final String EXPECTED_DIGEST =
-            "59ba554dee923523327e73a493060d041fabe81ed60e1b5388ac050a05d531b7";
+            "150c880f8018e6550786a2561de36845e74ce2b9d3e0b464bb193e7791084289";
     private static final String PACKAGE_PATH = "uk/co/enderfall/sdk/runtime/neoforge/v1_21_4/";
     private static final String CANONICAL_MENU = PACKAGE_PATH + "NeoForgeWorkbenchMenu.java";
     private static final String MENU_DESCRIPTION =

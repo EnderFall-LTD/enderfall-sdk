@@ -27,6 +27,11 @@ class UiPrimitivesTest {
         assertThrows(IllegalArgumentException.class, () -> new UiInsets(-1, 0, 0, 0));
         assertThrows(IllegalArgumentException.class,
                 () -> new UiRenderFrame(1920, 1080, 0, 0, Float.NaN, 1));
+        UiRenderFrame arbitraryClockOrigin =
+                new UiRenderFrame(1920, 1080, 0, 0, 0.5F, Long.MIN_VALUE);
+        assertEquals(Long.MIN_VALUE, arbitraryClockOrigin.frameNanos());
+        UiRenderFrame extractionDelta = new UiRenderFrame(1920, 1080, 0, 0, 20.0F, 1);
+        assertEquals(20.0F, extractionDelta.partialTick());
         assertThrows(IllegalArgumentException.class, () -> ClientScreenSpec.of("two\nlines"));
         assertEquals(new UiInsets(4, 4, 4, 4), UiInsets.uniform(4));
         ItemRef item = new ItemRef(ResourceId.of("minecraft", "diamond"));

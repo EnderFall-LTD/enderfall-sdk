@@ -25,7 +25,7 @@ class LegacyFmlGenerationTest {
     private static final Map<String, String> REFERENCE_JAVA_HASHES = Map.ofEntries(
             Map.entry("EnderfallForgeRuntime.java", "a4208d6dc644248b14f0cd1ee2102dba7c924217933d49e294641c3b04f66a31"),
             Map.entry("LegacyForgeClientHooks.java", "a1cad5ad80302e67129dcf29b519f08ab9b7cc45d364982958e035a5ee2859a9"),
-            Map.entry("LegacyForgeClientScreenBridge.java", "6d8164b3f9613a2ebbc7ff6d1f081010c10fc6cc516b7210c251aa379bfe13fb"),
+            Map.entry("LegacyForgeClientScreenBridge.java", "24443f8596007da94c50ea83563f1d626ff9e4b6e167fa9d779dd5982744bc9d"),
             Map.entry("LegacyForgeCommandBridge.java", "a2c0a1b471efc62005537185fbc486bd3623e63e9db415dd2e67ae69d975f6a4"),
             Map.entry("LegacyForgeConsumerBootstrap.java", "c558ac1712ba96c4d54e0f78a425d3c1a135089a8f8797621e0292002c32431b"),
             Map.entry("LegacyForgePlatformAdapter.java", "db99ad4c5825686f074428a28038bbe3b0ac9b82cf424ca4e03962d50644fede"),
@@ -48,8 +48,8 @@ class LegacyFmlGenerationTest {
             GenerationResult result = generate(target, first);
             assertEquals(result, generate(target, second));
             assertEquals(target.equals("1.20.1-forge")
-                    ? "d9327f01962ece7b9c0b261182a4d32a4a482d8a918d5e491921e169f5b9c984"
-                    : "0726d0cea107e86fe7b0e2d49119a67b7b641c0cd64778bbec26b592114f8480", result.sha256());
+                    ? "ad25d00bfc469525458a94d76d42b0154385320d696ad49be2a513948151681f"
+                    : "23eacfbeca5a7bea85db971c6184a5be57421d5d60177513b663768f4f05801a", result.sha256());
             assertEquals(17, result.files().size());
             assertEquals(hashes(first), hashes(second));
             assertEquals(17, TargetCatalog.standard().require(target).javaVersion());

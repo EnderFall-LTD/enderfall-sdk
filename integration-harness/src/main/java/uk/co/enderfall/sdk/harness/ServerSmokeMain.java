@@ -14,8 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Starts real dedicated servers and records machine-readable smoke-test evidence. */
@@ -94,18 +96,25 @@ public final class ServerSmokeMain {
                 .directory(sdkRoot.toFile())
                 .redirectErrorStream(true)
                 .start();
-        CountDownLatch ready = new CountDownLatch(1);
+        String serverStartedMarker = "Lifecycle SERVER_STARTED on " + target;
+        Set<String> pendingReadinessMarkers = ConcurrentHashMap.newKeySet();
+        pendingReadinessMarkers.add(serverStartedMarker);
+        pendingReadinessMarkers.add("ENDERFALL_GAMEPLAY_FOUNDATION_REGISTRATION_READY " + target);
+        pendingReadinessMarkers.add("ENDERFALL_GAMEPLAY_FOUNDATION_CONFIG_READY " + target);
+        pendingReadinessMarkers.add("ENDERFALL_GAMEPLAY_FOUNDATION_LISTENER_ISOLATION_READY " + target);
+        CountDownLatch ready = new CountDownLatch(pendingReadinessMarkers.size());
+        AtomicBoolean serverStarted = new AtomicBoolean();
         AtomicReference<Throwable> readerFailure = new AtomicReference<>();
-        String marker = "Lifecycle SERVER_STARTED on " + target;
-        Thread outputReader = new Thread(() -> copyOutput(process, logFile, target, marker, ready, readerFailure),
+        Thread outputReader = new Thread(() -> copyOutput(process, logFile, target, serverStartedMarker,
+                        pendingReadinessMarkers, ready, serverStarted, readerFailure),
                 "enderfall-server-smoke-" + projectName);
         outputReader.setDaemon(true);
         outputReader.start();
 
-        boolean sawReady = waitForReadyOrExit(process, ready, READY_TIMEOUT);
+        boolean sawRequiredReadiness = waitForReadyOrExit(process, ready, READY_TIMEOUT);
         boolean stoppedCleanly = false;
         String failure = "";
-        if (sawReady) {
+        if (sawRequiredReadiness) {
             try (BufferedWriter input = new BufferedWriter(new OutputStreamWriter(
                     process.getOutputStream(), StandardCharsets.UTF_8))) {
                 input.write("stop");
@@ -119,10 +128,12 @@ public final class ServerSmokeMain {
                 failure = "Server did not stop within " + STOP_TIMEOUT.toSeconds() + " seconds";
             }
         } else if (!process.isAlive()) {
-            failure = "Server exited before the SERVER_STARTED marker";
+            failure = "Server exited before all required readiness checkpoints; missing "
+                    + pendingReadinessMarkers.stream().sorted().toList();
         } else {
-            failure = "Server did not reach the SERVER_STARTED marker within "
-                    + READY_TIMEOUT.toSeconds() + " seconds";
+            failure = "Server did not reach all required readiness checkpoints within "
+                    + READY_TIMEOUT.toSeconds() + " seconds; missing "
+                    + pendingReadinessMarkers.stream().sorted().toList();
         }
 
         if (process.isAlive()) {
@@ -134,14 +145,14 @@ public final class ServerSmokeMain {
             failure = "Could not capture server output: " + outputProblem.getMessage();
         }
         int exitCode = process.isAlive() ? -1 : process.exitValue();
-        if (sawReady && stoppedCleanly && exitCode != 0 && failure.isEmpty()) {
+        if (sawRequiredReadiness && stoppedCleanly && exitCode != 0 && failure.isEmpty()) {
             failure = "Server Gradle process exited with code " + exitCode;
         }
         long durationMillis = Duration.between(started, Instant.now()).toMillis();
-        boolean passed = sawReady && stoppedCleanly && exitCode == 0 && failure.isEmpty();
+        boolean passed = sawRequiredReadiness && stoppedCleanly && exitCode == 0 && failure.isEmpty();
         System.out.println((passed ? "PASS " : "FAIL ") + target + " in " + durationMillis + " ms"
                 + (failure.isEmpty() ? "" : ": " + failure));
-        return new Result(target, passed, sawReady, stoppedCleanly, exitCode, durationMillis, failure,
+        return new Result(target, passed, serverStarted.get(), stoppedCleanly, exitCode, durationMillis, failure,
                 sdkRoot.relativize(logFile).toString().replace('\\', '/'));
     }
 
@@ -241,8 +252,9 @@ public final class ServerSmokeMain {
         return ready.getCount() == 0;
     }
 
-    private static void copyOutput(Process process, Path logFile, String target, String marker,
-                                   CountDownLatch ready, AtomicReference<Throwable> failure) {
+    private static void copyOutput(Process process, Path logFile, String target, String serverStartedMarker,
+                                   Set<String> pendingReadinessMarkers, CountDownLatch ready,
+                                   AtomicBoolean serverStarted, AtomicReference<Throwable> failure) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
                 process.getInputStream(), StandardCharsets.UTF_8));
              BufferedWriter log = Files.newBufferedWriter(logFile, StandardCharsets.UTF_8)) {
@@ -252,8 +264,13 @@ public final class ServerSmokeMain {
                 log.newLine();
                 log.flush();
                 System.out.println('[' + target + "] " + line);
-                if (line.contains(marker)) {
-                    ready.countDown();
+                if (line.contains(serverStartedMarker)) {
+                    serverStarted.set(true);
+                }
+                for (String marker : List.copyOf(pendingReadinessMarkers)) {
+                    if (line.contains(marker) && pendingReadinessMarkers.remove(marker)) {
+                        ready.countDown();
+                    }
                 }
             }
         } catch (Throwable throwable) {

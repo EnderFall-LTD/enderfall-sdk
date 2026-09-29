@@ -32,7 +32,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Verify SDK and fresh consumer builds
         if: runner.os != 'Windows'
         run: ./gradlew checkAll checkContractTargets checkDemoMod releaseChecksums cyclonedxBom
@@ -70,7 +70,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Resolve pinned build plugins
         shell: bash
         run: |
@@ -125,7 +125,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Publish candidate SDK for the starter
         if: runner.os != 'Windows'
         shell: bash
@@ -185,7 +185,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: acceptance-*
@@ -242,7 +242,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Verify coordinated version
         shell: bash
         run: |

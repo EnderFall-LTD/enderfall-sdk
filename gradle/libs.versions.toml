@@ -1,6 +1,6 @@
 [versions]
 gradle = "9.7.1"
-stonecutter = "0.9.7"
+stonecutter = "0.9.8"
 loom-back-compat = "0.4.2"
 foojay = "1.0.0"
 fabric-loom = "1.17.20"

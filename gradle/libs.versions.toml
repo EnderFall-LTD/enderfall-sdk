@@ -10,7 +10,7 @@ junit = "5.12.2"
 shadow = "9.6.1"
 cyclonedx = "3.4.1"
 japicmp = "0.26.1"
-plugin-publish = "2.1.1"
+plugin-publish = "2.2.1"
 
 [libraries]
 tomlj = { module = "org.tomlj:tomlj", version.ref = "tomlj" }

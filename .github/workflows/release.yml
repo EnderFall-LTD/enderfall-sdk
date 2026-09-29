@@ -128,10 +128,33 @@ jobs:
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
       - name: Publish candidate SDK for the starter
         if: runner.os != 'Windows'
-        run: ./enderfall-sdk/gradlew -p enderfall-sdk publishWorkspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if ./enderfall-sdk/gradlew -p enderfall-sdk publishWorkspace --stacktrace; then
+              exit 0
+            fi
+            test "$attempt" -lt 3 || exit 1
+            echo "Candidate publication failed on attempt ${attempt}; retrying with the populated Gradle cache."
+            sleep $((attempt * 15))
+          done
       - name: Publish candidate SDK for the starter on Windows
         if: runner.os == 'Windows'
-        run: .\enderfall-sdk\gradlew.bat -p enderfall-sdk publishWorkspace
+        shell: pwsh
+        run: |
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            & .\enderfall-sdk\gradlew.bat -p enderfall-sdk publishWorkspace --stacktrace
+            $publishExitCode = $LASTEXITCODE
+            if ($publishExitCode -eq 0) {
+              exit 0
+            }
+            if ($attempt -eq 3) {
+              exit $publishExitCode
+            }
+            Write-Warning "Candidate publication failed on attempt $attempt; retrying with the populated Gradle cache."
+            Start-Sleep -Seconds ($attempt * 15)
+          }
       - name: Isolate the starter from SDK sources
         if: runner.os != 'Windows'
         shell: bash

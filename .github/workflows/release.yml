@@ -192,7 +192,10 @@ jobs:
           path: build/reproducibility/windows
       - name: Compare Windows and Linux release archives
         shell: bash
-        run: diff -u build/reproducibility/linux/SHA256SUMS build/reproducibility/windows/SHA256SUMS
+        run: >-
+          diff -u
+          build/reproducibility/linux/checksums/SHA256SUMS
+          build/reproducibility/windows/checksums/SHA256SUMS
 
   release:
     needs: [release-matrix, reproducibility]

@@ -168,11 +168,19 @@ jobs:
           pattern: acceptance-*
           path: build/release-evidence
       - name: Audit exact-revision release matrix
-        run: >-
-          ./gradlew verifyRuntimeMatrix
-          -Penderfall.releaseEvidenceRoot=build/release-evidence
-          -Penderfall.releaseRevision=${{ github.sha }}
+        shell: bash
+        run: |
+          set +e
+          ./gradlew verifyRuntimeMatrix \
+            -Penderfall.releaseEvidenceRoot=build/release-evidence \
+            -Penderfall.releaseRevision=${{ github.sha }}
+          status=$?
+          if test -f build/reports/release-matrix/matrix.json; then
+            cat build/reports/release-matrix/matrix.json
+          fi
+          exit "$status"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
         with:
           name: release-matrix
           path: build/reports/release-matrix/matrix.json

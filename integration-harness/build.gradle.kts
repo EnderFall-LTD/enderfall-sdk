@@ -190,14 +190,11 @@ tasks.register<JavaExec>("verifyReleaseMatrix") {
     dependsOn(tasks.named("classes"))
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass = "uk.co.enderfall.sdk.harness.ReleaseMatrixMain"
-    val evidenceRoot = providers.gradleProperty("enderfall.releaseEvidenceRoot")
-        .map { rootProject.file(it).absolutePath }
-    val revision = providers.gradleProperty("enderfall.releaseRevision")
-    doFirst {
-        require(evidenceRoot.isPresent) { "Supply -Penderfall.releaseEvidenceRoot=<downloaded evidence directory>" }
-        require(revision.isPresent) { "Supply -Penderfall.releaseRevision=<full Git SHA>" }
-        args(rootProject.layout.projectDirectory.asFile.absolutePath,
-            evidenceRoot.get(), revision.get(),
-            rootProject.layout.buildDirectory.file("reports/release-matrix/matrix.json").get().asFile.absolutePath)
-    }
+    val evidenceRootProperty = providers.gradleProperty("enderfall.releaseEvidenceRoot").orNull
+        ?: throw GradleException("Supply -Penderfall.releaseEvidenceRoot=<downloaded evidence directory>")
+    val revision = providers.gradleProperty("enderfall.releaseRevision").orNull
+        ?: throw GradleException("Supply -Penderfall.releaseRevision=<full Git SHA>")
+    args(rootProject.layout.projectDirectory.asFile.absolutePath,
+        rootProject.file(evidenceRootProperty).absolutePath, revision,
+        rootProject.layout.buildDirectory.file("reports/release-matrix/matrix.json").get().asFile.absolutePath)
 }

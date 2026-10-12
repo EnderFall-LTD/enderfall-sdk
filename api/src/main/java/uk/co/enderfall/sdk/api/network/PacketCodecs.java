@@ -17,13 +17,28 @@ public final class PacketCodecs {
     }
 
     public static PacketCodec<String> string(int maximumBytes) {
-        return codec((writer, value) -> writer.writeString(value, maximumBytes),
-                reader -> reader.readString(maximumBytes));
+        int limit = boundedLimit(maximumBytes);
+        return codec((writer, value) -> writer.writeString(value, limit),
+                reader -> reader.readString(limit));
     }
 
     public static PacketCodec<byte[]> bytes(int maximumBytes) {
-        return codec((writer, value) -> writer.writeBytes(value, maximumBytes),
-                reader -> reader.readBytes(maximumBytes));
+        int limit = boundedLimit(maximumBytes);
+        return codec((writer, value) -> writer.writeBytes(value, limit),
+                reader -> reader.readBytes(limit));
+    }
+
+    /**
+     * Validates a codec byte bound where the codec is declared. Without this the bound is only
+     * discovered when the packet is first sent, inside loader networking, reporting "exceeds -1
+     * bytes" for a value that should never have been accepted in the first place.
+     */
+    private static int boundedLimit(int maximumBytes) {
+        if (maximumBytes < 1 || maximumBytes > PacketType.SDK_MAXIMUM_BYTES) {
+            throw new IllegalArgumentException(
+                    "maximumBytes must be between 1 and " + PacketType.SDK_MAXIMUM_BYTES);
+        }
+        return maximumBytes;
     }
 
     public static <T> PacketCodec<List<T>> list(PacketCodec<T> elementCodec, int maximumSize) {

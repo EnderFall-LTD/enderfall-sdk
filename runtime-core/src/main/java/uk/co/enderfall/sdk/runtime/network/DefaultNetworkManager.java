@@ -168,6 +168,7 @@ public final class DefaultNetworkManager implements NetworkManager {
 
     private <T> void receive(Registration<T> registration, byte[] payload, PacketDirection direction,
                              Optional<UUID> playerId, java.util.function.Consumer<String> disconnect) {
+        T decoded;
         try {
             requireIncomingDirection(registration.packet, direction);
             UUID remoteId = playerId.orElse(SERVER_CONNECTION_ID);
@@ -175,15 +176,24 @@ public final class DefaultNetworkManager implements NetworkManager {
                 throw new PacketDecodingException("Packet was not negotiated for this connection");
             }
             ByteArrayPacketReader reader = new ByteArrayPacketReader(payload, registration.packet.maximumBytes());
-            T decoded = registration.packet.codec().decode(reader);
+            decoded = registration.packet.codec().decode(reader);
             if (reader.remainingBytes() != 0) {
                 throw new PacketDecodingException("Packet has " + reader.remainingBytes() + " unread bytes");
             }
-            registration.handler.handle(decoded,
-                    new DefaultNetworkContext(direction, playerId, remoteCapabilities, disconnect));
         } catch (Exception exception) {
             logger.warn("Rejected malformed packet {}: {}", registration.packet.id(), exception.getMessage());
             disconnect.accept("Invalid packet " + registration.packet.id());
+            return;
+        }
+        // A consumer packet handler is a callback, not part of the wire contract. Isolating its
+        // failures matches the documented event-listener policy: one mod's bug is logged, and the
+        // connection survives a packet that decoded correctly. Only a malformed packet is a
+        // protocol violation worth disconnecting for.
+        try {
+            registration.handler.handle(decoded,
+                    new DefaultNetworkContext(direction, playerId, remoteCapabilities, disconnect));
+        } catch (Exception exception) {
+            logger.error("Handler for packet {} failed", exception, registration.packet.id());
         }
     }
 

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -240,10 +241,148 @@ class DefaultMenuManagerTest {
         assertEquals(uk.co.enderfall.sdk.api.ui.MenuListAction.Type.SELECT, received.get().type());
     }
 
+    @Test
+    void aFailingConsumerActionHandlerIsLoggedInsteadOfDisconnectingThePlayer() {
+        LinkedAdapter serverAdapter = new LinkedAdapter(Environment.DEDICATED_SERVER);
+        LinkedAdapter clientAdapter = new LinkedAdapter(Environment.CLIENT);
+        serverAdapter.peer = clientAdapter;
+        clientAdapter.peer = serverAdapter;
+        RecordingLogger logger = new RecordingLogger();
+        DefaultMenuManager server = manager(serverAdapter, logger);
+        DefaultMenuManager client = manager(clientAdapter, new RecordingLogger());
+        MenuSpec spec = MenuSpec.builder("Editor")
+                .textInput(MenuTextInput.singleLine("name", "Name", 10, 30, 100, 2))
+                .button(MenuButton.of("save", "Save", 10, 60, 60))
+                .build();
+        // A consumer validating its own input would naturally throw IllegalArgumentException, which
+        // used to be reported as a malformed packet and disconnect the player with that message.
+        MenuRef ref = server.register("editor", spec, context -> {
+            throw new IllegalArgumentException("name " + context.inputs().get("name") + " is reserved");
+        });
+        client.register("editor", spec, ignored -> { });
+        server.open(PLAYER, ref, MenuState.empty());
+
+        // LinkedAdapter turns any disconnect into an AssertionError, so reaching the assertion
+        // below proves the player was not kicked and the consumer message never left the server.
+        clientAdapter.actionSender.accept(new PortableMenuSubmission("save", Map.of("name", "ok")));
+
+        assertEquals(1, logger.failures().size());
+        assertEquals(IllegalArgumentException.class, logger.failures().get(0).getClass());
+    }
+
+    // Selection rows resolve entry IDs from the server's copy of the state, so in each test below a
+    // click on row 0 must still reach the entry the player can see, not one from an unsent page.
+
+    @Test
+    void anUpdateTooLargeToSendLeavesTheServerSessionOnTheStateTheClientShows() {
+        SelectionMenu menu = new SelectionMenu((self, action) -> { });
+
+        var failure = assertThrows(IllegalArgumentException.class,
+                () -> menu.server.update(PLAYER, oversized(menu.page("test:never_sent"))));
+        assertTrue(failure.getMessage().contains(String.valueOf(DefaultMenuManager.PACKET_LIMIT)), failure::getMessage);
+
+        menu.clickFirstRow();
+        assertEquals(List.of("test:shown"), menu.received);
+        org.junit.jupiter.api.Assertions.assertNull(menu.clientAdapter.updated);
+    }
+
+    @Test
+    void aHandlerUpdateTooLargeToSendLeavesTheServerSessionOnTheStateTheClientShows() {
+        // A paging handler whose next page is too large: its update fails and is logged.
+        SelectionMenu menu = new SelectionMenu((self, action) -> action.update(oversized(self.page("test:never_sent"))));
+
+        menu.clickFirstRow();
+        menu.clickFirstRow();
+
+        assertEquals(List.of("test:shown", "test:shown"), menu.received);
+        assertEquals(2, menu.serverLogger.failures().size());
+        org.junit.jupiter.api.Assertions.assertNull(menu.clientAdapter.updated);
+    }
+
+    @Test
+    void anUpdateTheTransportFailsToDeliverIsWithdrawnFromTheServerSession() {
+        SelectionMenu menu = new SelectionMenu((self, action) -> { });
+
+        menu.serverAdapter.failSends = true;
+        var failure = assertThrows(IllegalStateException.class,
+                () -> menu.server.update(PLAYER, menu.page("test:never_sent")));
+        assertEquals("transport closed", failure.getMessage());
+        menu.serverAdapter.failSends = false;
+
+        menu.clickFirstRow();
+        assertEquals(List.of("test:shown"), menu.received);
+    }
+
+    @Test
+    void aPeerOnTheSixtyFourEntryProtocolIsRejectedByVersionNotByEntryCount() {
+        // 0.1.0-beta.1 spoke menu protocol 2 and rejects states above 64 entries. The 128-entry
+        // budget is a wire change, so a mixed pair must fail on the first menu packet with a clear
+        // reason, not only when a menu happens to carry more than 64 entries.
+        LinkedAdapter clientAdapter = new LinkedAdapter(Environment.CLIENT);
+        manager(clientAdapter);
+        var writer = new uk.co.enderfall.sdk.runtime.network.ByteArrayPacketWriter(DefaultMenuManager.PACKET_LIMIT);
+        writer.writeVarInt(2);
+        writer.writeByte(1);
+        var reasons = new java.util.ArrayList<String>();
+
+        clientAdapter.receiver.receive(writer.toByteArray(), PacketDirection.CLIENTBOUND, Optional.empty(),
+                reasons::add);
+
+        assertEquals(1, reasons.size());
+        assertTrue(reasons.get(0).contains("Unsupported EnderFall menu protocol 2"), reasons::toString);
+    }
+
+    /** A linked server and client with a three-row selection menu open on entry "test:shown". */
+    private static final class SelectionMenu {
+        private final MenuSelectionList list = MenuSelectionList.of("recipes", 10, 20, 120, 3);
+        private final LinkedAdapter serverAdapter = new LinkedAdapter(Environment.DEDICATED_SERVER);
+        private final LinkedAdapter clientAdapter = new LinkedAdapter(Environment.CLIENT);
+        private final RecordingLogger serverLogger = new RecordingLogger();
+        private final List<String> received = new java.util.ArrayList<>();
+        private final DefaultMenuManager server;
+
+        private SelectionMenu(
+                java.util.function.BiConsumer<SelectionMenu, uk.co.enderfall.sdk.api.ui.MenuActionContext> afterSelect) {
+            serverAdapter.peer = clientAdapter;
+            clientAdapter.peer = serverAdapter;
+            server = manager(serverAdapter, serverLogger);
+            DefaultMenuManager client = manager(clientAdapter);
+            var spec = MenuSpec.builder("Recipes").size(160, 120).selectionList(list).build();
+            var ref = server.register("recipes", spec, action -> {
+                received.add(list.action(action).orElseThrow().entryId());
+                afterSelect.accept(this, action);
+            });
+            client.register("recipes", spec, ignored -> { });
+            server.open(PLAYER, ref, page("test:shown"));
+        }
+
+        private MenuState page(String firstEntry) {
+            return MenuState.builder().selectionPage(list,
+                    List.of(MenuSelectionEntry.enabled(firstEntry, "Entry")), 0, "").build();
+        }
+
+        private void clickFirstRow() {
+            clientAdapter.actionSender.accept(new PortableMenuSubmission("recipes.select.0", Map.of()));
+        }
+    }
+
+    /** Adds legal values until the state no longer fits one menu packet. */
+    private static MenuState oversized(MenuState base) {
+        MenuState.Builder builder = MenuState.builder();
+        base.values().forEach(builder::value);
+        for (int index = 0; index < 20; index++) {
+            builder.value("filler." + index, "x".repeat(1_000));
+        }
+        return builder.build();
+    }
+
     private static DefaultMenuManager manager(LinkedAdapter adapter) {
+        return manager(adapter, new RecordingLogger());
+    }
+
+    private static DefaultMenuManager manager(LinkedAdapter adapter, RecordingLogger logger) {
         return new DefaultMenuManager("test_mod", "1.21.4-fabric", adapter,
-                new RegistrationGate(), new SystemModLogger("test_mod"),
-                new DefaultEventBus(new SystemModLogger("test_mod")));
+                new RegistrationGate(), logger, new DefaultEventBus(logger));
     }
 
     private static final class LinkedAdapter implements PlatformAdapter {
@@ -254,6 +393,7 @@ class DefaultMenuManagerTest {
         private MenuState updated;
         private Consumer<PortableMenuSubmission> actionSender;
         private Runnable closeSender;
+        private boolean failSends;
 
         private LinkedAdapter(Environment environment) {
             this.environment = environment;
@@ -274,6 +414,7 @@ class DefaultMenuManagerTest {
                     reason -> { throw new AssertionError(reason); });
         }
         @Override public void sendToPlayer(UUID playerId, ResourceId id, byte[] payload) {
+            if (failSends) throw new IllegalStateException("transport closed");
             peer.receiver.receive(payload, PacketDirection.CLIENTBOUND, Optional.empty(),
                     reason -> { throw new AssertionError(reason); });
         }

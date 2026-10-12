@@ -55,6 +55,12 @@ public final class DefaultClientResourceManager implements ClientResourceManager
         } catch (UnsupportedOperationException unsupported) {
             registered.remove(id);
             throw new UnsupportedOperationException(prefix() + "Portable client resources are unavailable", unsupported);
+        } catch (RuntimeException failure) {
+            // Release the ID for any other native failure too, exactly as the command and screen
+            // registrars do. Leaving it reserved would make the reload listener ID permanently
+            // unusable for the rest of the process after one failed registration attempt.
+            registered.remove(id);
+            throw failure;
         }
         return new Subscription() {
             @Override public boolean active() { return active.get(); }

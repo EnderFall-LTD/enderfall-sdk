@@ -22,6 +22,25 @@ Build all selected targets:
 Artifacts are collected in `build/releases` using
 `<mod-id>-<mod-version>+mc<minecraft>-<loader>.jar`.
 
+## Dependency repositories
+
+Repositories are resolved in the order they are declared. The SDK plugin adds Maven
+Central as a **last fallback**, so any repository you declare yourself wins:
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        maven { url = uri("../build/repository") } // a locally published SDK
+        mavenCentral()                            // the SDK adds this too; yours keeps priority
+    }
+}
+```
+
+This matters when a version of the SDK exists both locally and on Maven Central. A
+repository declared above Central always supplies the artifact, so a local workspace
+or development build cannot be silently shadowed by the released one. Loader
+repositories (Fabric, NeoForged) are group-filtered and never serve SDK coordinates.
+
 Use `./gradlew enderfallDoctor` to see the exact catalog versions and selected
 development target. Select another development target with, for example:
 

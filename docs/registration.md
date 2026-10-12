@@ -72,7 +72,12 @@ for every Minecraft `Block` method. See [the furniture-port roadmap](furniture-p
 - `copyFrom(BlockRef)` copies the portable properties of a declaration in the same
   attachment batch, including any native base. It does **not** copy its block item,
   storage, callbacks, or recipes.
-- `copyFrom(BlockSpec)` copies an existing immutable portable specification.
+- `copyFrom(BlockSpec)` copies an existing immutable specification's native copy source and
+  the properties a copy can legally carry: strength, resistance, friction, jump factor,
+  luminance, tool requirement, sound, and its explicit property overrides. It deliberately does
+  **not** copy behavior, state definitions, state shapes, outline or collision shapes, the
+  facing/axis properties, six-way placement, waterlogging, scheduled ticks, or tool property
+  policies; a copy re-binds onto the source's own native states, so declare those separately.
 - `copyFrom(ResourceId)` uses the target's native property-copy operation. The source
   must exist when properties are resolved. Prefer `BlockRef` for SDK declarations.
 - A later copy replaces earlier property overrides. Calls after the copy override
@@ -88,7 +93,7 @@ block subclasses and state definitions are separate. State-dependent native prop
 callbacks can require state properties that a basic block does not have; do not use
 such a copy as a substitute for implementing the block's behavior.
 
-Explicit portable overrides currently cover strength, friction, jump factor,
+Explicit portable overrides currently cover strength, resistance, friction, jump factor,
 luminance, tool requirement and sound. Item declarations expose the existing
 stack-size, durability, fire-resistance and rarity settings, with
 `ItemSpec.Builder.copyFrom(ItemSpec)`. This is not a claim that every Minecraft

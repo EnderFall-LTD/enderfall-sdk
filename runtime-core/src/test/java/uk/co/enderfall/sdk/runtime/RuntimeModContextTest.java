@@ -87,6 +87,38 @@ class RuntimeModContextTest {
         assertThrows(IllegalStateException.class, handle::path);
     }
 
+    @Test
+    void configSnapshotIterationOrderIsStableAndRejectsClientConfigsOnAServer() {
+        RecordingAdapter adapter = new RecordingAdapter(temporaryDirectory);
+        RuntimeModContext context = new RuntimeModContext("test_mod", adapter);
+        ConfigSpec.Builder builder = ConfigSpec.builder();
+        builder.integer("zulu.count", 1, 1, 9, "Declared last.");
+        builder.integer("alpha.count", 2, 1, 9, "Declared first.");
+        builder.integer("mike.count", 3, 1, 9, "Declared middle.");
+
+        ConfigHandle handle = context.configs().register("ordered", ConfigScope.COMMON, builder.build());
+
+        // A snapshot feeds diagnostics and diffs, so its order must follow declaration order and
+        // must not be randomised per JVM.
+        List<String> first = List.copyOf(handle.snapshot().keySet());
+        List<String> second = List.copyOf(handle.snapshot().keySet());
+        assertEquals(first, second);
+        assertEquals(List.of("zulu.count", "alpha.count", "mike.count"), first);
+
+        // A client config on a dedicated server is rejected for the real reason, and the name stays
+        // available rather than being reported as a duplicate on a retry.
+        IllegalStateException rejection = assertThrows(IllegalStateException.class,
+                () -> context.configs().register("shared", ConfigScope.CLIENT, ConfigSpec.builder().build()));
+        assertTrue(rejection.getMessage().contains("cannot be loaded on a dedicated server"),
+                rejection.getMessage());
+        IllegalStateException duplicate = assertThrows(IllegalStateException.class,
+                () -> context.configs().register("shared", ConfigScope.CLIENT, ConfigSpec.builder().build()));
+        assertTrue(duplicate.getMessage().contains("cannot be loaded on a dedicated server"),
+                duplicate.getMessage());
+        assertTrue(context.configs().register("shared", ConfigScope.COMMON,
+                ConfigSpec.builder().build()) != null);
+    }
+
     public static final class ServerMod implements EnderfallMod {
         @Override
         public void initialize(ModContext context) {

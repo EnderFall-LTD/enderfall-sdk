@@ -19,6 +19,18 @@ class NamedModelAnimationTest {
         for (int i = 0; i < 30; i++) builder.animation("a" + i);
         assertThrows(IllegalArgumentException.class, () -> builder.animation("extra"));
     }
+    @Test void animationNamesIterateInAStableSortedOrder() {
+        var block = new BlockRef(ResourceId.of("test", "machine"));
+        var spec = BlockEntitySpec.builder(block)
+                .animation("zulu").animation("alpha").animation("mike").build();
+
+        // Animation names feed index-keyed lookups, so iteration must be deterministic. Copying the
+        // builder's sorted set with Set.copyOf would return an unordered set whose order differs
+        // between JVM runs.
+        assertEquals(java.util.List.of("alpha", "mike", "zulu"), java.util.List.copyOf(spec.animations()));
+        assertEquals(java.util.List.of("alpha", "mike", "zulu"), java.util.List.copyOf(spec.animations()));
+    }
+
     @Test void namedDisplayUsesLateArrivalTimeAndIdleFallback() {
         var idle = RenderTransform.at(0, 0, 0);
         var opening = new RenderAnimation(new RenderTransition(idle, idle.rotate(90, 0, 0),

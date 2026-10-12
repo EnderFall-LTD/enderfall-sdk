@@ -74,7 +74,15 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
         Objects.requireNonNull(itemSpec, "itemSpec");
         ResourceId id = ResourceId.of(modId, path);
         items.reserve(id);
-        return registerInternal(id, blockSpec, Objects.requireNonNull(itemSpec, "itemSpec"));
+        try {
+            return registerInternal(id, blockSpec, itemSpec);
+        } catch (RuntimeException failure) {
+            // The item ID was reserved before the block could be validated or registered. Release
+            // it again so a rejected or failed block does not make that item ID permanently
+            // unusable with a misleading "Duplicate item ID" on a later attempt.
+            items.release(id);
+            throw failure;
+        }
     }
 
     private BlockRef registerInternal(ResourceId id, BlockSpec spec, ItemSpec blockItemSpec) {
@@ -89,7 +97,16 @@ final class DefaultBlockRegistrar implements BlockRegistrar {
             throw new IllegalStateException("[" + modId + "] Duplicate block ID " + id + " on " + target);
         }
         specs.put(id, spec);
-        adapter.registerBlock(id, spec, blockItemSpec);
+        try {
+            adapter.registerBlock(id, spec, blockItemSpec);
+        } catch (RuntimeException failure) {
+            // The block never reached the native registry, so it must not stay visible to the SDK
+            // either. registerPersistentWithItem deliberately differs: it keeps the reservation so a
+            // partially completed native registration stops startup instead of silently retrying.
+            specs.remove(id);
+            blocks.remove(id, reference);
+            throw failure;
+        }
         return reference;
     }
 

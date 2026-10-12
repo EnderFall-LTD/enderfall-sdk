@@ -197,7 +197,17 @@ public final class BlockSpec {
             return this;
         }
 
-        /** Copies a portable specification, including its native base and overrides. */
+        /**
+         * Copies a native copy source and the target-native properties a copy can legally carry:
+         * hardness, resistance, friction, jump factor, luminance, tool requirement and sound,
+         * together with its explicit property overrides.
+         *
+         * <p>Behavior, state definitions, state shapes, outline and collision shapes, the
+         * facing/axis properties, six-way placement, waterlogging, scheduled ticks and tool
+         * property policies are deliberately not copied. A copy re-binds this block onto the
+         * native source's own states and shapes, so carrying the source's portable state
+         * definition across would be inconsistent. Declare those on the new builder instead.
+         */
         public Builder copyFrom(BlockSpec source) {
             Objects.requireNonNull(source, "source");
             copySource = source.copySource;

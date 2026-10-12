@@ -28,7 +28,14 @@ final class DefaultItemRegistrar implements ItemRegistrar {
         requireOwned(id);
         Objects.requireNonNull(spec, "spec");
         ItemRef reference = reserve(id);
-        adapter.registerItem(id, spec);
+        try {
+            adapter.registerItem(id, spec);
+        } catch (RuntimeException failure) {
+            // Release the reservation on a native failure so the ID is not burned for the rest of
+            // the process, matching the command, tab, screen and reload registrars.
+            items.remove(id);
+            throw failure;
+        }
         return reference;
     }
 
@@ -43,6 +50,11 @@ final class DefaultItemRegistrar implements ItemRegistrar {
             throw new IllegalStateException("[" + modId + "] Duplicate item ID " + id + " on " + target);
         }
         return reference;
+    }
+
+    /** Releases a reservation made for an item whose own registration never completed. */
+    void release(ResourceId id) {
+        items.remove(id);
     }
 
     private void requireOwned(ResourceId id) {

@@ -11,7 +11,17 @@ import java.util.regex.Pattern;
 
 /** Immutable, bounded string state synchronized from a menu's server session to its screen. */
 public final class MenuState {
-    public static final int MAXIMUM_ENTRIES = 64;
+    /**
+     * Bounded synchronized-state budget.
+     *
+     * <p>{@link MenuSpec} accepts two selection lists of up to eight rows each, and
+     * {@link Builder#selectionPage} writes six keys per visible row plus five page keys, so the
+     * largest legally declarable menu needs {@code 2 * (8 * 6 + 5)} = 106 entries. This budget must
+     * therefore stay above that number, or a menu the SDK accepts at registration could never be
+     * opened. The real payload ceiling remains the 16 KiB menu packet, enforced when the state is
+     * sent: a state that does not fit is rejected before the open or update takes effect.
+     */
+    public static final int MAXIMUM_ENTRIES = 128;
     private static final Pattern KEY = Pattern.compile("[a-z][a-z0-9_.-]{0,63}");
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{([a-z][a-z0-9_.-]{0,63})}");
     private final Map<String, String> values;

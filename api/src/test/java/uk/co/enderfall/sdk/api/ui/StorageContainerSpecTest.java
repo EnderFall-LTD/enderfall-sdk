@@ -79,6 +79,31 @@ class StorageContainerSpecTest {
                 .maximumCount(0));
     }
 
+    @Test void aContainerGroupMayStartWithPlayerWithoutBeingARealPlayerGroup() {
+        // Only player_main and player_hotbar are reserved. A mod's own inventory group such as
+        // "player_tools" is a legal group name and must not be mistaken for the player inventory.
+        var spec = StorageContainerSpec.builder("Workbench", storage(2))
+                .size(176, 166)
+                .slots(InventorySlotSpec.input(0, 10, 28, "player_tools"),
+                        InventorySlotSpec.output(1, 60, 28, "player_results"))
+                .quickMove("player_tools", "player_results")
+                .build();
+        assertEquals(2, spec.slots().size());
+        assertEquals(1, spec.quickMoveRules().size());
+
+        // The real reserved groups are still rejected without a bound player inventory.
+        assertThrows(IllegalArgumentException.class,
+                () -> StorageContainerSpec.builder("Washer", storage(2))
+                        .slots(InventorySlotSpec.input(0, 10, 28, "player_tools"),
+                                InventorySlotSpec.output(1, 60, 28, "outputs"))
+                        .quickMove("player_tools", InventoryQuickMoveRule.PLAYER_MAIN).build());
+        assertThrows(IllegalArgumentException.class,
+                () -> StorageContainerSpec.builder("Washer", storage(2))
+                        .slots(InventorySlotSpec.input(0, 10, 28, "inputs"),
+                                InventorySlotSpec.output(1, 60, 28, "outputs"))
+                        .quickMove("outputs", InventoryQuickMoveRule.PLAYER_HOTBAR).build());
+    }
+
     @Test void exposesOnlyDeclaredBoundedFieldsForMenuSynchronization() {
         var progress = new BlockEntityInt("progress", 0, 0, 10_000);
         var stored = BlockEntitySpec.builder(new BlockRef(ResourceId.of("test", "machine")))

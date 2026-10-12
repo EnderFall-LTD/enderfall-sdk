@@ -6,9 +6,15 @@ import java.util.Objects;
 
 /** A validated Minecraft release identifier such as {@code 1.21.4} or {@code 26.2}. */
 public record MinecraftVersion(String value) implements Comparable<MinecraftVersion> {
+    // Each segment is length-bounded as well as shape-checked. parts() parses segments as ints, so
+    // an unbounded digit run would validate here and then throw NumberFormatException from
+    // compareTo, far from the value that caused it.
+    private static final java.util.regex.Pattern FORMAT =
+            java.util.regex.Pattern.compile("[0-9]{1,9}(?:\\.[0-9]{1,9}){1,3}");
+
     public MinecraftVersion {
         Objects.requireNonNull(value, "value");
-        if (!value.matches("[0-9]+(?:\\.[0-9]+){1,3}")) {
+        if (!FORMAT.matcher(value).matches()) {
             throw new IllegalArgumentException("Unsupported Minecraft version format: " + value);
         }
     }

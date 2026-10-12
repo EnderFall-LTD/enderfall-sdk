@@ -26,8 +26,10 @@ public final class DefaultEventBus implements EventBus {
     public <E> Subscription subscribe(EventKey<E> event, EventPriority priority,
                                       EventListener<? super E> listener) {
         Objects.requireNonNull(event, "event");
-        RegisteredListener<E> registration = new RegisteredListener<>(priority, listener);
-        listeners.computeIfAbsent(event, ignored -> new CopyOnWriteArrayList<>()).add(registration);
+        CopyOnWriteArrayList<RegisteredListener<?>> registrations =
+                listeners.computeIfAbsent(event, ignored -> new CopyOnWriteArrayList<>());
+        RegisteredListener<E> registration = new RegisteredListener<>(priority, listener, registrations);
+        registrations.add(registration);
         return registration;
     }
 
@@ -47,14 +49,26 @@ public final class DefaultEventBus implements EventBus {
         }
     }
 
+    /**
+     * Reports how many registrations are still retained for one event. Closed subscriptions must not
+     * be counted, so this is how tests prove that closing actually releases them.
+     */
+    int retainedListenerCount(EventKey<?> key) {
+        CopyOnWriteArrayList<RegisteredListener<?>> registrations = listeners.get(Objects.requireNonNull(key, "key"));
+        return registrations == null ? 0 : registrations.size();
+    }
+
     private static final class RegisteredListener<E> implements Subscription {
         private final EventPriority priority;
         private final EventListener<? super E> listener;
         private final AtomicBoolean active = new AtomicBoolean(true);
+        private final CopyOnWriteArrayList<RegisteredListener<?>> registrations;
 
-        private RegisteredListener(EventPriority priority, EventListener<? super E> listener) {
+        private RegisteredListener(EventPriority priority, EventListener<? super E> listener,
+                                   CopyOnWriteArrayList<RegisteredListener<?>> registrations) {
             this.priority = Objects.requireNonNull(priority, "priority");
             this.listener = Objects.requireNonNull(listener, "listener");
+            this.registrations = Objects.requireNonNull(registrations, "registrations");
         }
 
         private EventPriority priority() {
@@ -80,7 +94,13 @@ public final class DefaultEventBus implements EventBus {
 
         @Override
         public void close() {
-            active.set(false);
+            // A closed subscription is a removal, not just a mute. Leaving the registration in the
+            // list would retain every listener a long-running server ever closed -- block entities,
+            // menus and player sessions are all reachable from their lambda -- and would make each
+            // publish copy and sort the whole history of that event.
+            if (active.compareAndSet(true, false)) {
+                registrations.remove(this);
+            }
         }
     }
 }

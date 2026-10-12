@@ -33,9 +33,13 @@ final class DefaultConfigHandle implements ConfigHandle {
 
     private static State createState(Path path, Map<ConfigKey<?>, Object> values) {
         Map<ConfigKey<?>, Object> immutableValues = Map.copyOf(values);
+        // Snapshot order follows the declared key order. Map.copyOf would hand back an unordered
+        // map whose iteration order is randomised per JVM, so any diagnostic, dump or diff built
+        // on snapshot() would not be reproducible between runs.
         java.util.LinkedHashMap<String, Object> byPath = new java.util.LinkedHashMap<>();
         values.forEach((key, value) -> byPath.put(key.path(), value));
-        return new State(path, immutableValues, Map.copyOf(byPath));
+        return new State(path, immutableValues,
+                java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(byPath)));
     }
 
     @Override

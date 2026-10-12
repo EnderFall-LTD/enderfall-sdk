@@ -111,8 +111,12 @@ public final class StorageContainerSpec {
         }
         if (!playerInventory && !quickMoveRules.isEmpty()) {
             for (InventoryQuickMoveRule rule : quickMoveRules) {
-                if (rule.sourceGroup().startsWith("player_")
-                        || rule.targetGroups().stream().anyMatch(group -> group.startsWith("player_"))) {
+                // Match the exact reserved player groups that knownGroup() recognises below and
+                // that InventorySlotSpec refuses to define. A prefix test would also reject a
+                // perfectly ordinary container group such as "player_tools", which only has to
+                // name this mod's own inventory.
+                if (isPlayerGroup(rule.sourceGroup())
+                        || rule.targetGroups().stream().anyMatch(StorageContainerSpec::isPlayerGroup)) {
                     throw new IllegalArgumentException("Quick-move player groups require a bound player inventory");
                 }
             }
@@ -128,8 +132,12 @@ public final class StorageContainerSpec {
     }
 
     private boolean knownGroup(String group, java.util.Set<String> groups) {
-        return groups.contains(group) || playerInventory && (group.equals(InventoryQuickMoveRule.PLAYER_MAIN)
-                || group.equals(InventoryQuickMoveRule.PLAYER_HOTBAR));
+        return groups.contains(group) || playerInventory && isPlayerGroup(group);
+    }
+
+    private static boolean isPlayerGroup(String group) {
+        return group.equals(InventoryQuickMoveRule.PLAYER_MAIN)
+                || group.equals(InventoryQuickMoveRule.PLAYER_HOTBAR);
     }
 
     public static final class Builder {

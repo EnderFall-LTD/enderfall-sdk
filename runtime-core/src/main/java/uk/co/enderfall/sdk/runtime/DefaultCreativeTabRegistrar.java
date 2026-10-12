@@ -25,6 +25,7 @@ final class DefaultCreativeTabRegistrar implements CreativeTabRegistrar {
     @Override
     public CreativeTabRef register(ResourceId id, CreativeTabSpec spec) {
         gate.requireOpen(modId, target);
+        Objects.requireNonNull(id, "id");
         if (!modId.equals(id.namespace())) {
             throw new IllegalArgumentException("[" + modId + "] Cannot register creative tab in namespace "
                     + id.namespace());
@@ -33,7 +34,14 @@ final class DefaultCreativeTabRegistrar implements CreativeTabRegistrar {
         if (!registered.add(id)) {
             throw new IllegalStateException("[" + modId + "] Duplicate creative tab ID " + id + " on " + target);
         }
-        adapter.registerCreativeTab(id, spec);
+        try {
+            adapter.registerCreativeTab(id, spec);
+        } catch (RuntimeException failure) {
+            // Release the ID on a native failure, as the command and screen registrars do. Leaving
+            // it reserved would make that tab permanently unregisterable for the rest of the process.
+            registered.remove(id);
+            throw failure;
+        }
         return new CreativeTabRef(id);
     }
 

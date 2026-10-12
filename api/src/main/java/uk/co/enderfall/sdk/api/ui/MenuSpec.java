@@ -133,10 +133,26 @@ public final class MenuSpec {
             if (selectionLists.size() >= 2) {
                 throw new IllegalArgumentException("A menu supports at most two selection lists");
             }
-            if (!selectionKeys.add(list.key())) {
+            if (selectionKeys.contains(list.key())) {
                 throw new IllegalArgumentException("Duplicate menu selection-list key: " + list.key());
             }
-            for (MenuButton button : list.buttons()) addButton(button);
+            // Validate the whole generated button batch before recording anything. Adding buttons one
+            // at a time left the selection-list key and some of its buttons already registered when a
+            // later button collided, so the caller's retry failed for a different reason.
+            List<MenuButton> generated = list.buttons();
+            if (buttons.size() + generated.size() > 24) {
+                throw new IllegalArgumentException("A menu supports at most 24 buttons");
+            }
+            for (MenuButton button : generated) {
+                if (actions.contains(button.action())) {
+                    throw new IllegalArgumentException("Duplicate menu action: " + button.action());
+                }
+            }
+            selectionKeys.add(list.key());
+            for (MenuButton button : generated) {
+                actions.add(button.action());
+                buttons.add(button);
+            }
             selectionLists.add(list);
             return this;
         }

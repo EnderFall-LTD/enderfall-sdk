@@ -35,7 +35,6 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         configureLoaderRepositories(settings);
         EnderfallSdkExtension extension = settings.getExtensions()
                 .create("enderfallSdk", EnderfallSdkExtension.class);
-        settings.getDependencyResolutionManagement().getRepositories().mavenCentral();
         settings.getGradle().settingsEvaluated(ignored -> createProjects(settings, extension));
     }
 
@@ -67,6 +66,12 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
 
         Map<String, TargetDefinition> byProjectPath = new LinkedHashMap<>();
         java.util.List<URI> dependencyRepositories = new ArrayList<>();
+        // Maven Central is added as the last fallback rather than during apply(). apply() runs inside
+        // the consumer's plugins {} block, so anything added there would be prepended ahead of the
+        // repositories the consumer declares afterwards in dependencyResolutionManagement. A
+        // consumer-declared repository must win, otherwise a locally published SDK is silently
+        // shadowed by the same version already published to Central.
+        addCentralFallback(settings);
         settings.getDependencyResolutionManagement().getRepositories()
                 .withType(MavenArtifactRepository.class)
                 .forEach(repository -> dependencyRepositories.add(repository.getUrl()));
@@ -349,6 +354,24 @@ public final class EnderfallSdkSettingsPlugin implements Plugin<Settings> {
         } catch (IOException exception) {
             throw new GradleException("Cannot create generated target directory " + directory, exception);
         }
+    }
+
+    private static void addCentralFallback(Settings settings) {
+        for (MavenArtifactRepository repository : settings.getDependencyResolutionManagement().getRepositories()
+                .withType(MavenArtifactRepository.class)) {
+            if (isMavenCentral(repository.getUrl())) {
+                return;
+            }
+        }
+        settings.getDependencyResolutionManagement().getRepositories().mavenCentral();
+    }
+
+    private static boolean isMavenCentral(URI url) {
+        if (url == null) {
+            return false;
+        }
+        String host = url.getHost();
+        return "repo.maven.apache.org".equalsIgnoreCase(host) || "repo1.maven.org".equalsIgnoreCase(host);
     }
 
     private static void configureLoaderRepositories(Settings settings) {

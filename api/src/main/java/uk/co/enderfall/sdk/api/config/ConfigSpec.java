@@ -82,13 +82,16 @@ public final class ConfigSpec {
         public <T> ConfigKey<T> value(String path, ConfigType<T> type, T defaultValue, String comment,
                                       ConfigValidator<T> validator, boolean sensitive) {
             validatePath(path);
-            if (!paths.add(path)) {
-                throw new IllegalArgumentException("Duplicate config key: " + path);
-            }
+            // Validate everything before recording the path. Mutating `paths` first left the two
+            // collections desynchronised when the key or default value was rejected, so the
+            // corrected retry was then refused as a duplicate.
             ConfigKey<T> key = new ConfigKey<>(path, type, defaultValue, comment, validator, sensitive);
             ValidationResult defaultResult = validator.validate(defaultValue);
             if (!defaultResult.valid()) {
                 throw new IllegalArgumentException("Default value for " + path + ' ' + defaultResult.message());
+            }
+            if (!paths.add(path)) {
+                throw new IllegalArgumentException("Duplicate config key: " + path);
             }
             keys.add(key);
             return key;

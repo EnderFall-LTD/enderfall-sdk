@@ -43,13 +43,15 @@ public final class DefaultConfigManager implements ConfigManager {
         if (!name.matches("[a-z0-9_-]+")) {
             throw new IllegalArgumentException("Invalid config name: " + name);
         }
+        // Validate the environment before reserving the name, so a rejected registration does not burn
+        // the name and turn a later legitimate attempt into a misleading duplicate error.
+if (scope == ConfigScope.CLIENT && adapter.platformInfo().environment() == Environment.DEDICATED_SERVER) {
+            throw new IllegalStateException("[" + modId + "] Client config " + name
+                    + " cannot be loaded on a dedicated server");
+        }
         String identity = scope.name() + ':' + name;
         if (!registeredNames.add(identity)) {
             throw new IllegalStateException("[" + modId + "] Duplicate " + scope + " config " + name);
-        }
-        if (scope == ConfigScope.CLIENT && adapter.platformInfo().environment() == Environment.DEDICATED_SERVER) {
-            throw new IllegalStateException("[" + modId + "] Client config " + name
-                    + " cannot be loaded on a dedicated server");
         }
         String suffix = switch (scope) {
             case COMMON -> "common";

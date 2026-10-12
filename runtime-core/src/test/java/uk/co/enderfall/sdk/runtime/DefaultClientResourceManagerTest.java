@@ -3,6 +3,7 @@ package uk.co.enderfall.sdk.runtime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -58,6 +59,34 @@ class DefaultClientResourceManagerTest {
     }
 
     @Test
+    void aFailedNativeRegistrationReleasesTheListenerIdForRetry() {
+        // A transient native failure must not burn the ID for the rest of the process, matching
+        // how the command and screen registrars roll their dedup sets back.
+        FailingAdapter adapter = new FailingAdapter();
+        DefaultClientResourceManager manager = new DefaultClientResourceManager(
+                "test_mod", "1.21.4-fabric", adapter, new RegistrationGate(), new RecordingLogger());
+        ResourceId id = ResourceId.of("test_mod", "ui");
+
+        assertThrows(IllegalStateException.class, () -> manager.onReload(id, () -> { }));
+
+        adapter.fail = false;
+        Subscription recovered = manager.onReload(id, () -> { });
+        assertTrue(recovered.active());
+    }
+
+    @Test
+    void anUnsupportedTargetStillReportsPortableResourcesUnavailable() {
+        FailingAdapter adapter = new FailingAdapter();
+        adapter.failure = new UnsupportedOperationException("no client resources");
+        DefaultClientResourceManager manager = new DefaultClientResourceManager(
+                "test_mod", "1.21.4-fabric", adapter, new RegistrationGate(), new RecordingLogger());
+
+        UnsupportedOperationException failure = assertThrows(UnsupportedOperationException.class,
+                () -> manager.onReload(ResourceId.of("test_mod", "ui"), () -> { }));
+        assertTrue(failure.getMessage().contains("Portable client resources are unavailable"));
+    }
+
+    @Test
     void returnsTheNativeReloadCompletion() {
         RecordingAdapter adapter = new RecordingAdapter();
         DefaultClientResourceManager manager = new DefaultClientResourceManager(
@@ -68,9 +97,9 @@ class DefaultClientResourceManagerTest {
         assertEquals(null, requested.toCompletableFuture().join());
     }
 
-    private static final class RecordingAdapter implements PlatformAdapter {
-        private final List<Runnable> listeners = new ArrayList<>();
-        private final CompletableFuture<Void> reload = new CompletableFuture<>();
+    private static class RecordingAdapter implements PlatformAdapter {
+        final List<Runnable> listeners = new ArrayList<>();
+        final CompletableFuture<Void> reload = new CompletableFuture<>();
         @Override public void registerClientResourceReloadListener(ResourceId id, Runnable listener) {
             listeners.add(listener);
         }
@@ -88,6 +117,17 @@ class DefaultClientResourceManagerTest {
         @Override public void sendToServer(ResourceId id, byte[] payload) { }
         @Override public void sendToPlayer(UUID playerId, ResourceId id, byte[] payload) { }
         @Override public void sendToAll(ResourceId id, byte[] payload) { }
+    }
+
+    private static final class FailingAdapter extends RecordingAdapter {
+        private boolean fail = true;
+        private RuntimeException failure = new IllegalStateException("native registration failed");
+        @Override public void registerClientResourceReloadListener(ResourceId id, Runnable listener) {
+            if (fail) {
+                throw failure;
+            }
+            listeners.add(listener);
+        }
     }
 
     private static final class ClientPlatformInfo implements PlatformInfo {

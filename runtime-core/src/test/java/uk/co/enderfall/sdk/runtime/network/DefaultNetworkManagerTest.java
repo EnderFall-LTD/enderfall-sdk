@@ -1,6 +1,7 @@
 package uk.co.enderfall.sdk.runtime.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -72,6 +73,57 @@ class DefaultNetworkManagerTest {
         assertEquals(1, clientAdapter.deliveredConsumerPackets);
         assertTrue(serverAdapter.disconnects.isEmpty());
         assertTrue(clientAdapter.disconnects.isEmpty());
+    }
+
+    @Test
+    void aFailingConsumerHandlerIsIsolatedInsteadOfDisconnectingThePlayer() {
+        LoopbackAdapter serverAdapter = new LoopbackAdapter(temporaryDirectory, Environment.DEDICATED_SERVER);
+        LoopbackAdapter clientAdapter = new LoopbackAdapter(temporaryDirectory, Environment.CLIENT);
+        serverAdapter.peer = clientAdapter;
+        clientAdapter.peer = serverAdapter;
+
+        RuntimeModContext server = new RuntimeModContext("test_mod", serverAdapter);
+        RuntimeModContext client = new RuntimeModContext("test_mod", clientAdapter);
+        PacketType<String> broken = packet("broken", PacketDirection.BIDIRECTIONAL, PacketRequirement.REQUIRED);
+        PacketType<String> healthy = packet("healthy", PacketDirection.BIDIRECTIONAL, PacketRequirement.REQUIRED);
+        AtomicReference<String> delivered = new AtomicReference<>();
+        server.networking().register(broken, (value, context) -> {
+            throw new IllegalStateException("consumer bug");
+        });
+        server.networking().register(healthy, (value, context) -> delivered.set(value));
+        client.networking().register(broken, (value, context) -> { });
+        client.networking().register(healthy, (value, context) -> { });
+
+        server.runtimeNetworking().connectionOpened(PLAYER_ID);
+        client.networking().sendToServer(broken, "boom");
+        client.networking().sendToServer(healthy, "still-delivered");
+
+        assertTrue(serverAdapter.disconnects.isEmpty(),
+                "A consumer handler failure must not disconnect the player: " + serverAdapter.disconnects);
+        assertEquals("still-delivered", delivered.get());
+    }
+
+    @Test
+    void aMalformedPayloadStillDisconnects() {
+        LoopbackAdapter serverAdapter = new LoopbackAdapter(temporaryDirectory, Environment.DEDICATED_SERVER);
+        LoopbackAdapter clientAdapter = new LoopbackAdapter(temporaryDirectory, Environment.CLIENT);
+        serverAdapter.peer = clientAdapter;
+        clientAdapter.peer = serverAdapter;
+
+        RuntimeModContext server = new RuntimeModContext("test_mod", serverAdapter);
+        RuntimeModContext client = new RuntimeModContext("test_mod", clientAdapter);
+        PacketType<String> broken = packet("broken", PacketDirection.BIDIRECTIONAL, PacketRequirement.REQUIRED);
+        server.networking().register(broken, (value, context) -> {
+            throw new AssertionError("A malformed packet must never reach the consumer handler");
+        });
+        client.networking().register(broken, (value, context) -> { });
+        server.runtimeNetworking().connectionOpened(PLAYER_ID);
+
+        serverAdapter.receivers.get(broken.id()).receive(
+                new byte[] { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF },
+                PacketDirection.SERVERBOUND, java.util.Optional.of(PLAYER_ID), serverAdapter.disconnects::add);
+
+        assertFalse(serverAdapter.disconnects.isEmpty(), "A malformed payload must still disconnect");
     }
 
     private static PacketType<String> packet(String path, PacketDirection direction,

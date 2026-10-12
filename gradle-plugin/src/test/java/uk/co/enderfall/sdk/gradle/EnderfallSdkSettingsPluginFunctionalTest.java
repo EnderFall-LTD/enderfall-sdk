@@ -184,6 +184,71 @@ class EnderfallSdkSettingsPluginFunctionalTest {
         assertTrue(!result.getOutput().contains("Fabric Loom:"));
     }
 
+    /**
+     * A consumer-declared repository must stay ahead of Maven Central. Maven Central already
+     * publishes {@code 0.1.0-beta.1}, so if the SDK's own fallback repository were registered
+     * first, a locally published or stubbed SDK would be silently shadowed by the released one
+     * and every target would compile against artifacts the working tree never produced.
+     */
+    @Test
+    void consumerRepositoryTakesPrecedenceOverMavenCentral() throws IOException {
+        assertCentralIsASingleFallbackAfterLocalStubs(repositoryOrder("mavenCentral()"));
+    }
+
+    /** A consumer that declares no Central of its own must still get exactly one, last. */
+    @Test
+    void mavenCentralIsAddedAsAFallbackWhenTheConsumerDeclaresNone() throws IOException {
+        assertCentralIsASingleFallbackAfterLocalStubs(repositoryOrder(""));
+    }
+
+    private static void assertCentralIsASingleFallbackAfterLocalStubs(java.util.List<String> repositories) {
+        int local = repositories.indexOf("LocalStubs");
+        int central = repositories.indexOf("MavenRepo");
+        assertTrue(local >= 0, "The consumer repository is missing from " + repositories);
+        assertTrue(central >= 0, "Maven Central was not offered as a fallback in " + repositories);
+        assertTrue(local < central, "Maven Central shadows the consumer repository in " + repositories);
+        assertEquals(1, repositories.stream().filter("MavenRepo"::equals).count(),
+                "Maven Central must not be registered twice in " + repositories);
+    }
+
+    private java.util.List<String> repositoryOrder(String repositoriesAfterLocalStubs) throws IOException {
+        Path repository = temporaryDirectory.resolve("precedence-repository");
+        write("settings.gradle.kts", """
+                plugins { id("uk.co.enderfall.sdk") }
+                rootProject.name = "precedence-fixture"
+                enderfallSdk {
+                    targets { version("1.21.4") { loaders("fabric") } }
+                    developmentTarget = "1.21.4-fabric"
+                }
+                dependencyResolutionManagement {
+                    repositories {
+                        maven { name = "LocalStubs"; url = uri("%s") }
+                        %s
+                    }
+                }
+                // Registered after the plugin's own settingsEvaluated callback, so it observes the
+                // final repository order the generated target projects inherit.
+                gradle.settingsEvaluated {
+                    println("RESOLVED_REPOSITORY_ORDER=" + dependencyResolutionManagement.repositories
+                        .withType(org.gradle.api.artifacts.repositories.MavenArtifactRepository::class.java)
+                        .joinToString(",") { it.name })
+                }
+                """.formatted(repository.toUri(), repositoriesAfterLocalStubs));
+        write("build.gradle.kts", """
+                tasks.register("initializeMod")
+                """);
+
+        BuildResult result = runner("initializeMod").build();
+
+        assertTrue(result.task(":initializeMod").getOutcome() != TaskOutcome.FAILED);
+        String order = result.getOutput().lines()
+                .filter(line -> line.startsWith("RESOLVED_REPOSITORY_ORDER="))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("The fixture did not report its repository order"))
+                .substring("RESOLVED_REPOSITORY_ORDER=".length());
+        return java.util.List.of(order.split(","));
+    }
+
     @Test
     void legacyTargetsExposeNativePreparationProxiesWithoutLaunchingMinecraft() throws IOException {
         write("settings.gradle.kts", """

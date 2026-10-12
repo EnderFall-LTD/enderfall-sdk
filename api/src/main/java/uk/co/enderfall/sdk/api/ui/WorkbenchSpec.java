@@ -17,8 +17,8 @@ public final class WorkbenchSpec {
 
     private WorkbenchSpec(Builder builder) {
         title = builder.title;
-        machineInputs = builder.machineInputs;
-        machineOutputs = builder.machineOutputs;
+        machineInputs = java.util.List.copyOf(builder.machineInputs);
+        machineOutputs = java.util.List.copyOf(builder.machineOutputs);
         machine = builder.machine;
         recipeType = builder.recipeType;
         backgroundColor = builder.backgroundColor;
@@ -121,11 +121,13 @@ public final class WorkbenchSpec {
         /** Binds persisted inputs to an already registered persistent block; output remains derived. */
         @uk.co.enderfall.sdk.api.annotation.Experimental("Persistent block-entity integration is under development")
         public Builder persistent(uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec value) {
-            machine = false; machineInputs = java.util.List.of(); machineOutputs = java.util.List.of();
+            // Validate before clearing: a rejected binding must leave the builder exactly as it was,
+            // otherwise a caught-and-ignored error silently changes what build() produces.
             Objects.requireNonNull(value, "storage");
             if (value.inventorySlots() != recipeType.inputSlots()) {
                 throw new IllegalArgumentException("Persistent inventory must match the recipe input slot count");
             }
+            machine = false; machineInputs = java.util.List.of(); machineOutputs = java.util.List.of();
             storage = value;
             processingTicks = 0;
             return this;
@@ -137,12 +139,12 @@ public final class WorkbenchSpec {
          */
         @uk.co.enderfall.sdk.api.annotation.Experimental("Available only in the generated Fabric 1.21.4 preview")
         public Builder persistentTimed(uk.co.enderfall.sdk.api.blockentity.BlockEntitySpec value, int ticks) {
-            machine = false; machineInputs = java.util.List.of(); machineOutputs = java.util.List.of();
             Objects.requireNonNull(value, "storage");
             if (ticks < 1 || ticks > 1_728_000) throw new IllegalArgumentException("Processing ticks must be 1..1728000");
             if (value.inventorySlots() != recipeType.inputSlots() + 1) {
                 throw new IllegalArgumentException("Timed inventory requires inputs plus one stored output slot");
             }
+            machine = false; machineInputs = java.util.List.of(); machineOutputs = java.util.List.of();
             storage = value;
             processingTicks = ticks;
             return this;

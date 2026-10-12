@@ -27,7 +27,10 @@ public final class BlockEntitySpec {
 
     private BlockEntitySpec(Builder builder) {
         block = builder.block;
-        animations = java.util.Set.copyOf(builder.animations);
+        // The builder collects animations in a sorted set; copy it the same way renderSlots and
+        // renderTanks are copied so iteration stays deterministic across runs. Set.copyOf would
+        // return an unordered set whose order changes from one JVM to the next.
+animations = java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(builder.animations));
         menuOpenAnimation = builder.menuOpenAnimation;
         menuCloseAnimation = builder.menuCloseAnimation;
         if (menuOpenAnimation != null && (!animations.contains(menuOpenAnimation) || !animations.contains(menuCloseAnimation))) {

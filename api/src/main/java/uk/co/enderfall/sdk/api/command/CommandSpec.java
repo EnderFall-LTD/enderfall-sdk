@@ -20,7 +20,13 @@ public final class CommandSpec {
         executor = Objects.requireNonNull(builder.executor, "executor");
         suggestions = builder.suggestions;
         boolean optionalSeen = false;
+        java.util.Set<String> names = new java.util.LinkedHashSet<>();
         for (CommandArgument<?> argument : arguments) {
+            // CommandContext exposes arguments as a map keyed by name, so two arguments sharing a
+            // name would silently shadow each other and hand the executor the wrong type.
+            if (!names.add(argument.name())) {
+                throw new IllegalArgumentException("Duplicate command argument name: " + argument.name());
+            }
             optionalSeen |= argument.optional();
             if (optionalSeen && !argument.optional()) {
                 throw new IllegalArgumentException("Required arguments cannot follow optional arguments");

@@ -27,6 +27,14 @@ final class DefaultCommandManager implements CommandManager {
         if (!commands.add(command.name())) {
             throw new IllegalStateException("[" + modId + "] Duplicate command /" + command.name() + " on " + target);
         }
-        adapter.registerCommand(command);
+        try {
+            adapter.registerCommand(command);
+        } catch (RuntimeException failure) {
+            // Release the name on a native failure, as the client command, screen and reload
+            // registrars do. Leaving it reserved would make that command permanently
+            // unregisterable for the rest of the process.
+            commands.remove(command.name());
+            throw failure;
+        }
     }
 }

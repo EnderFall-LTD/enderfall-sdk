@@ -29,7 +29,9 @@ import uk.co.enderfall.sdk.runtime.network.ByteArrayPacketWriter;
 /** Runtime-owned synchronized menu registration, session validation, and wire protocol. */
 public final class DefaultMenuManager implements MenuManager {
     static final int PACKET_LIMIT = 16_384;
-    private static final int PROTOCOL_VERSION = 2;
+    // Bump whenever a peer on the previous version could reject what this one sends. 3 raised the
+    // state budget from 64 to MenuState.MAXIMUM_ENTRIES (128), which a version-2 reader rejects.
+    private static final int PROTOCOL_VERSION = 3;
     private static final int OPEN = 1;
     private static final int UPDATE = 2;
     private static final int CLOSE = 3;
@@ -179,13 +181,32 @@ public final class DefaultMenuManager implements MenuManager {
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(state, "state");
         ServerSession existing = serverSessions.get(playerId);
-        if (existing != null) validateInputState(existing.registration().spec(), state);
-        ServerSession session = serverSessions.computeIfPresent(playerId,
-                (ignored, current) -> current.withState(state));
-        if (session == null) {
+        if (existing == null) {
             throw new IllegalStateException("[" + modId + "] Player has no active menu on " + target);
         }
-        adapter.sendToPlayer(playerId, payloadId, encodeState(UPDATE, session.id(), state));
+        validateInputState(existing.registration().spec(), state);
+        recordAndSend(playerId, existing, state);
+    }
+
+    /**
+     * Records {@code replacement} as the session's state and sends it, or leaves the session as it
+     * was. Selection rows resolve entry IDs from the server's copy, so a state the client never
+     * receives must not stay recorded: the player's next click would act on an entry from a page
+     * they cannot see. It is therefore encoded first, and withdrawn again if sending fails.
+     */
+    private void recordAndSend(UUID playerId, ServerSession current, MenuState replacement) {
+        byte[] payload = encodeState(UPDATE, current.id(), replacement);
+        ServerSession updated = current.withState(replacement);
+        if (!serverSessions.replace(playerId, current, updated)) {
+            throw new IllegalStateException("[" + modId + "] Menu session changed or closed during the update on "
+                    + target);
+        }
+        try {
+            adapter.sendToPlayer(playerId, payloadId, payload);
+        } catch (RuntimeException failure) {
+            serverSessions.replace(playerId, updated, current);
+            throw failure;
+        }
     }
 
     @Override
@@ -283,7 +304,15 @@ public final class DefaultMenuManager implements MenuManager {
             throw new PacketDecodingException("Disabled menu action " + action);
         }
         Map<String, String> inputs = readInputs(reader, session.registration().spec());
-        session.registration().handler().handle(new ActionContext(playerId, session, action, inputs));
+        try {
+            session.registration().handler().handle(new ActionContext(playerId, session, action, inputs));
+        } catch (RuntimeException failure) {
+            // A consumer menu handler is a callback, not part of the wire contract. Isolating it
+            // keeps a mod's own validation error from disconnecting the player, and keeps its
+            // message -- which may echo menu input -- out of the disconnect reason sent to the
+            // client. The server log still records the full failure for the mod's author.
+            logger.error("Menu action handler for {} failed", failure, action);
+        }
     }
 
     private void sendAction(long sessionId, PortableMenuSubmission submission) {
@@ -335,13 +364,21 @@ public final class DefaultMenuManager implements MenuManager {
         return writer;
     }
 
-    private static void writeState(ByteArrayPacketWriter writer, MenuState state) {
+    private void writeState(ByteArrayPacketWriter writer, MenuState state) {
         var entries = new ArrayList<>(state.values().entrySet());
         entries.sort(Comparator.comparing(Map.Entry::getKey));
-        writer.writeVarInt(entries.size());
-        for (Map.Entry<String, String> entry : entries) {
-            writer.writeString(entry.getKey(), 64);
-            writer.writeString(entry.getValue(), MAXIMUM_STATE_VALUE_BYTES);
+        try {
+            writer.writeVarInt(entries.size());
+            for (Map.Entry<String, String> entry : entries) {
+                writer.writeString(entry.getKey(), 64);
+                writer.writeString(entry.getValue(), MAXIMUM_STATE_VALUE_BYTES);
+            }
+        } catch (IllegalArgumentException tooLarge) {
+            // MenuState bounds each key and value, so the packet limit is the only way to get here.
+            // Values are deliberately left out of the message: they may hold private state.
+            throw new IllegalArgumentException("[" + modId + " on " + target + "] Menu state does not fit the "
+                    + PACKET_LIMIT + "-byte menu packet; shorten entry text or show fewer rows per page",
+                    tooLarge);
         }
     }
 
@@ -455,9 +492,8 @@ public final class DefaultMenuManager implements MenuManager {
             if (current == null || current.id() != sessionId) {
                 throw new IllegalStateException("Menu session is no longer active");
             }
+            recordAndSend(playerId, current, replacement);
             state = replacement;
-            serverSessions.put(playerId, current.withState(replacement));
-            adapter.sendToPlayer(playerId, payloadId, encodeState(UPDATE, sessionId, replacement));
         }
 
         @Override

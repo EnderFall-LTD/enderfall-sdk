@@ -34,7 +34,7 @@ loom {
 dependencies {
     minecraft("com.mojang:minecraft:26.2")
     implementation("net.fabricmc:fabric-loader:0.19.5")
-    implementation("net.fabricmc.fabric-api:fabric-api:0.159.0+26.2")
+    implementation("net.fabricmc.fabric-api:fabric-api:0.141.6+")
 
     compileOnly(project(":runtime-core"))
     include(project(path = ":runtime-core", configuration = "shadowRuntimeElements"))
